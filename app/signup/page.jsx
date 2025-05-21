@@ -1,44 +1,86 @@
-"use client"
+"use client";
 
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import Image from "next/image"
-import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth"
-import { doc, setDoc } from "firebase/firestore"
-import { auth, db } from "@/lib/firebase"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Checkbox } from "@/components/ui/checkbox"
-import { toast } from "@/components/ui/use-toast"
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import Head from "next/head";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/components/ui/use-toast";
+import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import useUserStore from "@/lib/userStore";
 
 export default function SignupPage() {
-  const router = useRouter()
-  const [fullName, setFullName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [checked, setChecked] = useState(false)
-  const [showTerms, setShowTerms] = useState(false)
-  const [showPrivacy, setShowPrivacy] = useState(false)
+  const router = useRouter();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+
+  // Initialize user store
+  useEffect(() => {
+    useUserStore.getState().loadUser();
+  }, []);
 
   const handleSignUp = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    // Basic validation
+    const { initError, isInitialized } = useUserStore.getState();
+    if (!isInitialized) {
+      toast({
+        title: "Store Not Initialized",
+        description: "User store is still loading. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (initError) {
+      toast({
+        title: "Initialization Error",
+        description: "Failed to initialize user data. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!email || !fullName || !password) {
       toast({
         title: "Incomplete Fields",
         description: "Please fill in all fields to continue.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
@@ -46,8 +88,8 @@ export default function SignupPage() {
         title: "Invalid Email",
         description: "Please enter a valid email address.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (!checked) {
@@ -55,22 +97,19 @@ export default function SignupPage() {
         title: "Terms & Conditions",
         description: "Please agree to the Terms & Conditions to continue.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      setLoading(true)
+      setLoading(true);
 
-      // Firebase Sign Up
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const user = userCredential.user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      // Send verification email
-      await sendEmailVerification(user)
+      await sendEmailVerification(user);
 
-      // Store user data in Firestore
-      const userRef = doc(db, "users", user.uid)
+      const userRef = doc(db, "users", user.uid);
       await setDoc(userRef, {
         uid: user.uid,
         email: user.email,
@@ -78,69 +117,150 @@ export default function SignupPage() {
         isVerified: false,
         emailVerified: false,
         createdAt: new Date().toISOString(),
-      })
+      });
+
+      await useUserStore.getState().setUser({
+        id: user.uid,
+        email: user.email,
+        fullName,
+      });
 
       toast({
-        title: "Account Created",
+        title: "Account Created 🎉",
         description: "A verification email has been sent. Please verify your email.",
-      })
+        position: "top-center",
+        duration: 3000,
+      });
 
-      // Log user out after sign-up to force email verification
       setTimeout(async () => {
-        await auth.signOut()
-        router.push("/login")
-      }, 2000)
+        await auth.signOut();
+        await useUserStore.getState().clearUser();
+        router.push("/login");
+      }, 2000);
     } catch (err) {
-      console.error("Sign up error:", err.message)
+      console.error("Sign up error:", err.message);
+      let errorMessage = "Something went wrong. Please try again.";
 
-      // Handle Firebase error messages
-      if (err.code === "auth/email-already-in-use") {
-        toast({
-          title: "Email Already Used",
-          description: "This email is already registered. Please login or use another email.",
-          variant: "destructive",
-        })
-      } else if (err.code === "auth/invalid-email") {
-        toast({
-          title: "Invalid Email",
-          description: "Please enter a valid email address.",
-          variant: "destructive",
-        })
-      } else if (err.code === "auth/weak-password") {
-        toast({
-          title: "Weak Password",
-          description: "Password should be at least 6 characters.",
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "Sign Up Failed",
-          description: "Something went wrong. Please try again.",
-          variant: "destructive",
-        })
+      switch (err.code) {
+        case "auth/email-already-in-use":
+          errorMessage = "This email is already registered. Please login or use another email.";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Please enter a valid email address.";
+          break;
+        case "auth/weak-password":
+          errorMessage = "Password should be at least 6 characters.";
+          break;
+        case "auth/network-request-failed":
+          errorMessage = "Network error. Please check your internet connection.";
+          break;
       }
+
+      toast({
+        title: "Sign Up Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleGoogleSignUp = async () => {
-    // This is a placeholder for Google sign up
-    // In a real implementation, you would use Firebase's Google authentication
-    toast({
-      title: "Google Sign Up",
-      description: "Google sign up is not implemented in this demo",
-    })
-  }
+    console.log("Starting Google Sign-Up");
+    if (isGoogleSigningIn) {
+      console.log("Google Sign-Up already in progress");
+      return;
+    }
+    setIsGoogleSigningIn(true);
 
-  // Sample terms and privacy content
+    const { initError, isInitialized } = useUserStore.getState();
+    if (!isInitialized) {
+      toast({
+        title: "Store Not Initialized",
+        description: "User store is still loading. Please try again.",
+        variant: "destructive",
+      });
+      setIsGoogleSigningIn(false);
+      return;
+    }
+    if (initError) {
+      toast({
+        title: "Initialization Error",
+        description: "Failed to initialize user data. Please try again.",
+        variant: "destructive",
+      });
+      setIsGoogleSigningIn(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log("Initializing Google provider");
+      const provider = new GoogleAuthProvider();
+      console.log("Triggering signInWithPopup");
+      const userCredential = await signInWithPopup(auth, provider);
+      const user = userCredential.user;
+      console.log("Google Sign-Up successful:", user.email);
+
+      const userRef = doc(db, "users", user.uid);
+      await setDoc(
+        userRef,
+        {
+          uid: user.uid,
+          email: user.email,
+          fullName: user.displayName,
+          emailVerified: true,
+          createdAt: new Date().toISOString(),
+          profilePicture: user.photoURL,
+        },
+        { merge: true }
+      );
+
+      await useUserStore.getState().setUser({
+        id: user.uid,
+        email: user.email,
+        fullName: user.displayName,
+        profilePicture: user.photoURL,
+      });
+
+      toast({
+        title: "Sign Up Successful 🎉",
+        description: `Welcome ${user.displayName}`,
+        position: "top-center",
+        duration: 3000,
+      });
+
+      router.replace("/");
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+      let errorMessage = "Something went wrong";
+      if (error.code === "auth/popup-closed-by-user") {
+        errorMessage = "Google Sign-In popup was closed";
+      } else if (error.code === "auth/cancelled-popup-request") {
+        errorMessage = "Sign-in was cancelled";
+      } else if (error.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+      toast({
+        title: "Google Sign-In Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setIsGoogleSigningIn(false);
+    }
+  };
+
+  // Sample terms and privacy content (unchanged)
   const termsParagraphs = [
     "1. Eligibility: You must be a student or a verified user aged 16+. Providing false information or fraudulent activity will lead to suspension.",
     "2. Your Account: Keep your account credentials safe. You are responsible for all activities under your account.",
     "3. Using trybe market: Post only genuine products or services. Respect other users. No scams, fake listings, hate speech, or illegal activities. Posting prohibited items can lead to suspension.",
     "4. Buying & Selling: trybe market connects buyers and sellers but does not guarantee any transaction. Always verify and confirm before paying or delivering. Prefer keeping transactions and chats within the app for safety.",
     "5. Payments & Subscriptions: Some premium features require a subscription. All payments are processed securely via Nigerian payment providers (e.g., Paystack, Flutterwave). No card details are stored by us. Refunds are only issued if a failure is caused directly by trybe market.",
-  ]
+  ];
 
   const privacyParagraphs = [
     "1. Information We Collect: Personal Info: Name, email, phone number, school, department, profile photo. Account Info: Login data, authentication info (via Firebase). Listings: Products/services uploaded, images (via Cloudinary). Device Info: IP address, device type, OS, for analytics and fraud prevention. Payment Info: Processed securely via third-party gateways (we do not store card details).",
@@ -148,14 +268,21 @@ export default function SignupPage() {
     "3. Data Sharing: We do not sell your personal information. We only share: With payment processors (e.g., Paystack, Flutterwave, Opay). With service providers (e.g., Firebase, Cloudinary). With law enforcement if required by law.",
     "4. Your Rights: As a Nigerian user, you have the right to: Access, correct, or delete your personal information. Deactivate your account. Opt out of marketing communications at any time.",
     "5. Data Security: We use secure systems (like Firebase security standards) to protect your data. No platform is 100% immune; users should also protect their accounts with strong passwords.",
-  ]
+  ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <Head>
+        <title>Sign Up - Trybe Market</title>
+        <meta
+          name="description"
+          content="Create an account on Trybe Market to start buying and selling."
+        />
+      </Head>
+      <Card className="w-full max-w-md shadow-md p-2">
         <CardHeader className="space-y-1 items-center">
-          <div className="w-40 h-20 relative mb-4">
-            <Image src="/placeholder.svg?height=80&width=160" alt="Logo" fill className="object-contain" />
+          <div className="w-40 h-40 relative mb-4">
+            <Image src="/assets/logo.png" alt="App Logo" fill className="object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
           <CardDescription>Sign up to get started with Trybe Market</CardDescription>
@@ -173,6 +300,7 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={loading}
+                  aria-label="Full Name Input"
                 />
               </div>
             </div>
@@ -187,6 +315,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
+                  aria-label="Email Input"
                 />
               </div>
             </div>
@@ -201,6 +330,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
+                  aria-label="Password Input"
                 />
                 <button
                   type="button"
@@ -213,20 +343,38 @@ export default function SignupPage() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Checkbox id="terms" checked={checked} onCheckedChange={(checked) => setChecked(checked === true)} />
+              <Checkbox
+                id="terms"
+                checked={checked}
+                onCheckedChange={(checked) => setChecked(checked === true)}
+                aria-label="Agree to Terms and Conditions"
+              />
               <label htmlFor="terms" className="text-sm text-gray-600">
                 I agree to the{" "}
-                <button type="button" className="text-blue-600 hover:underline" onClick={() => setShowTerms(true)}>
+                <button
+                  type="button"
+                  className="text-blue-600 hover:underline"
+                  onClick={() => setShowTerms(true)}
+                >
                   Terms & Conditions
                 </button>{" "}
                 and{" "}
-                <button type="button" className="text-blue-600 hover:underline" onClick={() => setShowPrivacy(true)}>
+                <button
+                  type="button"
+                  className="text-blue-600 hover:underline"
+                  onClick={() => setShowPrivacy(true)}
+                >
                   Privacy Policy
                 </button>
               </label>
             </div>
 
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              disabled={loading}
+              aria-label="Sign Up Button"
+            >
               {loading ? "Signing up..." : "Sign Up"}
             </Button>
           </form>
@@ -241,7 +389,8 @@ export default function SignupPage() {
             variant="outline"
             className="w-full mt-4 flex items-center justify-center gap-2"
             onClick={handleGoogleSignUp}
-            disabled={loading}
+            disabled={loading || isGoogleSigningIn}
+            aria-label="Sign Up with Google"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path
@@ -282,8 +431,8 @@ export default function SignupPage() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Terms & Conditions</DialogTitle>
             <DialogDescription>
-              Welcome to Trybe Market! By using our platform, you agree to comply with these Terms and Conditions.
-              Please read them carefully.
+              Welcome to Trybe Market! By using our platform, you agree to comply with
+              these Terms and Conditions. Please read them carefully.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
@@ -295,7 +444,8 @@ export default function SignupPage() {
             <p className="text-sm text-gray-700 mt-4">
               <strong>Contact Us</strong>
               <br />
-              If you have any questions about these Terms, please contact our support team.
+              If you have any questions about these Terms, please contact our support
+              team.
             </p>
             <p className="text-sm text-gray-500">Last Updated: May 2023</p>
           </div>
@@ -308,7 +458,8 @@ export default function SignupPage() {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Privacy Policy</DialogTitle>
             <DialogDescription>
-              At Trybe Market, we respect your privacy and are committed to protecting your personal information.
+              At Trybe Market, we respect your privacy and are committed to protecting
+              your personal information.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
@@ -327,5 +478,5 @@ export default function SignupPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
