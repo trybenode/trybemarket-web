@@ -24,7 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "react-hot-toast"; // Updated import
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import useUserStore from "@/lib/userStore";
 
@@ -46,37 +46,25 @@ export default function LoginPage() {
 
     const { initError, isInitialized } = useUserStore.getState();
     if (!isInitialized) {
-      toast({
-        title: "Store Not Initialized",
-        description: "User store is still loading. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Store Not Initialized: User store is still loading. Please try again."
+      );
       return;
     }
     if (initError) {
-      toast({
-        title: "Initialization Error",
-        description: "Failed to initialize user data. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Initialization Error: Failed to initialize user data. Please try again."
+      );
       return;
     }
 
     if (!email || !password) {
-      toast({
-        title: "Missing Fields",
-        description: "Please fill in both email and password.",
-        variant: "destructive",
-      });
+      toast.error("Missing Fields: Please fill in both email and password.");
       return;
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
+      toast.error("Invalid Email: Please enter a valid email address.");
       return;
     }
 
@@ -90,11 +78,9 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       if (!user.emailVerified) {
-        toast({
-          title: "Email Not Verified",
-          description: "Please verify your email before logging in.",
-          variant: "destructive",
-        });
+        toast.error(
+          "Email Not Verified: Please verify your email before logging in."
+        );
         await auth.signOut();
         return;
       }
@@ -108,9 +94,7 @@ export default function LoginPage() {
         email: user.email,
       });
 
-      toast({
-        title: "Login Successful",
-        description: "Welcome back!",
+      toast.success("Login Successful: Welcome back!", {
         position: "top-center",
         duration: 3000,
       });
@@ -139,11 +123,7 @@ export default function LoginPage() {
           break;
       }
 
-      toast({
-        title: "Login Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error(`Login Failed: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -159,20 +139,16 @@ export default function LoginPage() {
 
     const { initError, isInitialized } = useUserStore.getState();
     if (!isInitialized) {
-      toast({
-        title: "Store Not Initialized",
-        description: "User store is still loading. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Store Not Initialized: User store is still loading. Please try again."
+      );
       setIsGoogleSigningIn(false);
       return;
     }
     if (initError) {
-      toast({
-        title: "Initialization Error",
-        description: "Failed to initialize user data. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Initialization Error: Failed to initialize user data. Please try again."
+      );
       setIsGoogleSigningIn(false);
       return;
     }
@@ -207,9 +183,7 @@ export default function LoginPage() {
         profilePicture: user.photoURL,
       });
 
-      toast({
-        title: "Login Successful",
-        description: `Welcome ${user.displayName}`,
+      toast.success(`Login Successful: Welcome ${user.displayName}`, {
         position: "top-right",
         duration: 3000,
       });
@@ -223,11 +197,7 @@ export default function LoginPage() {
       } else if (error.code === "auth/cancelled-popup-request") {
         errorMessage = "Sign-in was cancelled";
       }
-      toast({
-        title: "Google Sign-In Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error(`Google Sign-In Failed: ${errorMessage}`);
     } finally {
       setLoading(false);
       setIsGoogleSigningIn(false);
@@ -236,28 +206,20 @@ export default function LoginPage() {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      toast({
-        title: "Missing Email",
-        description: "Please enter your email first.",
-        variant: "destructive",
-      });
+      toast.error("Missing Email: Please enter your email first.");
       return;
     }
 
     try {
       await sendPasswordResetEmail(auth, email);
-      toast({
-        title: "Reset Email Sent",
-        description:
-          "If this email is registered, you will receive reset instructions.",
-      });
+      toast.success(
+        "Reset Email Sent: If this email is registered, you will receive reset instructions."
+      );
     } catch (error) {
       console.error("Forgot Password Error:", error.message);
-      toast({
-        title: "Reset Email Sent",
-        description:
-          "If this email is registered, you will receive reset instructions.",
-      });
+      toast.success(
+        "Reset Email Sent: If this email is registered, you will receive reset instructions."
+      );
     }
   };
 

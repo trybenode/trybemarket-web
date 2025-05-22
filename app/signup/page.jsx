@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "@/components/ui/use-toast";
+import { Toaster, toast } from "react-hot-toast"; 
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import {
   Dialog,
@@ -58,53 +58,43 @@ export default function SignupPage() {
 
     const { initError, isInitialized } = useUserStore.getState();
     if (!isInitialized) {
-      toast({
-        title: "Store Not Initialized",
-        description: "User store is still loading. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Store Not Initialized: User store is still loading. Please try again."
+      );
       return;
     }
     if (initError) {
-      toast({
-        title: "Initialization Error",
-        description: "Failed to initialize user data. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Initialization Error: Failed to initialize user data. Please try again."
+      );
       return;
     }
 
     if (!email || !fullName || !password) {
-      toast({
-        title: "Incomplete Fields",
-        description: "Please fill in all fields to continue.",
-        variant: "destructive",
-      });
+      toast.error("Incomplete Fields: Please fill in all fields to continue.");
       return;
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
+      toast.error("Invalid Email: Please enter a valid email address.");
       return;
     }
 
     if (!checked) {
-      toast({
-        title: "Terms & Conditions",
-        description: "Please agree to the Terms & Conditions to continue.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Terms & Conditions: Please agree to the Terms & Conditions to continue."
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       await sendEmailVerification(user);
@@ -125,12 +115,13 @@ export default function SignupPage() {
         fullName,
       });
 
-      toast({
-        title: "Account Created 🎉",
-        description: "A verification email has been sent. Please verify your email.",
-        position: "top-center",
-        duration: 3000,
-      });
+      toast.success(
+        "Account Created 🎉: A verification email has been sent. Please verify your email.",
+        {
+          position: "top-center",
+          duration: 3000,
+        }
+      );
 
       setTimeout(async () => {
         await auth.signOut();
@@ -143,7 +134,8 @@ export default function SignupPage() {
 
       switch (err.code) {
         case "auth/email-already-in-use":
-          errorMessage = "This email is already registered. Please login or use another email.";
+          errorMessage =
+            "This email is already registered. Please login or use another email.";
           break;
         case "auth/invalid-email":
           errorMessage = "Please enter a valid email address.";
@@ -152,15 +144,12 @@ export default function SignupPage() {
           errorMessage = "Password should be at least 6 characters.";
           break;
         case "auth/network-request-failed":
-          errorMessage = "Network error. Please check your internet connection.";
+          errorMessage =
+            "Network error. Please check your internet connection.";
           break;
       }
 
-      toast({
-        title: "Sign Up Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error(`Sign Up Failed: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -176,20 +165,16 @@ export default function SignupPage() {
 
     const { initError, isInitialized } = useUserStore.getState();
     if (!isInitialized) {
-      toast({
-        title: "Store Not Initialized",
-        description: "User store is still loading. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Store Not Initialized: User store is still loading. Please try again."
+      );
       setIsGoogleSigningIn(false);
       return;
     }
     if (initError) {
-      toast({
-        title: "Initialization Error",
-        description: "Failed to initialize user data. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Initialization Error: Failed to initialize user data. Please try again."
+      );
       setIsGoogleSigningIn(false);
       return;
     }
@@ -224,9 +209,7 @@ export default function SignupPage() {
         profilePicture: user.photoURL,
       });
 
-      toast({
-        title: "Sign Up Successful 🎉",
-        description: `Welcome ${user.displayName}`,
+      toast.success(`Sign Up Successful 🎉: Welcome ${user.displayName}`, {
         position: "top-center",
         duration: 3000,
       });
@@ -242,11 +225,7 @@ export default function SignupPage() {
       } else if (error.code === "auth/network-request-failed") {
         errorMessage = "Network error. Please check your internet connection.";
       }
-      toast({
-        title: "Google Sign-In Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error(`Google Sign-In Failed: ${errorMessage}`);
     } finally {
       setLoading(false);
       setIsGoogleSigningIn(false);
@@ -271,97 +250,111 @@ export default function SignupPage() {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className='min-h-screen flex items-center justify-center bg-gray-50 px-4'>
+      
       <Head>
         <title>Sign Up - Trybe Market</title>
         <meta
-          name="description"
-          content="Create an account on Trybe Market to start buying and selling."
+          name='description'
+          content='Create an account on Trybe Market to start buying and selling.'
         />
       </Head>
-      <Card className="w-full max-w-md shadow-md p-2">
-        <CardHeader className="space-y-1 items-center">
-          <div className="h-20 w-40 relative mb-2">
-            <Image src="/assets/logo.png" alt="App Logo" fill className="object-contain" />
+      <Card className='w-full max-w-md shadow-md p-2'>
+        <CardHeader className='space-y-1 items-center'>
+          <div className='h-20 w-40 relative mb-2'>
+            <Image
+              src='/assets/logo.png'
+              alt='App Logo'
+              fill
+              className='object-contain'
+            />
           </div>
-          <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-          <CardDescription>Sign up to get started with Trybe Market</CardDescription>
+          <CardTitle className='text-2xl font-bold'>
+            Create an account
+          </CardTitle>
+          <CardDescription>
+            Sign up to get started with Trybe Market
+          </CardDescription>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSignUp} className="space-y-4">
-            <div className="space-y-2">
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <form onSubmit={handleSignUp} className='space-y-4'>
+            <div className='space-y-2'>
+              <div className='relative'>
+                <User className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                 <Input
-                  type="text"
-                  placeholder="Full Name"
-                  className="pl-10"
+                  type='text'
+                  placeholder='Full Name'
+                  className='pl-10'
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={loading}
-                  aria-label="Full Name Input"
+                  aria-label='Full Name Input'
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <div className='space-y-2'>
+              <div className='relative'>
+                <Mail className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                 <Input
-                  type="email"
-                  placeholder="Email"
-                  className="pl-10"
+                  type='email'
+                  placeholder='Email'
+                  className='pl-10'
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
-                  aria-label="Email Input"
+                  aria-label='Email Input'
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <div className='space-y-2'>
+              <div className='relative'>
+                <Lock className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                 <Input
                   type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  className="pl-10 pr-10"
+                  placeholder='Password'
+                  className='pl-10 pr-10'
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
-                  aria-label="Password Input"
+                  aria-label='Password Input'
                 />
                 <button
-                  type="button"
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  type='button'
+                  className='absolute right-3 top-3 text-gray-400 hover:text-gray-600'
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className='h-4 w-4' />
+                  ) : (
+                    <Eye className='h-4 w-4' />
+                  )}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className='flex items-center space-x-2'>
               <Checkbox
-                id="terms"
+                id='terms'
                 checked={checked}
                 onCheckedChange={(checked) => setChecked(checked === true)}
-                aria-label="Agree to Terms and Conditions"
+                aria-label='Agree to Terms and Conditions'
               />
-              <label htmlFor="terms" className="text-sm text-gray-600">
+              <label htmlFor='terms' className='text-sm text-gray-600'>
                 I agree to the{" "}
                 <button
-                  type="button"
-                  className="text-blue-600 hover:underline"
+                  type='button'
+                  className='text-blue-600 hover:underline'
                   onClick={() => setShowTerms(true)}
                 >
                   Terms & Conditions
                 </button>{" "}
                 and{" "}
                 <button
-                  type="button"
-                  className="text-blue-600 hover:underline"
+                  type='button'
+                  className='text-blue-600 hover:underline'
                   onClick={() => setShowPrivacy(true)}
                 >
                   Privacy Policy
@@ -370,55 +363,58 @@ export default function SignupPage() {
             </div>
 
             <Button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              type='submit'
+              className='w-full bg-blue-600 hover:bg-blue-700'
               disabled={loading}
-              aria-label="Sign Up Button"
+              aria-label='Sign Up Button'
             >
               {loading ? "Signing up..." : "Sign Up"}
             </Button>
           </form>
 
-          <div className="mt-6 flex items-center">
-            <Separator className="flex-grow" />
-            <span className="mx-4 text-sm text-gray-500">OR</span>
-            <Separator className="flex-grow" />
+          <div className='mt-6 flex items-center'>
+            <Separator className='flex-grow' />
+            <span className='mx-4 text-sm text-gray-500'>OR</span>
+            <Separator className='flex-grow' />
           </div>
 
           <Button
-            variant="outline"
-            className="w-full mt-4 flex items-center justify-center gap-2"
+            variant='outline'
+            className='w-full mt-4 flex items-center justify-center gap-2'
             onClick={handleGoogleSignUp}
             disabled={loading || isGoogleSigningIn}
-            aria-label="Sign Up with Google"
+            aria-label='Sign Up with Google'
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24">
+            <svg className='h-5 w-5' viewBox='0 0 24 24'>
               <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                fill="#4285F4"
+                d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'
+                fill='#4285F4'
               />
               <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853"
+                d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'
+                fill='#34A853'
               />
               <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                fill="#FBBC05"
+                d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'
+                fill='#FBBC05'
               />
               <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                fill="#EA4335"
+                d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'
+                fill='#EA4335'
               />
-              <path d="M1 1h22v22H1z" fill="none" />
+              <path d='M1 1h22v22H1z' fill='none' />
             </svg>
             Sign up with Google
           </Button>
         </CardContent>
 
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-600">
+        <CardFooter className='flex justify-center'>
+          <p className='text-sm text-gray-600'>
             Already have an account?{" "}
-            <Link href="/login" className="text-blue-600 hover:underline font-medium">
+            <Link
+              href='/login'
+              className='text-blue-600 hover:underline font-medium'
+            >
               Login
             </Link>
           </p>
@@ -427,53 +423,59 @@ export default function SignupPage() {
 
       {/* Terms and Conditions Dialog */}
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogContent className='max-w-md max-h-[80vh] overflow-y-auto'>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Terms & Conditions</DialogTitle>
+            <DialogTitle className='text-xl font-bold'>
+              Terms & Conditions
+            </DialogTitle>
             <DialogDescription>
-              Welcome to Trybe Market! By using our platform, you agree to comply with
-              these Terms and Conditions. Please read them carefully.
+              Welcome to Trybe Market! By using our platform, you agree to
+              comply with these Terms and Conditions. Please read them
+              carefully.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
+          <div className='space-y-4 mt-4'>
             {termsParagraphs.map((paragraph, index) => (
-              <p key={index} className="text-sm text-gray-700">
+              <p key={index} className='text-sm text-gray-700'>
                 {paragraph}
               </p>
             ))}
-            <p className="text-sm text-gray-700 mt-4">
+            <p className='text-sm text-gray-700 mt-4'>
               <strong>Contact Us</strong>
               <br />
-              If you have any questions about these Terms, please contact our support
-              team.
+              If you have any questions about these Terms, please contact our
+              support team.
             </p>
-            <p className="text-sm text-gray-500">Last Updated: May 2023</p>
+            <p className='text-sm text-gray-500'>Last Updated: May 2023</p>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Privacy Policy Dialog */}
       <Dialog open={showPrivacy} onOpenChange={setShowPrivacy}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogContent className='max-w-md max-h-[80vh] overflow-y-auto'>
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Privacy Policy</DialogTitle>
+            <DialogTitle className='text-xl font-bold'>
+              Privacy Policy
+            </DialogTitle>
             <DialogDescription>
-              At Trybe Market, we respect your privacy and are committed to protecting
-              your personal information.
+              At Trybe Market, we respect your privacy and are committed to
+              protecting your personal information.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
+          <div className='space-y-4 mt-4'>
             {privacyParagraphs.map((paragraph, index) => (
-              <p key={index} className="text-sm text-gray-700">
+              <p key={index} className='text-sm text-gray-700'>
                 {paragraph}
               </p>
             ))}
-            <p className="text-sm text-gray-700 mt-4">
+            <p className='text-sm text-gray-700 mt-4'>
               <strong>Contact Us</strong>
               <br />
-              If you have any questions regarding this Privacy Policy, please contact us.
+              If you have any questions regarding this Privacy Policy, please
+              contact us.
             </p>
-            <p className="text-sm text-gray-500">Last Updated: May 2023</p>
+            <p className='text-sm text-gray-500'>Last Updated: May 2023</p>
           </div>
         </DialogContent>
       </Dialog>
