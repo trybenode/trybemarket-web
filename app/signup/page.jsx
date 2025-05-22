@@ -281,7 +281,7 @@ export default function SignupPage() {
       </Head>
       <Card className="w-full max-w-md shadow-md p-2">
         <CardHeader className="space-y-1 items-center">
-          <div className="w-40 h-40 relative mb-4">
+          <div className="h-20 w-40 relative mb-2">
             <Image src="/assets/logo.png" alt="App Logo" fill className="object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold">Create an account</CardTitle>

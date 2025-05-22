@@ -1,87 +1,155 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
+import { useEffect } from "react";
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User, LogOut, ShoppingBag, MessageSquare, Settings } from "lucide-react"
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  User,
+  LogOut,
+  ShoppingBag,
+  MessageSquare,
+  Settings,
+} from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import useUserStore from "@/lib/userStore";
 
 export default function UserProfile() {
-  const [isLoggedIn, setIsLoggedIn] = useState(true)
+  const { user, setUser, clearUser } = useUserStore();
+  const isLoggedIn = !!user;
 
-  if (!isLoggedIn) {
-    return (
-      <div className="flex items-center space-x-2">
-        <Link href="/login" className="text-sm font-medium text-blue-600 hover:underline">
-          Login
-        </Link>
-        <span className="text-gray-300">|</span>
-        <Link href="/signup" className="text-sm font-medium text-blue-600 hover:underline">
-          Sign Up
-        </Link>
-      </div>
-    )
-  }
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser({
+          displayName: currentUser.displayName || "User Name",
+          email: currentUser.email || "user@example.com",
+          photoURL: currentUser.photoURL || "/images/default-avatar.png",
+        });
+      } else {
+        clearUser();
+      }
+    });
+
+    return () => unsubscribe();
+  }, [setUser, clearUser]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      clearUser();
+    } catch (error) {
+      if (__DEV__) {
+        console.error("Logout error:", error);
+      }
+    }
+  };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="focus:outline-none">
-          <Avatar className="h-9 w-9 cursor-pointer border-2 border-blue-500">
-            <AvatarImage src="/placeholder.svg?height=36&width=36" alt="User" />
-            <AvatarFallback>
-              <User className="h-5 w-5" />
-            </AvatarFallback>
-          </Avatar>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <div className="flex items-center justify-start gap-2 p-2">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User" />
-            <AvatarFallback>
-              <User className="h-4 w-4" />
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col space-y-0.5">
-            <p className="text-sm font-medium">User Name</p>
-            <p className="text-xs text-gray-500">user@example.com</p>
-          </div>
+    <div className='relative'>
+      {!isLoggedIn ? (
+        <div className='flex items-center space-x-4'>
+          <Link
+            href='/login'
+            className='text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-bg duration-200 ease-in-out focus:outline-none border border-blue-500 rounded-md px-4 py-2'
+          >
+            Login
+          </Link>
+          {/* <span className='text-gray-400 text-base'>|</span> */}
+          <Link
+            href='/signup'
+            className='text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-bg duration-200 ease-in-out focus:outline-none border border-blue-500 rounded-md px-4 py-2'
+          >
+            Sign Up
+          </Link>
         </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/my-shop" className="flex cursor-pointer items-center">
-            <ShoppingBag className="mr-2 h-4 w-4" />
-            <span>My Shop</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/messages" className="flex cursor-pointer items-center">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            <span>Messages</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings" className="flex cursor-pointer items-center">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="flex cursor-pointer items-center text-red-500 focus:text-red-500"
-          onClick={() => setIsLoggedIn(false)}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Logout</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className='focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full transition-all duration-200'
+              aria-label='Open user profile menu'
+            >
+              <Avatar className='h-10 w-10 cursor-pointer border-2 border-blue-500 hover:border-blue-600 transition-colors duration-200'>
+                <AvatarImage
+                  src={user?.photoURL}
+                  alt={user?.displayName || "User"}
+                />
+                <AvatarFallback className='bg-gray-100 text-gray-600'>
+                  <User className='h-5 w-5' />
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align='end'
+            className='w-64 bg-white shadow-lg rounded-lg border border-gray-100 p-2 mt-2'
+          >
+            <div className='flex items-center gap-3 p-3'>
+              <Avatar className='h-10 w-10'>
+                <AvatarImage
+                  src={user?.photoURL}
+                  alt={user?.displayName || "User"}
+                />
+                <AvatarFallback className='bg-gray-100 text-gray-600'>
+                  <User className='h-5 w-5' />
+                </AvatarFallback>
+              </Avatar>
+              <div className='flex flex-col'>
+                <p className='text-sm font-semibold text-gray-800 truncate max-w-[180px]'>
+                  {user?.displayName}
+                </p>
+                <p className='text-xs text-gray-500 truncate max-w-[180px]'>
+                  {user?.email}
+                </p>
+              </div>
+            </div>
+            <DropdownMenuSeparator className='bg-gray-200' />
+            <DropdownMenuItem asChild>
+              <Link
+                href='/my-shop'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <ShoppingBag className='mr-2 h-4 w-4' />
+                My Shop
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href='/messages'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <MessageSquare className='mr-2 h-4 w-4' />
+                Messages
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href='/settings'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <Settings className='mr-2 h-4 w-4' />
+                Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className='bg-gray-200' />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className='flex items-center px-3 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors duration-150 text-sm font-medium cursor-pointer'
+            >
+              <LogOut className='mr-2 h-4 w-4' />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
+  );
 }

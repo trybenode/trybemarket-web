@@ -210,7 +210,7 @@ export default function LoginPage() {
       toast({
         title: "Login Successful",
         description: `Welcome ${user.displayName}`,
-        position: "top-center",
+        position: "top-right",
         duration: 3000,
       });
 
@@ -272,7 +272,7 @@ export default function LoginPage() {
       </Head>
       <Card className='w-full max-w-md shadow-md p-2'>
         <CardHeader className='space-y-1 items-center'>
-          <div className='w-40 h-40 relative mb-1'>
+          <div className='w-40 h-20 relative mb-2'>
             <Image
               src='/assets/logo.png'
               alt='App Logo'
