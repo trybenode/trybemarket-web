@@ -132,6 +132,15 @@ export default function UserProfile() {
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
+                href='/kyc'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <MessageSquare className='mr-2 h-4 w-4' />
+                Kyc Registeration
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
                 href='/settings'
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
