@@ -14,6 +14,7 @@ import {
   User,
   LogOut,
   ShoppingBag,
+  Upload,
   MessageSquare,
   Settings,
 } from "lucide-react";
@@ -128,6 +129,15 @@ export default function UserProfile() {
               >
                 <MessageSquare className='mr-2 h-4 w-4' />
                 Messages
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href='/sell'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <Upload className='mr-2 h-4 w-4' />
+                Sell
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
