@@ -11,8 +11,9 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, MessageCircle, ChevronLeft } from "lucide-react";
-import { toast } from 'react-hot-toast';
+import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
+
 import {
   getUserIdOfSeller,
   initiateConversation,
@@ -75,7 +76,6 @@ export default function ListingDetailsPage({ params }) {
     }
   }, [product]);
 
-
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) setCurrentUserId(user.uid);
@@ -128,18 +128,21 @@ export default function ListingDetailsPage({ params }) {
       setMessage("");
 
       if (conversationId) {
-        navigation.navigate("Chat", {
-          conversationId,
-          otherUserId: sellerID,
-          productDetails,
+        router.push({
+          pathname: "/chat",
+          query: {
+            conversationId,
+            otherUserId: sellerID,
+            productDetails: JSON.stringify(productDetails),
+          },
         });
       }
     } catch (error) {
       console.error("Error sending message:", error);
-        toast.error("Failed to send message", {
-          duration: 4000,
-          position: "top-right",
-        });
+      toast.error("Failed to send message", {
+        duration: 4000,
+        position: "top-right",
+      });
     } finally {
       setSendingMessage(false);
     }
