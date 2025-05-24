@@ -43,6 +43,7 @@ export default function ListingDetailsPage({ params }) {
             ...docSnap.data(),
           };
           setProduct(productData);
+  
 
           if (productData.images?.length > 0) {
             setSelectedImage(
@@ -69,6 +70,7 @@ export default function ListingDetailsPage({ params }) {
     });
     return () => unsubscribe();
   }, []);
+
 
   //messaging logic
   useEffect(() => {
