@@ -1,163 +1,149 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { auth } from "@/lib/firebase"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { ChevronLeft, Send } from "lucide-react"
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { auth } from "@/lib/firebase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ChevronLeft, Send } from "lucide-react";
 
 export default function ChatPage({ params }) {
-  const router = useRouter()
-  const [conversation, setConversation] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [newMessage, setNewMessage] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [currentUserId, setCurrentUserId] = useState(null)
-  const [otherUser, setOtherUser] = useState(null)
+  const router = useRouter();
+  const { conversationId, otherUserId, productDetails } = router.query;
+  const [conversation, setConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [otherUser, setOtherUser] = useState(null);
 
-  const messagesEndRef = useRef(null)
+  const messagesEndRef = useRef(null);
 
   // Check if user is authenticated
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
-        router.push("/login")
+        router.push("/login");
       } else {
-        setCurrentUserId(user.uid)
+        setCurrentUserId(user.uid);
       }
-    })
+    });
 
-    return () => unsubscribe()
-  }, [router])
+    return () => unsubscribe();
+  }, [router]);
+
+
+  useEffect(() => {
+    if (productDetails) {
+      try {
+        setProduct(JSON.parse(productDetails));
+      } catch (error) {
+        console.error("Invalid productDetails JSON", error);
+      }
+    }
+  }, [productDetails]);
+
+    const sendMessage = async () => {
+    if (!newMessage.trim() || !currentUserId) return;
+
+    try {
+      const messageObj = {
+        senderID: currentUserId,
+        text: newMessage,
+        timestamp: Date.now(),
+      };
+      await addMessageToConversation(messageObj, conversationId);
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to send message',
+      });
+    }
+  };
 
   // Fetch conversation and messages
   useEffect(() => {
-    const fetchData = async () => {
-      if (!params.id || !currentUserId) return
-
-      try {
-        // Demo data; replace with actual Firestore fetch
-        const sampleConversation = {
-          id: params.id,
-          participants: [currentUserId, "user2"],
-          product: {
-            id: "prod1",
-            name: "iPhone 13 Pro",
-            imageUrl: "/placeholder.svg?height=64&width=64",
-          },
-        }
-
-        const sampleMessages = [
-          {
-            id: "msg1",
-            text: "Hi, is this still available?",
-            senderId: currentUserId,
-            timestamp: Date.now() - 3600000 * 2, // 2 hours ago
-          },
-          {
-            id: "msg2",
-            text: "Yes, it's still available.",
-            senderId: "user2",
-            timestamp: Date.now() - 3600000, // 1 hour ago
-          },
-          {
-            id: "msg3",
-            text: "Great! What's the lowest you can go?",
-            senderId: currentUserId,
-            timestamp: Date.now() - 1800000, // 30 minutes ago
-          },
-          {
-            id: "msg4",
-            text: "I can do ₦480,000.",
-            senderId: "user2",
-            timestamp: Date.now() - 900000, // 15 minutes ago
-          },
-        ]
-
-        setConversation(sampleConversation)
-        setMessages(sampleMessages)
-
-        // Demo other user
-        setOtherUser({
-          id: "user2",
-          name: "John Doe",
-          avatar: "/placeholder.svg?height=40&width=40",
-        })
-      } catch (error) {
-        console.error("Error fetching data:", error)
-      } finally {
-        setLoading(false)
-      }
+    if (conversationId) {
+      const unsubscribe = getConversationWithID(conversationId, setConversation);
+      return () => unsubscribe();
     }
-
-    fetchData()
-  }, [params.id, currentUserId])
+  }, [conversationId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSendMessage = async (e) => {
-    e.preventDefault()
-    if (!newMessage.trim() || !currentUserId || !conversation) return
+    e.preventDefault();
+    if (!newMessage.trim() || !currentUserId || !conversation) return;
 
     try {
-      setSending(true)
+      setSending(true);
       // Demo send; replace with Firestore write
       const newMsg = {
         id: `msg${messages.length + 1}`,
         text: newMessage.trim(),
         senderId: currentUserId,
         timestamp: Date.now(),
-      }
-      setMessages([...messages, newMsg])
-      setNewMessage("")
+      };
+      setMessages([...messages, newMsg]);
+      setNewMessage("");
     } catch (error) {
-      console.error("Error sending message:", error)
+      console.error("Error sending message:", error);
     } finally {
-      setSending(false)
+      setSending(false);
     }
-  }
+  };
 
   const formatTimestamp = (ts) =>
-    new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   const formatDate = (ts) => {
-    const date = new Date(ts)
-    const today = new Date()
-    if (date.toDateString() === today.toDateString()) return "Today"
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-    if (date.toDateString() === yesterday.toDateString()) return "Yesterday"
-    return date.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })
-  }
+    const date = new Date(ts);
+    const today = new Date();
+    if (date.toDateString() === today.toDateString()) return "Today";
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return date.toLocaleDateString([], {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
-    const dateLabel = formatDate(message.timestamp)
-    if (!groups[dateLabel]) groups[dateLabel] = []
-    groups[dateLabel].push(message)
-    return groups
-  }, {})
+    const dateLabel = formatDate(message.timestamp);
+    if (!groups[dateLabel]) groups[dateLabel] = [];
+    groups[dateLabel].push(message);
+    return groups;
+  }, {});
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
-    )
+    );
   }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="flex items-center mb-6">
-        <Button variant="ghost" className="p-0 mr-2" onClick={() => router.push("/messages")}>
+        <Button
+          variant="ghost"
+          className="p-0 mr-2"
+          onClick={() => router.push("/messages")}
+        >
           <ChevronLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-2xl font-bold">Chat</h1>
@@ -176,11 +162,15 @@ export default function ChatPage({ params }) {
               />
             </div>
             <div className="ml-4">
-              <CardTitle className="text-lg">{conversation?.product.name}</CardTitle>
+              <CardTitle className="text-lg">
+                {conversation?.product.name}
+              </CardTitle>
               <Button
                 variant="link"
                 className="p-0 h-auto text-sm text-blue-600"
-                onClick={() => router.push(`/listing/${conversation?.product.id}`)}
+                onClick={() =>
+                  router.push(`/listing/${conversation?.product.id}`)
+                }
               >
                 View Product
               </Button>
@@ -199,11 +189,13 @@ export default function ChatPage({ params }) {
                 </span>
               </div>
               {msgs.map((msg) => {
-                const isMe = msg.senderId === currentUserId
+                const isMe = msg.senderId === currentUserId;
                 return (
                   <div
                     key={msg.id}
-                    className={`flex mb-4 ${isMe ? "justify-end" : "justify-start"}`}
+                    className={`flex mb-4 ${
+                      isMe ? "justify-end" : "justify-start"
+                    }`}
                   >
                     {!isMe && (
                       <div className="relative h-8 w-8 rounded-full overflow-hidden mr-2">
@@ -231,7 +223,7 @@ export default function ChatPage({ params }) {
                       </p>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           ))}
@@ -258,5 +250,5 @@ export default function ChatPage({ params }) {
         </form>
       </div>
     </div>
-  )
+  );
 }
