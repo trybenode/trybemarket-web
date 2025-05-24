@@ -129,7 +129,7 @@ export default function ListingDetailsPage({ params }) {
 
       if (conversationId) {
         router.push({
-          pathname: "/chat",
+          pathname: `/chat/${conversationId}`,
           query: {
             conversationId,
             otherUserId: sellerID,
