@@ -1,13 +1,14 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { UserProvider } from "@/context/UserContext";
 import { ToastProvider } from "@/components/ToastProvider";
 export const metadata = {
   title: "trybemarket",
   description: "student e-commerce platform",
-  icons:{
+  icons: {
     // icon: "/logo.png"
-    icon: '/logo.jpeg'
-  }
+    icon: "/logo.jpeg",
+  },
 };
 
 export default function RootLayout({ children }) {
@@ -33,7 +34,7 @@ export default function RootLayout({ children }) {
             duration: 2000,
           }}
         />
-        {children}
+        <UserProvider>{children}</UserProvider>
       </body>
     </html>
   );
