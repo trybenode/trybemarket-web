@@ -1,68 +1,99 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import Link from "next/link"
-import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Heart, MessageCircle, ChevronLeft } from "lucide-react"
-import { formatNumber } from "@/lib/utils"
+import React, { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { doc, getDoc } from "firebase/firestore";
+import { db, auth} from "@/lib/firebase";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Heart, MessageCircle, ChevronLeft } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
+import SellerDetailsAndRelatedProducts from "@/components/SellerDetailsAndRelatedProducts";
 
 export default function ListingDetailsPage({ params }) {
-  const router = useRouter()
-  const [product, setProduct] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [selectedImage, setSelectedImage] = useState(null)
-  const [liked, setLiked] = useState(false)
-  const [message, setMessage] = useState("")
-  const id = params.id
+  const router = useRouter();
+  const { id } = React.use(params);
+  const itemId = id || product?.id;
+  const [sellerID, setSellerID] = useState(null);
+  const [currentProduct, setCurrentProduct] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [liked, setLiked] = useState(false);
+  const [message, setMessage] = useState("");
+  const effectiveProductId = itemId || currentProduct?.id;
 
+  //product fetch 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        if (!id) return
+        if (!id) return;
 
-        const docRef = doc(db, "products", id)
-        const docSnap = await getDoc(docRef)
+        const docRef = doc(db, "products", id);
+        const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
           const productData = {
             id: docSnap.id,
             ...docSnap.data(),
-          }
-          setProduct(productData)
+          };
+          setProduct(productData);
 
           if (productData.images?.length > 0) {
             setSelectedImage(
               productData.images[0]?.url || productData.images[0]
-            )
+            );
           }
         } else {
-          console.warn("Product not found")
+          console.warn("Product not found");
         }
       } catch (error) {
-        console.error("Error fetching product:", error)
+        console.error("Error fetching product:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) setCurrentUserId(user.uid);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  //messaging logic
+  useEffect(() => {
+    if (currentProduct?.userId) {
+      setSellerID(currentProduct.userId);
+    } else if (itemId) {
+      const fetchSeller = async () => {
+        try {
+          const id = await getUserIdOfSeller(itemId);
+          if (id) setSellerID(id);
+        } catch (error) {
+          console.error("Error fetching seller ID:", error);
+        }
+      };
+      fetchSeller();
     }
-
-    fetchProduct()
-  }, [id])
-
-  const handleLiked = () => setLiked(!liked)
+  }, [currentProduct, itemId]);
+  const handleLiked = () => setLiked(!liked);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
-    )
+    );
   }
 
   if (!product) {
@@ -71,7 +102,7 @@ export default function ListingDetailsPage({ params }) {
         <p className="text-xl text-gray-600 mb-4">Product not found</p>
         <Button onClick={() => router.push("/")}>Back to Home</Button>
       </div>
-    )
+    );
   }
 
   const {
@@ -87,7 +118,7 @@ export default function ListingDetailsPage({ params }) {
     subcategory = "",
     color = "",
     year = "",
-  } = product
+  } = product;
 
   const details = [
     { label: "Category", value: categoryId },
@@ -96,18 +127,24 @@ export default function ListingDetailsPage({ params }) {
     { label: "Condition", value: condition },
     { label: "Color", value: color },
     { label: "Year", value: year },
-  ]
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
       <div className="mb-6 flex items-center">
-        <Button variant="ghost" className="p-0 mr-2" onClick={() => router.back()}>
+        <Button
+          variant="ghost"
+          className="p-0 mr-2"
+          onClick={() => router.back()}
+        >
           <ChevronLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-2xl font-bold">Product Details</h1>
         <Button variant="ghost" className="ml-auto" onClick={handleLiked}>
-          <Heart className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`} />
+          <Heart
+            className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
+          />
         </Button>
       </div>
 
@@ -132,7 +169,7 @@ export default function ListingDetailsPage({ params }) {
 
           <div className="flex space-x-2 overflow-x-auto pb-2">
             {images.map((image, index) => {
-              const imgSrc = image.url || image
+              const imgSrc = image.url || image;
               return (
                 <div
                   key={index}
@@ -151,7 +188,7 @@ export default function ListingDetailsPage({ params }) {
                     sizes="80px"
                   />
                 </div>
-              )
+              );
             })}
           </div>
         </div>
@@ -224,44 +261,17 @@ export default function ListingDetailsPage({ params }) {
               </Button>
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex space-x-4">
-            <Button className="flex-1 bg-blue-600 hover:bg-blue-700">
-              Contact Seller
-            </Button>
-            <Button variant="outline" className="flex-1">
-              <Heart className={`h-4 w-4 mr-2 ${liked ? "fill-red-500 text-red-500" : ""}`} />
-              Add to Wishlist
-            </Button>
-          </div>
         </div>
       </div>
 
       <Separator className="my-8" />
 
       {/* Seller Info */}
-      <div className="mt-8">
-        <h2 className="text-xl font-bold mb-4">Seller Information</h2>
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-center space-x-4">
-          <div className="relative w-16 h-16 rounded-full overflow-hidden">
-            <Image
-              src="/placeholder.svg?height=64&width=64"
-              alt="Seller"
-              fill
-              className="object-cover"
-              sizes="64px"
-            />
-          </div>
-          <div>
-            <h3 className="font-semibold">Seller Name</h3>
-            <p className="text-sm text-gray-500">Member since 2023</p>
-            <Link href="/shop/seller-id" className="text-sm text-blue-600 hover:underline">
-              View Seller's Shop
-            </Link>
-          </div>
-        </div>
-      </div>
+      <SellerDetailsAndRelatedProducts
+        key={effectiveProductId}
+        productId={effectiveProductId}
+        product={currentProduct}
+      />
     </div>
-  )
+  );
 }
