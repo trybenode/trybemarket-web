@@ -128,14 +128,7 @@ export default function ListingDetailsPage({ params }) {
       setMessage("");
 
       if (conversationId) {
-        router.push({
-          pathname: `/chat/${conversationId}`,
-          query: {
-            conversationId,
-            otherUserId: sellerID,
-            productDetails: JSON.stringify(productDetails),
-          },
-        });
+        router.push(`/chat/${conversationId}`);
       }
     } catch (error) {
       console.error("Error sending message:", error);

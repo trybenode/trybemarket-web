@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -156,19 +156,8 @@ export default function MessagesPage() {
                       </p>
                       <Button
                         variant="link"
-                        className="p-0 h-auto text-xs text-blue-600"
-                        onClick={() => {
-                          router.push({
-                            pathname: `/chat/${conversation.id}`,
-                            query: {
-                              conversationId: conversation.id,
-                              otherUserId: conversation.participants.find(
-                                (id) => id !== currentUserId
-                              ),
-                              productDetails: conversation.product,
-                            },
-                          });
-                        }}
+                        className="p-0 h-auto text-xs text-blue-600"                        
+                        onClick={() => router.push(`/chat/${conversation.id}}`)}
                       >
                         View
                       </Button>

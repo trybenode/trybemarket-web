@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, Send } from "lucide-react";
+import { getConversationWithID } from "@/utils/messaginghooks";
 
 export default function ChatPage({ params }) {
   const router = useRouter();
-  const { conversationId, otherUserId, productDetails } = router.query;
+  const { conversationId } = params;
+  // const { conversationId, otherUserId, productDetails } = router.query;
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -38,17 +40,7 @@ export default function ChatPage({ params }) {
   }, [router]);
 
 
-  useEffect(() => {
-    if (productDetails) {
-      try {
-        setProduct(JSON.parse(productDetails));
-      } catch (error) {
-        console.error("Invalid productDetails JSON", error);
-      }
-    }
-  }, [productDetails]);
-
-    const sendMessage = async () => {
+  const sendMessage = async () => {
     if (!newMessage.trim() || !currentUserId) return;
 
     try {
@@ -58,12 +50,12 @@ export default function ChatPage({ params }) {
         timestamp: Date.now(),
       };
       await addMessageToConversation(messageObj, conversationId);
-      setNewMessage('');
+      setNewMessage("");
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
       Toast.show({
-        type: 'error',
-        text1: 'Failed to send message',
+        type: "error",
+        text1: "Failed to send message",
       });
     }
   };
@@ -71,7 +63,12 @@ export default function ChatPage({ params }) {
   // Fetch conversation and messages
   useEffect(() => {
     if (conversationId) {
-      const unsubscribe = getConversationWithID(conversationId, setConversation);
+      const unsubscribe = getConversationWithID(
+        conversationId,
+        setConversation
+      );
+      setProduct(conversation?.product || null);
+      setLoading(!loading);
       return () => unsubscribe();
     }
   }, [conversationId]);
