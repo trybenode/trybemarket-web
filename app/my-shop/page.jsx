@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, RefreshCw } from "lucide-react"
 import ListingCard from "@/components/ListingCard"
+import SellerProfileCard from "@/components/SellerProfileCard"
 
 export default function MyShopPage() {
   const router = useRouter()
@@ -120,33 +121,7 @@ export default function MyShopPage() {
         </div>
       </div>
 
-      <Card className="mb-8">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="relative w-24 h-24 rounded-full overflow-hidden">
-              <Image
-                src={userProfile?.profilePicture || "/placeholder.svg?height=96&width=96"}
-                alt="Profile"
-                fill
-                className="object-cover"
-                sizes="96px"
-              />
-            </div>
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-xl font-bold">{userProfile?.fullName || "Your Shop"}</h2>
-              <p className="text-gray-500">
-                Member since {new Date(userProfile?.createdAt || Date.now()).getFullYear()}
-              </p>
-              <p className="text-gray-500">{userProfile?.address || "No address provided"}</p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Button variant="outline" onClick={() => router.push("/settings")}>
-                Edit Profile
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <SellerProfileCard userProfile={userProfile}/>
 
       <Tabs defaultValue="products" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
