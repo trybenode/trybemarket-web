@@ -1,30 +1,80 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Search } from "lucide-react"
+import { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { Input } from "@/components/ui/input"
+import { Search } from "lucide-react"
 
 export default function SearchBar({ onResults }) {
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // This is a placeholder for actual search functionality
-  // You would replace this with your actual search logic
+  // Fetch products on mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          product: {
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate(),
+          },
+        }));
+        setProducts(data);
+        onResults(data, false); // Load all by default
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Debounce user input
   useEffect(() => {
     const delaySearch = setTimeout(() => {
-      if (searchQuery.trim()) {
-        // Placeholder for actual search implementation
-        // In a real app, you would fetch results from your database
-        console.log("Searching for:", searchQuery)
+      setDebouncedQuery(searchQuery);
+    }, 500);
 
-        // For now, we're just passing an empty array and search status
-        onResults([], searchQuery.trim().length > 0)
-      } else {
-        onResults([], false)
-      }
-    }, 500)
+    return () => clearTimeout(delaySearch);
+  }, [searchQuery]);
 
-    return () => clearTimeout(delaySearch)
-  }, [searchQuery, onResults])
+  // Search logic
+  useEffect(() => {
+    if (!debouncedQuery.trim()) {
+      onResults(products, false);
+      return;
+    }
+
+    const filtered = products.filter((prod) => {
+      const item = prod.product;
+      const q = debouncedQuery.toLowerCase();
+
+      return (
+        item.name?.toLowerCase().includes(q) ||
+        item.categoryId?.toLowerCase().includes(q) ||
+        item.brand?.toLowerCase().includes(q) ||
+        item.subcategory?.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q) 
+        
+      );
+    });
+
+    onResults(filtered, true);
+  }, [debouncedQuery, products]);
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+  };
+
 
   return (
     <div className="relative">
@@ -34,7 +84,7 @@ export default function SearchBar({ onResults }) {
       <Input
         type="text"
         placeholder="Search products..."
-        className="pl-10 py-2 rounded-full border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        className="pl-10 py-2 rounded-full border border-gray-300 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />
