@@ -1,8 +1,7 @@
 "use client"
 
-
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import React, { useState, useEffect, useCallback } from "react"
+import { useRouter , useSearchParams} from "next/navigation"
 import Image from "next/image"
 import { collection, getDoc, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
@@ -27,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ChevronLeft, Trash2, Upload, X } from "lucide-react"
 
-// Sample categories - replace with your actual categories
+// Sample categories
 const categories = [
   { id: "electronics", name: "Electronics" },
   { id: "clothing", name: "Clothing" },
@@ -42,14 +41,18 @@ const categories = [
 export default function SellPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const productId = searchParams.get("id")
-  const isEditMode = !!productId
+  const productId = searchParams.get('id')
+  const isEditMode = Boolean(productId)
 
+
+  // Loading states
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [product, setProduct] = useState<any>(null)
+  const [checkingVerification, setCheckingVerification] = useState(true)
+  const [showVerificationAlert, setShowVerificationAlert] = useState(false)
 
-  // Form state
+  // Product and form state
+  const [product, setProduct] = useState(null)
   const [productName, setProductName] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("")
   const [subCategory, setSubCategory] = useState("")
@@ -64,202 +67,203 @@ export default function SellPage() {
   const [originalPrice, setOriginalPrice] = useState("")
   const [year, setYear] = useState("")
 
-  // Check if user is authenticated
+  // Protect route: redirect unauthenticated
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        router.push("/login")
-      }
+      if (!user) router.push("/login")
     })
-
-    return () => unsubscribe()
+    return unsubscribe
   }, [router])
 
-  // Fetch product data if in edit mode
+  // Check KYC verification on mount
+  useEffect(() => {
+    let isActive = true
+    const verifyUser = async () => {
+      try {
+        const currentUser = auth.currentUser
+        if (!currentUser) throw new Error('no-user')
+
+        const snap = await getDoc(doc(db, 'users', currentUser.uid))
+        const verified = snap.exists() && snap.data().isVerified
+        if (!verified && isActive) setShowVerificationAlert(true)
+      } catch {
+        if (isActive) setShowVerificationAlert(true)
+      } finally {
+        if (isActive) setCheckingVerification(false)
+      }
+    }
+    verifyUser()
+    return () => { isActive = false }
+  }, [])
+
+  // Show verification modal
+  useEffect(() => {
+    if (!showVerificationAlert) return
+    const proceed = window.confirm(
+      'You are not verified. Please complete KYC to continue.'
+    )
+    setShowVerificationAlert(false)
+    if (proceed) router.push('/kyc')
+    else router.back()
+  }, [showVerificationAlert, router])
+
+  // Fetch product data if editing
   useEffect(() => {
     const fetchProduct = async () => {
-      if (isEditMode && productId) {
-        try {
-          const productDoc = await getDoc(doc(db, "products", productId))
-
-          if (productDoc.exists()) {
-            const productData = productDoc.data()
-            setProduct(productData)
-
-            // Populate form fields
-            setProductName(productData.name || "")
-            setSelectedCategory(productData.categoryId || "")
-            setSubCategory(productData.subcategory || "")
-            setIsNegotiable(productData.negotiable || false)
-            setProductDescription(productData.description || "")
-            setBrand(productData.brand || "")
-            setCondition(productData.condition || "")
-            setColor(productData.color || "")
-            setPrice(productData.price?.toString() || "")
-            setOriginalPrice(productData.originalPrice?.toString() || "")
-            setYear(productData.year || "")
-            setImages(Array.isArray(productData.images) ? productData.images : [])
-          } else {
-            toast({
-              title: "Product not found",
-              description: "The product you're trying to edit doesn't exist.",
-              variant: "destructive",
-            })
-            router.push("/my-shop")
-          }
-        } catch (error) {
-          console.error("Error fetching product:", error)
-          toast({
-            title: "Error",
-            description: "Failed to load product data. Please try again.",
-            variant: "destructive",
-          })
+      if (!isEditMode) { setLoading(false); return }
+      try {
+        const docSnap = await getDoc(doc(db, 'products', productId))
+        if (!docSnap.exists()) {
+          toast({ title: 'Not found', description: 'Product not found', variant: 'destructive' })
+          router.push('/my-shop')
+          return
         }
+        const data = docSnap.data()
+        setProduct(data)
+        // populate form
+        setProductName(data.name || '')
+        setSelectedCategory(data.categoryId || '')
+        setSubCategory(data.subcategory || '')
+        setIsNegotiable(data.negotiable || false)
+        setProductDescription(data.description || '')
+        setBrand(data.brand || '')
+        setCondition(data.condition || '')
+        setColor(data.color || '')
+        setPrice(data.price?.toString() || '')
+        setOriginalPrice(data.originalPrice?.toString() || '')
+        setYear(data.year || '')
+        setImages(Array.isArray(data.images) ? data.images : [])
+      } catch (err) {
+        console.error(err)
+        toast({ title: 'Error', description: 'Failed load product', variant: 'destructive' })
+        router.push('/my-shop')
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
-
     fetchProduct()
   }, [isEditMode, productId, router])
 
-  const handleImageUpload = () => {
-    const files = e.target.files
+  // Clear form on unmount
+  const clearForm = useCallback(() => {
+    setProductName('')
+    setSubCategory('')
+    setSelectedCategory('')
+    setIsNegotiable(false)
+    setProductDescription('')
+    setBrand('')
+    setCondition('')
+    setColor('')
+    setPrice('')
+    setOriginalPrice('')
+    setYear('')
+    setImages([])
+    setIsAgreed(false)
+  }, [])
+  useEffect(() => clearForm, [clearForm])
 
-    if (!files || files.length === 0) return
+  // Warn on unsaved changes
+  const arraysAreEqual = (a,b) => a.length===b.length && a.every((v,i)=>v===b[i])
+  const hasUnsaved = useCallback(() => {
+    if (!isEditMode) return productName||price||selectedCategory||productDescription||brand||condition||color||year||images.length
+    return (
+      productName!==product?.name ||
+      price!==product?.price?.toString() ||
+      selectedCategory!==product?.categoryId ||
+      subCategory!==product?.subcategory ||
+      isNegotiable!==product?.negotiable ||
+      productDescription!==product?.description ||
+      brand!==product?.brand ||
+      condition!==product?.condition ||
+      color!==product?.color ||
+      originalPrice!==product?.originalPrice?.toString() ||
+      year!==product?.year ||
+      !arraysAreEqual(images, product?.images||[])
+    )
+  }, [isEditMode, product, productName, price, selectedCategory, subCategory, isNegotiable, productDescription, brand, condition, color, originalPrice, year, images])
+  useEffect(() => {
+    const handleBefore = (e) => {
+      if (hasUnsaved()) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBefore)
+    return () => window.removeEventListener('beforeunload', handleBefore)
+  }, [hasUnsaved])
 
-    // This is a placeholder for actual image upload
-    // In a real implementation, you would upload to a storage service like Firebase Storage
-
-    // For demo purposes, we'll use local URLs
-    const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
-    setImages([...images, ...newImages])
-
-    // Reset the input
-    e.target.value = ""
+  // Image upload handler
+  const handleImageUpload = async (e) => {
+    const files = e.target.files; if (!files.length) return
+    const arr = Array.from(files)
+    try {
+      const urls = await Promise.all(arr.map(async file => {
+        const data = new FormData()
+        data.append('file', file)
+        data.append('upload_preset','ProductImage')
+        data.append('cloud_name','dj21x4jnt')
+        data.append('folder','market_trybe_products')
+        const res = await fetch('https://api.cloudinary.com/v1_1/dj21x4jnt/image/upload',{ method:'POST', body:data })
+        const json = await res.json()
+        if (!json.secure_url) throw new Error('Upload failed')
+        return json.secure_url
+      }))
+      setImages(prev => [...prev, ...urls])
+    } catch (err) {
+      console.error(err)
+      toast({ title:'Upload Error', description: err.message, variant:'destructive' })
+    }
   }
 
-  const removeImage = (index) => {
-    const newImages = [...images]
-    newImages.splice(index, 1)
-    setImages(newImages)
-  }
-
+  // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault()
-
-    // Validation
-    if (
-      !productName ||
-      !selectedCategory ||
-      !productDescription ||
-      !brand ||
-      !condition ||
-      !color ||
-      !price ||
-      !year ||
-      images.length === 0
-    ) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields and upload at least one image.",
-        variant: "destructive",
-      })
+    if (!productName||!selectedCategory||!productDescription||!brand||!condition||!color||!price||!year||images.length===0) {
+      toast({ title:'Missing Info', description:'Fill all fields & add images', variant:'destructive' })
       return
     }
-
     if (!isEditMode && !isAgreed) {
-      toast({
-        title: "Terms & Conditions",
-        description: "Please agree to the terms and conditions to continue.",
-        variant: "destructive",
-      })
+      toast({ title:'Terms', description:'Agree to terms', variant:'destructive' })
       return
     }
-
     try {
       setSaving(true)
-
-      // Check authentication
-      if (!auth.currentUser) {
-        throw new Error("User not authenticated")
+      const user = auth.currentUser
+      if (!user) throw new Error('not-auth')
+      const data = {
+        name:productName.trim(), subcategory:subCategory.trim(), categoryId:selectedCategory,
+        negotiable:isNegotiable, description:productDescription.trim(), brand:brand.trim(),
+        condition, color, price:parseFloat(price)||0, originalPrice:parseFloat(originalPrice)||0,
+        year:year.trim(), images, userId:user.uid,
+        ...(isEditMode?{updatedAt:new Date()}:{createdAt:new Date()})
       }
-
-      // Prepare product data
-      const productData = {
-        name: productName.trim(),
-        subcategory: subCategory.trim(),
-        categoryId: selectedCategory,
-        negotiable: isNegotiable,
-        description: productDescription.trim(),
-        brand: brand.trim(),
-        condition: condition.trim(),
-        color: color.trim(),
-        price: Number.parseFloat(price) || 0,
-        originalPrice: Number.parseFloat(originalPrice) || 0,
-        year: year.trim(),
-        images: images,
-        userId: auth.currentUser.uid,
-        ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
-      }
-
-      // Create or update product
-      if (isEditMode && productId) {
-        await updateDoc(doc(db, "products", productId), productData)
-        toast({
-          title: "Success",
-          description: "Product updated successfully",
-        })
-      } else {
-        await addDoc(collection(db, "products"), productData)
-        toast({
-          title: "Success",
-          description: "Product uploaded successfully",
-        })
-      }
-
-      router.push("/my-shop")
-    } catch (error) {
-      console.error("Failed to save product:", error)
-      toast({
-        title: "Error",
-        description: `Failed to save product: ${error.message}`,
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
+      if (isEditMode) await updateDoc(doc(db,'products',productId), data)
+      else await addDoc(collection(db,'products'), data)
+      toast({ title:'Success', description: isEditMode?'Updated':'Uploaded' })
+      router.push('/my-shop')
+    } catch(err) {
+      console.error(err)
+      toast({ title:'Error', description:err.message, variant:'destructive' })
+    } finally { setSaving(false) }
   }
 
+  // Delete handler
   const handleDelete = async () => {
-    if (!isEditMode || !productId) return
-
-    try {
-      setSaving(true)
-      await deleteDoc(doc(db, "products", productId))
-
-      toast({
-        title: "Success",
-        description: "Product deleted successfully",
-      })
-
-      router.push("/my-shop")
-    } catch (error) {
-      console.error("Failed to delete product:", error)
-      toast({
-        title: "Error",
-        description: `Failed to delete product: ${error.message}`,
-        variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
-    }
+    if (!isEditMode) return
+    const confirm = window.confirm('Delete this product?')
+    if (!confirm) return
+    try { setSaving(true)
+      await deleteDoc(doc(db,'products',productId))
+      toast({ title:'Deleted', description:'Product removed' })
+      router.push('/my-shop')
+    } catch(err) { console.error(err); toast({ title:'Error', description:'Delete failed', variant:'destructive' }) }
+    finally { setSaving(false) }
   }
 
-  if (loading) {
+  if (loading || checkingVerification) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     )
   }
