@@ -20,6 +20,7 @@ import {
   Pencil,
   CheckCircle2,
 } from "lucide-react";
+import { MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
@@ -63,12 +64,13 @@ export default function UserProfile() {
               className='focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full transition-all duration-200'
               aria-label='Open user profile menu'
             >
-              <Avatar className='h-10 w-10 cursor-pointer border-2 border-blue-500 hover:border-blue-600 transition-colors duration-200'>
+              <Avatar className='h-10 w-10 cursor-pointer border-2 border-blue-500 hover:border-blue-600 transition-colors duration-200 aspect-square'>
                 <AvatarImage
                   src={
                     currentUser?.profilePicture || "/images/default-avatar.png"
                   }
                   alt={currentUser?.fullName || "User"}
+                  className='object-cover w-full h-full'
                 />
                 <AvatarFallback className='bg-gray-100 text-gray-600'>
                   <User className='h-5 w-5' />
@@ -81,12 +83,13 @@ export default function UserProfile() {
             className='w-64 bg-white shadow-lg rounded-lg border border-gray-100 p-2 mt-2'
           >
             <div className='flex items-center gap-3 p-3'>
-              <Avatar className='h-10 w-10'>
+              <Avatar className='h-10 w-10 aspect-square'>
                 <AvatarImage
                   src={
                     currentUser?.profilePicture || "/images/default-avatar.png"
                   }
                   alt={currentUser?.fullName || "User"}
+                  className='object-cover w-full h-full'
                 />
                 <AvatarFallback className='bg-gray-100 text-gray-600'>
                   <User className='h-5 w-5' />
@@ -98,7 +101,7 @@ export default function UserProfile() {
                     {currentUser?.fullName || "User"}
                   </p>
                   {currentUser?.isVerified && (
-                    <CheckCircle2
+                    <MdVerified
                       className='h-5 w-5 text-green-500'
                       aria-label='Verified User'
                       title='Verified User'
