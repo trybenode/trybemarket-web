@@ -1,4 +1,3 @@
-// components/ui/UserProfile.js
 "use client";
 
 import { useContext } from "react";
@@ -18,7 +17,8 @@ import {
   Upload,
   MessageSquare,
   Settings,
-  CheckCircle2, // Using CheckCircle2 for a more refined verified badge
+  Pencil,
+  CheckCircle2,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -151,11 +151,11 @@ export default function UserProfile() {
             )}
             <DropdownMenuItem asChild>
               <Link
-                href='/settings'
+                href='/edit-profile'
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
-                <Settings className='mr-2 h-4 w-4' />
-                Settings
+                <Pencil className='mr-2 h-4 w-4' />
+                Edit Profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className='bg-gray-200' />
