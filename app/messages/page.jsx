@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
 import { getAllConversations } from "@/utils/messaginghooks";
+import UserProfile from "@/components/UserProfile";
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -105,6 +106,7 @@ export default function MessagesPage() {
           />
           Refresh
         </Button> */}
+        <UserProfile />
       </div>
 
       {conversations.length > 0 ? (
