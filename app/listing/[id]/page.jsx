@@ -5,13 +5,19 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { doc, getDoc } from "firebase/firestore";
-import { db, auth} from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, MessageCircle, ChevronLeft } from "lucide-react";
+import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
+
+import {
+  getUserIdOfSeller,
+  initiateConversation,
+} from "@/utils/messaginghooks";
 import SellerDetailsAndRelatedProducts from "@/components/SellerDetailsAndRelatedProducts";
 
 export default function ListingDetailsPage({ params }) {
@@ -26,9 +32,10 @@ export default function ListingDetailsPage({ params }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [liked, setLiked] = useState(false);
   const [message, setMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
   const effectiveProductId = itemId || currentProduct?.id;
 
-  //product fetch 
+  //product fetch
   useEffect(() => {
     const fetchProduct = async () => {
       try {
@@ -43,7 +50,8 @@ export default function ListingDetailsPage({ params }) {
             ...docSnap.data(),
           };
           setProduct(productData);
-
+          // console.log("Fetched product:", productData.userId);
+          setSellerID(productData.userId);
           if (productData.images?.length > 0) {
             setSelectedImage(
               productData.images[0]?.url || productData.images[0]
@@ -62,7 +70,12 @@ export default function ListingDetailsPage({ params }) {
     fetchProduct();
   }, [id]);
 
-  
+  useEffect(() => {
+    if (product) {
+      console.log("Seller ID:", product.userId);
+    }
+  }, [product]);
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) setCurrentUserId(user.uid);
@@ -71,21 +84,63 @@ export default function ListingDetailsPage({ params }) {
   }, []);
 
   //messaging logic
-  useEffect(() => {
-    if (currentProduct?.userId) {
-      setSellerID(currentProduct.userId);
-    } else if (itemId) {
-      const fetchSeller = async () => {
-        try {
-          const id = await getUserIdOfSeller(itemId);
-          if (id) setSellerID(id);
-        } catch (error) {
-          console.error("Error fetching seller ID:", error);
-        }
+  // useEffect(() => {
+  //   if (currentProduct?.userId) {
+  //     setSellerID(currentProduct.userId);
+  //   } else if (itemId) {
+  //     const fetchSeller = async () => {
+  //       try {
+  //         const id = await getUserIdOfSeller(itemId);
+  //         if (id) setSellerID(id);
+  //       } catch (error) {
+  //         console.error("Error fetching seller ID:", error);
+  //       }
+  //     };
+  //     fetchSeller();
+  //   }
+  // }, [currentProduct, itemId]);
+
+  const handleSendMessage = async () => {
+    try {
+      if (!message.trim() || !currentUserId || !sellerID) {
+        toast.error("Message and user information required", {
+          duration: 4000,
+          position: "top-right",
+        });
+        return;
+      }
+
+      setSendingMessage(true);
+
+      const productDetails = {
+        name,
+        imageUrl: images[0]?.url || images[0] || "",
+        id: effectiveProductId,
       };
-      fetchSeller();
+
+      const conversationId = await initiateConversation(
+        message,
+        currentUserId,
+        sellerID,
+        productDetails
+      );
+
+      setMessage("");
+
+      if (conversationId) {
+        router.push(`/chat/${conversationId}`);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message", {
+        duration: 4000,
+        position: "top-right",
+      });
+    } finally {
+      setSendingMessage(false);
     }
-  }, [currentProduct, itemId]);
+  };
+
   const handleLiked = () => setLiked(!liked);
 
   if (loading) {
@@ -255,7 +310,7 @@ export default function ListingDetailsPage({ params }) {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
-              <Button className="rounded-l-none">
+              <Button onClick={handleSendMessage} className="rounded-l-none">
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Send
               </Button>

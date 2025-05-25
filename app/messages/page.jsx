@@ -1,183 +1,172 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { auth } from "@/lib/firebase"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { RefreshCw } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { auth } from "@/lib/firebase";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { RefreshCw } from "lucide-react";
+import { getAllConversations } from "@/utils/messaginghooks";
+import UserProfile from "@/components/UserProfile";
 
 export default function MessagesPage() {
-  const router = useRouter()
-  const [conversations, setConversations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [currentUserId, setCurrentUserId] = useState(null)
-
+  const router = useRouter();
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
   // Check if user is authenticated
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
-        router.push("/login")
+        router.push("/login");
       } else {
-        setCurrentUserId(user.uid)
+        setCurrentUserId(user.uid);
       }
-    })
+    });
 
-    return () => unsubscribe()
-  }, [router])
+    return () => unsubscribe();
+  }, []); // Removed router from dependencies
 
   // Fetch conversations
+
   useEffect(() => {
-    const fetchConversations = async () => {
-      if (!currentUserId) return
+    let unsubscribeListener = null;
 
-      try {
-        // Placeholder data; replace with real Firestore fetch
-        const sampleConversations = [
-          {
-            id: "conv1",
-            participants: [currentUserId, "user2"],
-            product: {
-              id: "prod1",
-              name: "iPhone 13 Pro",
-              imageUrl: "/placeholder.svg?height=48&width=48",
-            },
-            lastMessage: {
-              text: "Is this still available?",
-              timestamp: Date.now() - 3600000, // 1 hour ago
-            },
-          },
-          {
-            id: "conv2",
-            participants: [currentUserId, "user3"],
-            product: {
-              id: "prod2",
-              name: "MacBook Pro 2021",
-              imageUrl: "/placeholder.svg?height=48&width=48",
-            },
-            lastMessage: {
-              text: "Can you do ₦450,000?",
-              timestamp: Date.now() - 86400000, // 1 day ago
-            },
-            unreadBy: [currentUserId],
-          },
-        ]
-
-        setConversations(sampleConversations)
-      } catch (error) {
-        console.error("Error fetching conversations:", error)
-      } finally {
-        setLoading(false)
-        setRefreshing(false)
-      }
+    if (currentUserId) {
+      setLoading(true);
+      getAllConversations(currentUserId, setConversations)
+        .then((unsubscribe) => {
+          unsubscribeListener = unsubscribe;
+          setLoading(false);
+          // console.log("Conversation ID", conversations);
+        })
+        .catch((error) => {
+          console.error("Error setting up conversation listener:", error);
+          setLoading(false);
+        });
     }
 
-    fetchConversations()
-  }, [currentUserId])
-
-  const onRefresh = () => {
-    setRefreshing(true)
-    // Re-fetch conversations (demo only)
-    const fetchConversations = async () => {
-      if (!currentUserId) return
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        setRefreshing(false)
-      } catch (error) {
-        console.error("Error refreshing conversations:", error)
-        setRefreshing(false)
+    return () => {
+      if (unsubscribeListener) {
+        unsubscribeListener();
       }
-    }
-    fetchConversations()
-  }
+    };
+  }, [currentUserId]);
 
   const formatTimestamp = (timestamp) => {
-    if (!timestamp) return ""
+    if (!timestamp) return "";
 
-    const date = new Date(timestamp)
-    const now = new Date()
+    const date = new Date(timestamp);
+    const now = new Date();
 
     if (date.toDateString() === now.toDateString()) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     }
 
     if (now.getTime() - date.getTime() < 7 * 24 * 60 * 60 * 1000) {
-      return date.toLocaleDateString([], { weekday: "short" })
+      return date.toLocaleDateString([], { weekday: "short" });
     }
 
-    return date.toLocaleDateString([], { month: "short", day: "numeric" })
-  }
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Messages</h1>
-        <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+        {/* <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+          />
           Refresh
-        </Button>
+        </Button> */}
+        <UserProfile />
       </div>
 
       {conversations.length > 0 ? (
         <div className="space-y-4">
-          {conversations.map((conversation) => {
-            const hasUnread =
-              Array.isArray(conversation.unreadBy) &&
-              conversation.unreadBy.includes(currentUserId || "")
+          {[...conversations]
+            .sort((a, b) => {
+              // Sort by updatedAt timestamp or lastMessage timestamp
+              const timeA = a.updatedAt?.seconds || a.lastMessage?.timestamp || 0;
+              const timeB = b.updatedAt?.seconds || b.lastMessage?.timestamp || 0;
+              return timeB - timeA; // Descending order
+            })
+            .map((conversation) => {
+              const hasUnread =
+                Array.isArray(conversation.unreadBy) &&
+                conversation.unreadBy.includes(currentUserId || "");
+              // console.log("Conversation ID", conversation.id);
 
-            return (
-              <Card key={conversation.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-center">
-                    <div className="relative h-12 w-12 rounded-lg overflow-hidden">
-                      <Image
-                        src={conversation.product.imageUrl || "/placeholder.svg"}
-                        alt={conversation.product.name}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                      {hasUnread && (
-                        <div className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-blue-500" />
-                      )}
-                    </div>
+              return (
+                <Card
+                  key={conversation.id}
+                  className="hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center">
+                      <div className="relative h-12 w-12 rounded-lg overflow-hidden">
+                        <Image
+                          src={
+                            conversation.product.imageUrl || "/placeholder.svg"
+                          }
+                          alt={conversation.product.name}
+                          fill
+                          className="object-cover"
+                          sizes="48px"
+                        />
+                        {hasUnread && (
+                          <div className="absolute right-1 top-1 h-3 w-3 rounded-full bg-blue-500" />
+                        )}
+                      </div>
 
-                    <div className="ml-4 flex-1">
-                      <h3 className={hasUnread ? "font-bold" : "font-normal"}>
-                        {conversation.product.name}
-                      </h3>
-                      <p className={`${hasUnread ? "text-gray-900" : "text-gray-500"} text-sm`}>
-                        {conversation.lastMessage?.text}
-                      </p>
-                    </div>
+                      <div className="ml-4 flex-1">
+                        <h3 className={hasUnread ? "font-bold" : "font-normal"}>
+                          {conversation.product.name}
+                        </h3>
+                        <p
+                          className={`${
+                            hasUnread ? "text-gray-900" : "text-gray-500"
+                          } text-sm`}
+                        >
+                          {conversation.lastMessage?.text}
+                        </p>
+                      </div>
 
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">
-                        {formatTimestamp(conversation.lastMessage?.timestamp || 0)}
-                      </p>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-xs text-blue-600"
-                        onClick={() => router.push(`/chat/${conversation.id}`)}
-                      >
-                        View
-                      </Button>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-400">
+                          {formatTimestamp(
+                            conversation.lastMessage?.timestamp || 0
+                          )}
+                        </p>
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto text-xs text-blue-600"
+                          onClick={() => {
+                            router.push(`/chat/${conversation.id}`);
+                          }}
+                        >
+                          View
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -197,9 +186,12 @@ export default function MessagesPage() {
               />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">No Messages Yet</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">
+            No Messages Yet
+          </h2>
           <p className="text-gray-500 max-w-md">
-            When you start conversations with sellers or buyers, they'll appear here
+            When you start conversations with sellers or buyers, they'll appear
+            here
           </p>
           <Button className="mt-6" onClick={() => router.push("/")}>
             Browse Products
@@ -207,5 +199,5 @@ export default function MessagesPage() {
         </div>
       )}
     </div>
-  )
+  );
 }
