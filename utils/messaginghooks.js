@@ -80,15 +80,17 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
 
 const getConversationWithID = (id, setConversationData) => {
   try {
+    console.log("Fetching conversation with ID:", id); // Log the conversation ID
     const docRef = doc(firestore, 'conversation', id);
     return onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        console.log("Fetched conversation data:", data); // Log the fetched data
         // Mark as read when opened
         markConversationAsRead(id, auth.currentUser?.uid);
         setConversationData(data);
       } else {
-        console.log("Conversation doesn't exist");
+        console.log("Conversation doesn't exist for ID:", id); // Log if the document doesn't exist
         setConversationData(null);
       }
     });
