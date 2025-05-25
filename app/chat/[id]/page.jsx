@@ -13,7 +13,8 @@ import { getConversationWithID } from "@/utils/messaginghooks";
 
 export default function ChatPage({ params }) {
   const router = useRouter();
-  const { conversationId } = params;
+  const { id } = params;
+  const conversationId = id; // Assuming the ID is passed as a URL parameter
   // const { conversationId, otherUserId, productDetails } = router.query;
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -39,7 +40,6 @@ export default function ChatPage({ params }) {
     return () => unsubscribe();
   }, [router]);
 
-
   const sendMessage = async () => {
     if (!newMessage.trim() || !currentUserId) return;
 
@@ -62,13 +62,14 @@ export default function ChatPage({ params }) {
 
   // Fetch conversation and messages
   useEffect(() => {
+    console.log("Fetching conversation with ID:", conversationId);
     if (conversationId) {
       const unsubscribe = getConversationWithID(
         conversationId,
         setConversation
       );
       setProduct(conversation?.product || null);
-      setLoading(!loading);
+      setLoading(false);
       return () => unsubscribe();
     }
   }, [conversationId]);

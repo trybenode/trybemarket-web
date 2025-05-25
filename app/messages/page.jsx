@@ -36,6 +36,7 @@ export default function MessagesPage() {
         .then((unsubscribe) => {
           unsubscribeListener = unsubscribe;
           setLoading(false);
+          console.log("Conversation ID", conversations);
         })
         .catch((error) => {
           console.error("Error setting up conversation listener:", error);
@@ -98,12 +99,12 @@ export default function MessagesPage() {
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Messages</h1>
-        <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
+        {/* <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
           <RefreshCw
             className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
           />
           Refresh
-        </Button>
+        </Button> */}
       </div>
 
       {conversations.length > 0 ? (
@@ -112,6 +113,7 @@ export default function MessagesPage() {
             const hasUnread =
               Array.isArray(conversation.unreadBy) &&
               conversation.unreadBy.includes(currentUserId || "");
+              console.log("Conversation ID", conversation.id);
 
             return (
               <Card
@@ -157,7 +159,9 @@ export default function MessagesPage() {
                       <Button
                         variant="link"
                         className="p-0 h-auto text-xs text-blue-600"                        
-                        onClick={() => router.push(`/chat/${conversation.id}}`)}
+                        onClick={() => {
+                          router.push(`/chat/${conversation.id}`)
+                        }}
                       >
                         View
                       </Button>
