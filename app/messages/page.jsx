@@ -40,7 +40,7 @@ export default function MessagesPage() {
         .then((unsubscribe) => {
           unsubscribeListener = unsubscribe;
           setLoading(false);
-          console.log("Conversation ID", conversations);
+          // console.log("Conversation ID", conversations);
         })
         .catch((error) => {
           console.error("Error setting up conversation listener:", error);
@@ -109,7 +109,7 @@ export default function MessagesPage() {
               const hasUnread =
                 Array.isArray(conversation.unreadBy) &&
                 conversation.unreadBy.includes(currentUserId || "");
-              console.log("Conversation ID", conversation.id);
+              // console.log("Conversation ID", conversation.id);
 
               return (
                 <Card
