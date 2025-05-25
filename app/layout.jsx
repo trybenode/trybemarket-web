@@ -1,7 +1,7 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { UserProvider } from "@/context/UserContext";
-import { ToastProvider } from "@/components/ToastProvider";
+import ToastProvider from "@/components/ToastProvider";
 export const metadata = {
   title: "trybemarket",
   description: "student e-commerce platform",
@@ -15,25 +15,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang='en'>
       <body>
-        {/* <ToastProvider /> //use to fix hydration          */}
-        <Toaster
-          position='top-center'
-          toastOptions={{
-            success: {
-              style: {
-                background: "#FFFFFF",
-                color: "#808080",
-              },
-            },
-            error: {
-              style: {
-                background: "#FFFFFF",
-                color: "#808080",
-              },
-            },
-            duration: 2000,
-          }}
-        />
+        <ToastProvider />
         <UserProvider>{children}</UserProvider>
       </body>
     </html>

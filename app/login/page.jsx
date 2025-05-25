@@ -184,7 +184,7 @@ export default function LoginPage() {
       });
 
       toast.success(`Login Successful: Welcome ${user.displayName}`, {
-        position: "top-right",
+        position: "top-center",
         duration: 3000,
       });
 
