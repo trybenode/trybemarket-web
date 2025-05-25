@@ -28,6 +28,9 @@ export default function MessagesPage() {
 
     return () => unsubscribe();
   }, []); // Removed router from dependencies
+
+  // Fetch conversations
+
   useEffect(() => {
     let unsubscribeListener = null;
 
@@ -51,22 +54,6 @@ export default function MessagesPage() {
       }
     };
   }, [currentUserId]);
-
-  // Fetch conversations
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const unsubscribe = await getAllConversations(
-        currentUserId,
-        setConversations
-      );
-      if (unsubscribe) unsubscribe(); // Clean up the listener since we just want a one-time refresh
-    } catch (error) {
-      console.error("Error refreshing conversations:", error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return "";
@@ -111,68 +98,75 @@ export default function MessagesPage() {
 
       {conversations.length > 0 ? (
         <div className="space-y-4">
-          {conversations.map((conversation) => {
-            const hasUnread =
-              Array.isArray(conversation.unreadBy) &&
-              conversation.unreadBy.includes(currentUserId || "");
+          {[...conversations]
+            .sort((a, b) => {
+              // Sort by updatedAt timestamp or lastMessage timestamp
+              const timeA = a.updatedAt?.seconds || a.lastMessage?.timestamp || 0;
+              const timeB = b.updatedAt?.seconds || b.lastMessage?.timestamp || 0;
+              return timeB - timeA; // Descending order
+            })
+            .map((conversation) => {
+              const hasUnread =
+                Array.isArray(conversation.unreadBy) &&
+                conversation.unreadBy.includes(currentUserId || "");
               console.log("Conversation ID", conversation.id);
 
-            return (
-              <Card
-                key={conversation.id}
-                className="hover:shadow-md transition-shadow"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center">
-                    <div className="relative h-12 w-12 rounded-lg overflow-hidden">
-                      <Image
-                        src={
-                          conversation.product.imageUrl || "/placeholder.svg"
-                        }
-                        alt={conversation.product.name}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                      {hasUnread && (
-                        <div className="absolute right-1 top-1 h-3 w-3 rounded-full bg-blue-500" />
-                      )}
-                    </div>
-
-                    <div className="ml-4 flex-1">
-                      <h3 className={hasUnread ? "font-bold" : "font-normal"}>
-                        {conversation.product.name}
-                      </h3>
-                      <p
-                        className={`${
-                          hasUnread ? "text-gray-900" : "text-gray-500"
-                        } text-sm`}
-                      >
-                        {conversation.lastMessage?.text}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">
-                        {formatTimestamp(
-                          conversation.lastMessage?.timestamp || 0
+              return (
+                <Card
+                  key={conversation.id}
+                  className="hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center">
+                      <div className="relative h-12 w-12 rounded-lg overflow-hidden">
+                        <Image
+                          src={
+                            conversation.product.imageUrl || "/placeholder.svg"
+                          }
+                          alt={conversation.product.name}
+                          fill
+                          className="object-cover"
+                          sizes="48px"
+                        />
+                        {hasUnread && (
+                          <div className="absolute right-1 top-1 h-3 w-3 rounded-full bg-blue-500" />
                         )}
-                      </p>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-xs text-blue-600"                        
-                        onClick={() => {
-                          router.push(`/chat/${conversation.id}`)
-                        }}
-                      >
-                        View
-                      </Button>
+                      </div>
+
+                      <div className="ml-4 flex-1">
+                        <h3 className={hasUnread ? "font-bold" : "font-normal"}>
+                          {conversation.product.name}
+                        </h3>
+                        <p
+                          className={`${
+                            hasUnread ? "text-gray-900" : "text-gray-500"
+                          } text-sm`}
+                        >
+                          {conversation.lastMessage?.text}
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-xs text-gray-400">
+                          {formatTimestamp(
+                            conversation.lastMessage?.timestamp || 0
+                          )}
+                        </p>
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto text-xs text-blue-600"
+                          onClick={() => {
+                            router.push(`/chat/${conversation.id}`);
+                          }}
+                        >
+                          View
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
