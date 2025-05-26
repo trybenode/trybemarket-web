@@ -21,7 +21,7 @@ import {
   Pencil,
   CheckCircle2,
 } from "lucide-react";
-import { MdVerified } from "react-icons/md";
+// import { MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";

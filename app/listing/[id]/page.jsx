@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, MessageCircle, ChevronLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
+import useFavoritesStore from "@/lib/FavouriteStore"
 
 import {
   getUserIdOfSeller,
