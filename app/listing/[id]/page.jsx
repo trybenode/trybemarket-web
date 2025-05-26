@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, MessageCircle, ChevronLeft } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
-import useFavoritesStore from "@/lib/FavouriteStore"
+import useFavoritesStore from "@/lib/FavouriteStore";
 
 import {
   getUserIdOfSeller,
@@ -24,6 +24,8 @@ import SellerDetailsAndRelatedProducts from "@/components/SellerDetailsAndRelate
 export default function ListingDetailsPage({ params }) {
   const router = useRouter();
   const { id } = React.use(params);
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
+  const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
   const itemId = id || product?.id;
   const [sellerID, setSellerID] = useState(null);
   const [currentProduct, setCurrentProduct] = useState(null);
@@ -142,7 +144,29 @@ export default function ListingDetailsPage({ params }) {
     }
   };
 
-  const handleLiked = () => setLiked(!liked);
+  useEffect(() => {
+    if (id) {
+      setLiked(favoriteIds.includes(id));
+    }
+  }, [id, favoriteIds]);
+
+  const handleLiked = () => {
+    if (!currentUserId) {
+      toast.error("Please login to add items to favorites", {
+        duration: 4000,
+        position: "top-right",
+      });
+      router.push("/login");
+      return;
+    }
+
+    toggleFavorite(id);
+    setLiked(!liked);
+    toast.success(liked ? "Removed from favorites" : "Added to favorites", {
+      duration: 2000,
+      position: "top-right",
+    });
+  };
 
   if (loading) {
     return (
