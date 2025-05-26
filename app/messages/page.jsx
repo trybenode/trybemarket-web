@@ -87,12 +87,6 @@ export default function MessagesPage() {
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Messages</h1>
-        {/* <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
-          <RefreshCw
-            className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </Button> */}
         <UserProfile />
       </div>
 
