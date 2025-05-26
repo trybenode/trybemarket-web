@@ -1,5 +1,4 @@
-// context/UserContext.js
-"use client"; // Mark as client component
+"use client"; 
 
 import React, {
   createContext,
