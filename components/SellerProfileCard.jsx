@@ -254,7 +254,7 @@ export default function SellerProfileCard({ sellerInfo = null }) {
             )}
           </div>
           {!sellerInfo && (
-            <Button variant="outline" onClick={() => router.push("/settings")}>
+            <Button variant="outline" onClick={() => router.push("/edit-profile")}>
               Edit Profile
             </Button>
           )}
