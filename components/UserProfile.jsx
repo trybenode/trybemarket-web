@@ -16,6 +16,7 @@ import {
   LogOut,
   ShoppingBag,
   Upload,
+  Store ,
   MessageSquare,
   Settings,
   CheckCircle2, // Using CheckCircle2 for a more refined verified badge
@@ -113,10 +114,19 @@ export default function UserProfile() {
             <DropdownMenuSeparator className='bg-gray-200' />
             <DropdownMenuItem asChild>
               <Link
-                href='/my-shop'
+                href='/'
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
                 <ShoppingBag className='mr-2 h-4 w-4' />
+                Homepage
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href='/my-shop'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <Store  className='mr-2 h-4 w-4' />
                 My Shop
               </Link>
             </DropdownMenuItem>
