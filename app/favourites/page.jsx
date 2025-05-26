@@ -1,8 +1,7 @@
-import React from 'react'
+import React from "react";
+import { useFavoritesStore } from "@/lib/FavouriteStore";
 
 export default function FavouritePage() {
-  return (
-    <div>page</div>
-  )
+  const { products, loading, isFetchingMore, fetchFavorites, loadMore } = useFavoritesStore();
+  return <div>page</div>;
 }
-
