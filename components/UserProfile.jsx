@@ -19,8 +19,10 @@ import {
   Settings,
   Pencil,
   CheckCircle2,
+  Home,
+  CreditCard
 } from "lucide-react";
-import { MdVerified } from "react-icons/md";
+import { MdShop, MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
@@ -116,6 +118,15 @@ export default function UserProfile() {
             <DropdownMenuSeparator className='bg-gray-200' />
             <DropdownMenuItem asChild>
               <Link
+                href='/'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <Home className='mr-2 h-4 w-4' />
+                Marketplace 
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
                 href='/my-shop'
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
@@ -159,6 +170,15 @@ export default function UserProfile() {
               >
                 <Pencil className='mr-2 h-4 w-4' />
                 Edit Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href='/subscription'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <CreditCard  className='mr-2 h-4 w-4' />
+                Subscription
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className='bg-gray-200' />

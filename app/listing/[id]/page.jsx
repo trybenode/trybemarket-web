@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect,} from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -170,7 +170,7 @@ export default function ListingDetailsPage({ params }) {
     categoryId = "",
     brand = "",
     condition = "",
-    subcategory = "",
+    subcategory = [],
     color = "",
     year = "",
   } = product;

@@ -52,7 +52,7 @@ export default function SellerDetailsAndRelatedProducts({
 
         const { userId, categoryId, subcategory } = productData;
 
-        if (!userId || !categoryId || !subcategory) {
+        if (!userId || !categoryId ) { // || !subcategory
           throw new Error("Incomplete product data");
         }
 
@@ -127,7 +127,7 @@ export default function SellerDetailsAndRelatedProducts({
           <div className="flex items-start justify-between">
             <div className="relative w-16 h-16 rounded-full overflow-hidden">
               <Image
-                src={sellerInfo.image || "/default-avatar.png"}
+                src={sellerInfo.profilePicture || "/placeholder.svg"}
                 alt="Seller"
                 fill
                 className="object-cover"
@@ -143,7 +143,8 @@ export default function SellerDetailsAndRelatedProducts({
               </p>
               <button
                 className="rounded-lg bg-blue-500 px-4 py-2 text-white font-semibold"
-                onClick={() => router.push(`/shop?sellerId=${sellerInfo.id}`)}
+                onClick={() => router.push(`/shop?sellerId=${sellerProducts}`)}
+                // onClick={() => router.push(`/shop?sellerId=${sellerInfo.id}`)}
               >
                 View Shop
               </button>

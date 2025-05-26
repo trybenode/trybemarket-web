@@ -41,6 +41,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ChevronLeft, Trash2, Upload, X } from "lucide-react";
 import UserProfile from "@/components/UserProfile";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // Sample categories
 // const categories = [
@@ -71,6 +76,8 @@ export default function SellPage() {
   const [productName, setProductName] = useState("");
   const [category, setCategory] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [availableSubcategories, setAvailableSubcategories] = useState([]);
+  const [selectedSubcategories, setSelectedSubcategories] = useState([]);
   const [subCategory, setSubCategory] = useState("");
   const [images, setImages] = useState([]);
   const [isNegotiable, setIsNegotiable] = useState(false);
@@ -126,19 +133,36 @@ export default function SellPage() {
   }, [showVerificationAlert, router]);
 
   //fetch category
+  // useEffect(() => {
+  //   const unsubscribe = onSnapshot(
+  //     collection(db, "categories"),
+  //     (QuerySnapshot) => {
+  //       const categoryData = QuerySnapshot.docs.map((doc) => ({
+  //         label: doc.data().name,
+  //         value: doc.data().value,
+  //         subcategories: doc.data().subcategories || [],
+  //       }));
+  //       setCategory(categoryData);
+  //     }
+  //   );
+  //   return () => unsubscribe();
+  // }, []);
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "categories"),
-      (QuerySnapshot) => {
-        const categoryData = QuerySnapshot.docs.map((doc) => ({
-          label: doc.data().name,
-          value: doc.data().value,
-        }));
-        setCategory(categoryData);
-      }
-    );
+    const unsubscribe = onSnapshot(collection(db, "categories"), (snapshot) => {
+      const categoryData = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          label: data.name,
+          value: data.name,
+          subCategories: data.subcategories || [],
+        };
+      });
+      setCategory(categoryData);
+    });
+
     return () => unsubscribe();
   }, []);
+
   // Fetch product data if editing
   useEffect(() => {
     const fetchProduct = async () => {
@@ -205,9 +229,23 @@ export default function SellPage() {
   }, []);
   useEffect(() => clearForm, [clearForm]);
 
+  const handleCategoryChange = (value) => {
+    setSelectedCategory(value);
+    const matched = category.find((cat) => cat.label === value);
+    console.log("Matched category:", matched);
+    setAvailableSubcategories(matched?.subCategories || []);
+    setSelectedSubcategories([]);
+    console.log("Selected category value:", value);
+    console.log("Matched category object:", matched);
+    console.log(
+      "Available subcategories set to:",
+      matched?.subCategories || []
+    );
+  };
   // Warn on unsaved changes
   const arraysAreEqual = (a, b) =>
     a.length === b.length && a.every((v, i) => v === b[i]);
+
   const hasUnsaved = useCallback(() => {
     if (!isEditMode)
       return (
@@ -294,6 +332,7 @@ export default function SellPage() {
       });
     }
   };
+  //remove image
   const removeImage = (index) => {
     const updatedImages = images.filter((_, i) => i !== index);
     setImages(updatedImages);
@@ -430,18 +469,19 @@ export default function SellPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Category Select */}
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select
                   value={selectedCategory}
-                  onValueChange={setSelectedCategory}
+                  onValueChange={handleCategoryChange}
                 >
                   <SelectTrigger id="category">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
                     {category.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
+                      <SelectItem key={cat.label} value={cat.label}>
                         {cat.label}
                       </SelectItem>
                     ))}
@@ -449,16 +489,46 @@ export default function SellPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="subCategory">Sub-Category</Label>
-                <Input
-                  id="subCategory"
-                  placeholder="Enter sub-category"
-                  value={subCategory}
-                  onChange={(e) => setSubCategory(e.target.value)}
-                  disabled={saving}
-                />
-              </div>
+              {/* Sub-Category Popover */}
+              {availableSubcategories.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="subCategory">Sub-Category</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                      >
+                        {selectedSubcategories.length > 0
+                          ? selectedSubcategories.join(", ")
+                          : "Select sub-categories"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full">
+                      <div className="flex flex-col space-y-2 max-h-48 overflow-y-auto">
+                        {availableSubcategories.map((sub) => (
+                          <label
+                            key={sub}
+                            className="flex items-center space-x-2 cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={selectedSubcategories.includes(sub)}
+                              onCheckedChange={(checked) => {
+                                setSelectedSubcategories((prev) =>
+                                  checked
+                                    ? [...prev, sub]
+                                    : prev.filter((s) => s !== sub)
+                                );
+                              }}
+                            />
+                            <span className="text-sm">{sub}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
