@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import {
   collection,
   getDoc,
@@ -10,17 +9,15 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot,
-  QuerySnapshot,
 } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
+import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/components/ui/use-toast";
 import {
   Select,
   SelectContent,
@@ -37,9 +34,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog";;
 import { ChevronLeft, Trash2, Upload, X } from "lucide-react";
+import Image from "next/image";
+import toast from "react-hot-toast";;
 import UserProfile from "@/components/UserProfile";
 import {
   Popover,
@@ -60,6 +58,29 @@ import {
 // ];
 
 export default function SellPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { currentUser, loading: authLoading } = useUser();
+  const productId = searchParams.get("id");
+  const isEditMode = Boolean(productId);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [openVerificationDialog, setOpenVerificationDialog] = useState(false);
+  const [product, setProduct] = useState(null);
+  const [productName, setProductName] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [subCategory, setSubCategory] = useState("");
+  const [images, setImages] = useState([]);
+  const [isNegotiable, setIsNegotiable] = useState(false);
+  const [isAgreed, setIsAgreed] = useState(false);
+  const [productDescription, setProductDescription] = useState("");
+  const [brand, setBrand] = useState("");
+  const [condition, setCondition] = useState("");
+  const [color, setColor] = useState("");
+  const [price, setPrice] = useState("");
+  const [originalPrice, setOriginalPrice] = useState("");
+  const [year, setYear] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
   const productId = searchParams.get("id");
@@ -90,100 +111,36 @@ export default function SellPage() {
   const [originalPrice, setOriginalPrice] = useState("");
   const [year, setYear] = useState("");
 
-  // Protect route: redirect unauthenticated
+  // Handle authentication and KYC
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) router.push("/login");
-    });
-    return unsubscribe;
-  }, [router]);
-
-  // Check KYC verification on mount
-  useEffect(() => {
-    let isActive = true;
-    const verifyUser = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) throw new Error("no-user");
-
-        const snap = await getDoc(doc(db, "users", currentUser.uid));
-        const verified = snap.exists() && snap.data().isVerified;
-        if (!verified && isActive) setShowVerificationAlert(true);
-      } catch {
-        if (isActive) setShowVerificationAlert(true);
-      } finally {
-        if (isActive) setCheckingVerification(false);
+    if (!authLoading) {
+      if (!currentUser) {
+        console.log("No authenticated user, redirecting to login");
+        router.push("/login");
+      } else if (!currentUser.isVerified) {
+        console.log("User is not verified, showing KYC dialog");
+        setOpenVerificationDialog(true);
       }
-    };
-    verifyUser();
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  // Show verification modal
-  useEffect(() => {
-    if (!showVerificationAlert) return;
-    const proceed = window.confirm(
-      "You are not verified. Please complete KYC to continue."
-    );
-    setShowVerificationAlert(false);
-    if (proceed) router.push("/kyc");
-    else router.back();
-  }, [showVerificationAlert, router]);
-
-  //fetch category
-  // useEffect(() => {
-  //   const unsubscribe = onSnapshot(
-  //     collection(db, "categories"),
-  //     (QuerySnapshot) => {
-  //       const categoryData = QuerySnapshot.docs.map((doc) => ({
-  //         label: doc.data().name,
-  //         value: doc.data().value,
-  //         subcategories: doc.data().subcategories || [],
-  //       }));
-  //       setCategory(categoryData);
-  //     }
-  //   );
-  //   return () => unsubscribe();
-  // }, []);
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "categories"), (snapshot) => {
-      const categoryData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          label: data.name,
-          value: data.name,
-          subCategories: data.subcategories || [],
-        };
-      });
-      setCategory(categoryData);
-    });
-
-    return () => unsubscribe();
-  }, []);
+      setLoading(false);
+    }
+  }, [currentUser, authLoading, router]);
 
   // Fetch product data if editing
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!isEditMode) {
+      if (!isEditMode || !currentUser) {
         setLoading(false);
         return;
       }
       try {
         const docSnap = await getDoc(doc(db, "products", productId));
         if (!docSnap.exists()) {
-          toast({
-            title: "Not found",
-            description: "Product not found",
-            variant: "destructive",
-          });
+          toast.error("Product not found");
           router.push("/my-shop");
           return;
         }
         const data = docSnap.data();
         setProduct(data);
-        // populate form
         setProductName(data.name || "");
         setSelectedCategory(data.categoryId || "");
         setSubCategory(data.subcategory || "");
@@ -197,22 +154,37 @@ export default function SellPage() {
         setYear(data.year || "");
         setImages(Array.isArray(data.images) ? data.images : []);
       } catch (err) {
-        console.error(err);
-        toast({
-          title: "Error",
-          description: "Failed load product",
-          variant: "destructive",
-        });
+        console.error("Error fetching product:", err);
+        toast.error("Failed to load product");
         router.push("/my-shop");
       } finally {
         setLoading(false);
       }
     };
     fetchProduct();
-  }, [isEditMode, productId, router]);
+  }, [isEditMode, productId, currentUser, router]);
 
   // Clear form on unmount
   const clearForm = useCallback(() => {
+    setProductName("");
+    setSubCategory("");
+    setSelectedCategory("");
+    setIsNegotiable(false);
+    setProductDescription("");
+    setBrand("");
+    setCondition("");
+    setColor("");
+    setPrice("");
+    setOriginalPrice("");
+    setYear("");
+    setImages([]);
+    setIsAgreed(false);
+  }, []);
+
+  useEffect(() => {
+    return () => clearForm();
+  }, [clearForm]);
+
     setProductName("");
     setSubCategory("");
     setSelectedCategory("");
@@ -245,7 +217,6 @@ export default function SellPage() {
   // Warn on unsaved changes
   const arraysAreEqual = (a, b) =>
     a.length === b.length && a.every((v, i) => v === b[i]);
-
   const hasUnsaved = useCallback(() => {
     if (!isEditMode)
       return (
@@ -289,6 +260,7 @@ export default function SellPage() {
     year,
     images,
   ]);
+
   useEffect(() => {
     const handleBefore = (e) => {
       if (hasUnsaved()) {
@@ -299,9 +271,20 @@ export default function SellPage() {
     window.addEventListener("beforeunload", handleBefore);
     return () => window.removeEventListener("beforeunload", handleBefore);
   }, [hasUnsaved]);
+    };
+    window.addEventListener("beforeunload", handleBefore);
+    return () => window.removeEventListener("beforeunload", handleBefore);
+  }, [hasUnsaved]);
 
-  // Image upload handler
+  // Image handlers
+  const removeImage = (index) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleImageUpload = async (e) => {
+    const files = e.target.files;
+    if (!files.length) return;
+    const arr = Array.from(files);
     const files = e.target.files;
     if (!files.length) return;
     const arr = Array.from(files);
@@ -323,20 +306,29 @@ export default function SellPage() {
         })
       );
       setImages((prev) => [...prev, ...urls]);
+      const urls = await Promise.all(
+        arr.map(async (file) => {
+          const data = new FormData();
+          data.append("file", file);
+          data.append("upload_preset", "ProductImage");
+          data.append("cloud_name", "dj21x4jnt");
+          data.append("folder", "market_trybe_products");
+          const res = await fetch(
+            "https://api.cloudinary.com/v1_1/dj21x4jnt/image/upload",
+            { method: "POST", body: data }
+          );
+          const json = await res.json();
+          if (!json.secure_url) throw new Error("Upload failed");
+          return json.secure_url;
+        })
+      );
+      setImages((prev) => [...prev, ...urls]);
     } catch (err) {
-      console.error(err);
-      toast({
-        title: "Upload Error",
-        description: err.message,
-        variant: "destructive",
-      });
+      console.error("Image upload error:", err);
+      toast.error(err.message);
     }
   };
-  //remove image
-  const removeImage = (index) => {
-    const updatedImages = images.filter((_, i) => i !== index);
-    setImages(updatedImages);
-  };
+
   // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -351,25 +343,16 @@ export default function SellPage() {
       !year ||
       images.length === 0
     ) {
-      toast({
-        title: "Missing Info",
-        description: "Fill all fields & add images",
-        variant: "destructive",
-      });
+      toast.error("Fill all fields & add images");
       return;
     }
     if (!isEditMode && !isAgreed) {
-      toast({
-        title: "Terms",
-        description: "Agree to terms",
-        variant: "destructive",
-      });
+      toast.error("Agree to terms");
       return;
     }
     try {
       setSaving(true);
-      const user = auth.currentUser;
-      if (!user) throw new Error("not-auth");
+      if (!currentUser) throw new Error("Not authenticated");
       const data = {
         name: productName.trim(),
         subcategory: subCategory.trim(),
@@ -383,23 +366,16 @@ export default function SellPage() {
         originalPrice: parseFloat(originalPrice) || 0,
         year: year.trim(),
         images,
-        userId: user.uid,
+        userId: currentUser.uid,
         ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
       };
       if (isEditMode) await updateDoc(doc(db, "products", productId), data);
       else await addDoc(collection(db, "products"), data);
-      toast({
-        title: "Success",
-        description: isEditMode ? "Updated" : "Uploaded",
-      });
+      toast.success(isEditMode ? "Updated" : "Uploaded");
       router.push("/my-shop");
     } catch (err) {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      });
+      console.error("Submit error:", err);
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }
@@ -408,31 +384,25 @@ export default function SellPage() {
   // Delete handler
   const handleDelete = async () => {
     if (!isEditMode) return;
-    const confirm = window.confirm("Delete this product?");
-    if (!confirm) return;
     try {
       setSaving(true);
       await deleteDoc(doc(db, "products", productId));
-      toast({ title: "Deleted", description: "Product removed" });
+      toast.success("Product removed");
       router.push("/my-shop");
     } catch (err) {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: "Delete failed",
-        variant: "destructive",
-      });
+      console.error("Delete error:", err);
+      toast.error("Delete failed");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading || checkingVerification) {
+  if (loading || authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      <div className='flex items-center justify-center min-h-screen'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600' />
       </div>
-    );
+    );;
   }
 
   return (
@@ -451,17 +421,39 @@ export default function SellPage() {
         <UserProfile />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <AlertDialog
+        open={openVerificationDialog}
+        onOpenChange={setOpenVerificationDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>KYC Verification Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are not verified. Please complete KYC to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => router.back()}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push("/kyc")}>
+              Complete KYC
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <form onSubmit={handleSubmit} className='space-y-8'>
         <Card>
           <CardHeader>
             <CardTitle>Product Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="productName">Product Name</Label>
+          <CardContent className='space-y-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='productName'>Product Name</Label>
               <Input
-                id="productName"
-                placeholder="Enter product name"
+                id='productName'
+                placeholder='Enter product name'
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
                 disabled={saving}
@@ -531,9 +523,9 @@ export default function SellPage() {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className='space-y-2'>
               <Label>Product Images</Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
                 {images.map((image, index) => (
                   <div
                     key={index}
@@ -543,30 +535,30 @@ export default function SellPage() {
                       src={image || "/placeholder.svg"}
                       alt={`Product image ${index + 1}`}
                       fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 50vw, 25vw"
+                      className='object-cover'
+                      sizes='(max-width: 768px) 50vw, 25vw'
                     />
                     <button
-                      type="button"
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                      type='button'
+                      className='absolute top-1 right-1 bg-red-500 text-white rounded-full p-1'
                       onClick={() => removeImage(index)}
                     >
-                      <X className="h-4 w-4" />
+                      <X className='h-4 w-4' />
                     </button>
                   </div>
                 ))}
 
                 {images.length < 5 && (
-                  <div className="aspect-square flex items-center justify-center border border-dashed border-gray-300 rounded-md">
-                    <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
-                      <Upload className="h-8 w-8 text-gray-400" />
-                      <span className="mt-2 text-sm text-gray-500">
+                  <div className='aspect-square flex items-center justify-center border border-dashed border-gray-300 rounded-md'>
+                    <label className='cursor-pointer flex flex-col items-center justify-center w-full h-full'>
+                      <Upload className='h-8 w-8 text-gray-400' />
+                      <span className='mt-2 text-sm text-gray-500'>
                         Add Image
                       </span>
                       <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
+                        type='file'
+                        accept='image/*'
+                        className='hidden'
                         onChange={handleImageUpload}
                         multiple={images.length === 0}
                         disabled={saving}
@@ -575,32 +567,32 @@ export default function SellPage() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-500">
+              <p className='text-xs text-gray-500'>
                 Upload up to 5 images. First image will be the cover.
               </p>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className='flex items-center space-x-2'>
               <Checkbox
-                id="negotiable"
+                id='negotiable'
                 checked={isNegotiable}
                 onCheckedChange={(checked) => setIsNegotiable(checked === true)}
                 disabled={saving}
               />
               <label
-                htmlFor="negotiable"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                htmlFor='negotiable'
+                className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
               >
                 Price is negotiable
               </label>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Product Description</Label>
+            <div className='space-y-2'>
+              <Label htmlFor='description'>Product Description</Label>
               <Textarea
-                id="description"
-                placeholder="Describe your product in detail"
-                className="min-h-[120px]"
+                id='description'
+                placeholder='Describe your product in detail'
+                className='min-h-[120px]'
                 value={productDescription}
                 onChange={(e) => setProductDescription(e.target.value)}
                 disabled={saving}
@@ -613,63 +605,63 @@ export default function SellPage() {
           <CardHeader>
             <CardTitle>Additional Details</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="brand">Brand</Label>
+          <CardContent className='space-y-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='brand'>Brand</Label>
                 <Input
-                  id="brand"
-                  placeholder="Enter brand"
+                  id='brand'
+                  placeholder='Enter brand'
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
                   disabled={saving}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="condition">Condition</Label>
+              <div className='space-y-2'>
+                <Label htmlFor='condition'>Condition</Label>
                 <Select value={condition} onValueChange={setCondition}>
-                  <SelectTrigger id="condition">
-                    <SelectValue placeholder="Select condition" />
+                  <SelectTrigger id='condition'>
+                    <SelectValue placeholder='Select condition' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="like-new">Like New</SelectItem>
-                    <SelectItem value="good">Good</SelectItem>
-                    <SelectItem value="fair">Fair</SelectItem>
-                    <SelectItem value="poor">Poor</SelectItem>
+                    <SelectItem value='new'>New</SelectItem>
+                    <SelectItem value='like-new'>Like New</SelectItem>
+                    <SelectItem value='good'>Good</SelectItem>
+                    <SelectItem value='fair'>Fair</SelectItem>
+                    <SelectItem value='poor'>Poor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="color">Color</Label>
+              <div className='space-y-2'>
+                <Label htmlFor='color'>Color</Label>
                 <Input
-                  id="color"
-                  placeholder="Enter color"
+                  id='color'
+                  placeholder='Enter color'
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   disabled={saving}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="year">Year</Label>
+              <div className='space-y-2'>
+                <Label htmlFor='year'>Year</Label>
                 <Input
-                  id="year"
-                  placeholder="Enter year"
+                  id='year'
+                  placeholder='Enter year'
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
                   disabled={saving}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price">Price (₦)</Label>
+              <div className='space-y-2'>
+                <Label htmlFor='price'>Price (₦)</Label>
                 <Input
-                  id="price"
-                  type="number"
-                  placeholder="Enter price"
+                  id='price'
+                  type='number'
+                  placeholder='Enter price'
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   disabled={saving}
@@ -681,9 +673,9 @@ export default function SellPage() {
                   Original Price (₦) (Optional)
                 </Label>
                 <Input
-                  id="originalPrice"
-                  type="number"
-                  placeholder="Enter original price"
+                  id='originalPrice'
+                  type='number'
+                  placeholder='Enter original price'
                   value={originalPrice}
                   onChange={(e) => setOriginalPrice(e.target.value)}
                   disabled={saving}
@@ -694,9 +686,9 @@ export default function SellPage() {
         </Card>
 
         {!isEditMode && (
-          <div className="flex items-center space-x-2">
+          <div className='flex items-center space-x-2'>
             <Checkbox
-              id="terms"
+              id='terms'
               checked={isAgreed}
               onCheckedChange={(checked) => setIsAgreed(checked === true)}
               disabled={saving}
@@ -708,12 +700,12 @@ export default function SellPage() {
           </div>
         )}
 
-        <div className="flex justify-between">
+        <div className='flex justify-between'>
           {isEditMode ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" type="button" disabled={saving}>
-                  <Trash2 className="h-4 w-4 mr-2" />
+                <Button variant='destructive' type='button' disabled={saving}>
+                  <Trash2 className='h-4 w-4 mr-2' />
                   Delete Product
                 </Button>
               </AlertDialogTrigger>
@@ -721,6 +713,8 @@ export default function SellPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete
+                    your product from our servers.
                     This action cannot be undone. This will permanently delete
                     your product from our servers.
                   </AlertDialogDescription>
@@ -747,10 +741,10 @@ export default function SellPage() {
             </Button>
           )}
 
-          <Button type="submit" disabled={saving || (!isEditMode && !isAgreed)}>
+          <Button type='submit' disabled={saving || (!isEditMode && !isAgreed)}>
             {saving ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
                 {isEditMode ? "Updating..." : "Uploading..."}
               </>
             ) : (
@@ -760,5 +754,6 @@ export default function SellPage() {
         </div>
       </form>
     </div>
+  );
   );
 }

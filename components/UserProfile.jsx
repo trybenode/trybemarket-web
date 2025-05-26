@@ -15,6 +15,7 @@ import {
   LogOut,
   ShoppingBag,
   Upload,
+  Store ,
   MessageSquare,
   Settings,
   Pencil,
@@ -131,6 +132,15 @@ export default function UserProfile() {
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
                 <ShoppingBag className='mr-2 h-4 w-4' />
+                Homepage
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href='/my-shop'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <Store  className='mr-2 h-4 w-4' />
                 My Shop
               </Link>
             </DropdownMenuItem>
