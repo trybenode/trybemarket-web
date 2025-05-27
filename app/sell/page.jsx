@@ -9,6 +9,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  onSnapshot
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
@@ -34,6 +35,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger
 } from "@/components/ui/alert-dialog";;
 import { ChevronLeft, Trash2, Upload, X } from "lucide-react";
 import Image from "next/image";
@@ -45,17 +47,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-// Sample categories
-// const categories = [
-//   { id: "electronics", name: "Electronics" },
-//   { id: "clothing", name: "Clothing" },
-//   { id: "books", name: "Books" },
-//   { id: "furniture", name: "Furniture" },
-//   { id: "sports", name: "Sports" },
-//   { id: "toys", name: "Toys" },
-//   { id: "beauty", name: "Beauty" },
-//   { id: "automotive", name: "Automotive" },
-// ];
 
 export default function SellPage() {
   const router = useRouter();
@@ -69,6 +60,7 @@ export default function SellPage() {
   const [openVerificationDialog, setOpenVerificationDialog] = useState(false);
   const [product, setProduct] = useState(null);
   const [productName, setProductName] = useState("");
+  const [category, setCategory] = useState([])
   const [selectedCategory, setSelectedCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [images, setImages] = useState([]);
@@ -81,35 +73,9 @@ export default function SellPage() {
   const [price, setPrice] = useState("");
   const [originalPrice, setOriginalPrice] = useState("");
   const [year, setYear] = useState("");
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const productId = searchParams.get("id");
-  const isEditMode = Boolean(productId);
-
-  // Loading states
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [checkingVerification, setCheckingVerification] = useState(true);
-  const [showVerificationAlert, setShowVerificationAlert] = useState(false);
-
-  // Product and form state
-  const [product, setProduct] = useState(null);
-  const [productName, setProductName] = useState("");
-  const [category, setCategory] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [availableSubcategories, setAvailableSubcategories] = useState([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState([]);
-  const [subCategory, setSubCategory] = useState("");
-  const [images, setImages] = useState([]);
-  const [isNegotiable, setIsNegotiable] = useState(false);
-  const [isAgreed, setIsAgreed] = useState(false);
-  const [productDescription, setProductDescription] = useState("");
-  const [brand, setBrand] = useState("");
-  const [condition, setCondition] = useState("");
-  const [color, setColor] = useState("");
-  const [price, setPrice] = useState("");
-  const [originalPrice, setOriginalPrice] = useState("");
-  const [year, setYear] = useState("");
+
 
   // Handle authentication and KYC
   useEffect(() => {
@@ -124,6 +90,23 @@ export default function SellPage() {
       setLoading(false);
     }
   }, [currentUser, authLoading, router]);
+
+  //fetchCategory and sub
+  useEffect(() => {
+  const unsubscribe = onSnapshot(collection(db, "categories"), (snapshot) => {
+    const categoryData = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        label: data.name,
+        value: data.name, 
+        subCategories: data.subcategories || [],
+      };
+    });
+    setCategory(categoryData);
+  });
+
+  return () => unsubscribe();
+}, []);
 
   // Fetch product data if editing
   useEffect(() => {
@@ -143,7 +126,7 @@ export default function SellPage() {
         setProduct(data);
         setProductName(data.name || "");
         setSelectedCategory(data.categoryId || "");
-        setSubCategory(data.subcategory || "");
+        setSubCategory(data.subcategory || []);
         setIsNegotiable(data.negotiable || false);
         setProductDescription(data.description || "");
         setBrand(data.brand || "");
@@ -167,7 +150,7 @@ export default function SellPage() {
   // Clear form on unmount
   const clearForm = useCallback(() => {
     setProductName("");
-    setSubCategory("");
+    setSubCategory([]);
     setSelectedCategory("");
     setIsNegotiable(false);
     setProductDescription("");
@@ -185,34 +168,14 @@ export default function SellPage() {
     return () => clearForm();
   }, [clearForm]);
 
-    setProductName("");
-    setSubCategory("");
-    setSelectedCategory("");
-    setIsNegotiable(false);
-    setProductDescription("");
-    setBrand("");
-    setCondition("");
-    setColor("");
-    setPrice("");
-    setOriginalPrice("");
-    setYear("");
-    setImages([]);
-    setIsAgreed(false);
-  }, []);
-  useEffect(() => clearForm, [clearForm]);
 
+//map categories and sub categories 
   const handleCategoryChange = (value) => {
     setSelectedCategory(value);
     const matched = category.find((cat) => cat.label === value);
     console.log("Matched category:", matched);
     setAvailableSubcategories(matched?.subCategories || []);
     setSelectedSubcategories([]);
-    console.log("Selected category value:", value);
-    console.log("Matched category object:", matched);
-    console.log(
-      "Available subcategories set to:",
-      matched?.subCategories || []
-    );
   };
   // Warn on unsaved changes
   const arraysAreEqual = (a, b) =>
@@ -271,10 +234,8 @@ export default function SellPage() {
     window.addEventListener("beforeunload", handleBefore);
     return () => window.removeEventListener("beforeunload", handleBefore);
   }, [hasUnsaved]);
-    };
-    window.addEventListener("beforeunload", handleBefore);
-    return () => window.removeEventListener("beforeunload", handleBefore);
-  }, [hasUnsaved]);
+
+
 
   // Image handlers
   const removeImage = (index) => {
@@ -284,28 +245,25 @@ export default function SellPage() {
   const handleImageUpload = async (e) => {
     const files = e.target.files;
     if (!files.length) return;
-    const arr = Array.from(files);
-    const files = e.target.files;
-    if (!files.length) return;
-    const arr = Array.from(files);
+    const arr = Array.from(files)
     try {
-      const urls = await Promise.all(
-        arr.map(async (file) => {
-          const data = new FormData();
-          data.append("file", file);
-          data.append("upload_preset", "ProductImage");
-          data.append("cloud_name", "dj21x4jnt");
-          data.append("folder", "market_trybe_products");
-          const res = await fetch(
-            "https://api.cloudinary.com/v1_1/dj21x4jnt/image/upload",
-            { method: "POST", body: data }
-          );
-          const json = await res.json();
-          if (!json.secure_url) throw new Error("Upload failed");
-          return json.secure_url;
-        })
-      );
-      setImages((prev) => [...prev, ...urls]);
+      // const urls = await Promise.all(
+      //   arr.map(async (file) => {
+      //     const data = new FormData();
+      //     data.append("file", file);
+      //     data.append("upload_preset", "ProductImage");
+      //     data.append("cloud_name", "dj21x4jnt");
+      //     data.append("folder", "market_trybe_products");
+      //     const res = await fetch(
+      //       "https://api.cloudinary.com/v1_1/dj21x4jnt/image/upload",
+      //       { method: "POST", body: data }
+      //     );
+      //     const json = await res.json();
+      //     if (!json.secure_url) throw new Error("Upload failed");
+      //     return json.secure_url;
+      //   })
+      // );
+      // setImages((prev) => [...prev, ...urls]);
       const urls = await Promise.all(
         arr.map(async (file) => {
           const data = new FormData();
@@ -355,7 +313,7 @@ export default function SellPage() {
       if (!currentUser) throw new Error("Not authenticated");
       const data = {
         name: productName.trim(),
-        subcategory: subCategory.trim(),
+        subcategory: selectedSubcategories,
         categoryId: selectedCategory,
         negotiable: isNegotiable,
         description: productDescription.trim(),
@@ -591,7 +549,7 @@ export default function SellPage() {
               <Label htmlFor='description'>Product Description</Label>
               <Textarea
                 id='description'
-                placeholder='Describe your product in detail'
+                placeholder='Describe your product in details'
                 className='min-h-[120px]'
                 value={productDescription}
                 onChange={(e) => setProductDescription(e.target.value)}
@@ -754,6 +712,5 @@ export default function SellPage() {
         </div>
       </form>
     </div>
-  );
   );
 }
