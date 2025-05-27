@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -10,32 +10,34 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import LogoutModal from "@/components/LogoutModal";
 import {
   User,
   LogOut,
   ShoppingBag,
   Upload,
-  Store ,
+  Store,
   MessageSquare,
-  Settings,
+  Home,
+  CreditCard,
   Pencil,
   CheckCircle2,
-  Home,
-  CreditCard
 } from "lucide-react";
-import { MdShop, MdVerified } from "react-icons/md";
+import { MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 
 export default function UserProfile() {
   const { currentUser, setCurrentUser } = useUser();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const isLoggedIn = !!currentUser;
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      setCurrentUser(null); // Clear user in context
+      setCurrentUser(null);
+      setIsModalOpen(false);
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
         console.error("Logout error:", error);
@@ -49,13 +51,13 @@ export default function UserProfile() {
         <div className='flex items-center space-x-4'>
           <Link
             href='/login'
-            className='text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-bg duration-200 ease-in-out focus:outline-none border border-blue-500 rounded-md px-4 py-2'
+            className='text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 border border-blue-500 rounded-md px-4 py-2'
           >
             Login
           </Link>
           <Link
             href='/signup'
-            className='text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-bg duration-200 ease-in-out focus:outline-none border border-blue-500 rounded-md px-4 py-2'
+            className='text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 border border-blue-500 rounded-md px-4 py-2'
           >
             Sign Up
           </Link>
@@ -123,10 +125,10 @@ export default function UserProfile() {
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
                 <Home className='mr-2 h-4 w-4' />
-                Marketplace 
+                Marketplace
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
+            {/* <DropdownMenuItem asChild>
               <Link
                 href='/my-shop'
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
@@ -134,13 +136,13 @@ export default function UserProfile() {
                 <ShoppingBag className='mr-2 h-4 w-4' />
                 Homepage
               </Link>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuItem asChild>
               <Link
                 href='/my-shop'
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
-                <Store  className='mr-2 h-4 w-4' />
+                <Store className='mr-2 h-4 w-4' />
                 My Shop
               </Link>
             </DropdownMenuItem>
@@ -168,8 +170,8 @@ export default function UserProfile() {
                   href='/kyc'
                   className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
                 >
-                  <MessageSquare className='mr-2 h-4 w-4' />
-                  Kyc Registration
+                  <CheckCircle2 className='mr-2 h-4 w-4' />
+                  KYC Registration
                 </Link>
               </DropdownMenuItem>
             )}
@@ -187,13 +189,13 @@ export default function UserProfile() {
                 href='/subscription'
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
-                <CreditCard  className='mr-2 h-4 w-4' />
+                <CreditCard className='mr-2 h-4 w-4' />
                 Subscription
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator className='bg-gray-200' />
             <DropdownMenuItem
-              onClick={handleLogout}
+              onClick={() => setIsModalOpen(true)}
               className='flex items-center px-3 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors duration-150 text-sm font-medium cursor-pointer'
             >
               <LogOut className='mr-2 h-4 w-4' />
@@ -202,6 +204,11 @@ export default function UserProfile() {
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      <LogoutModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleLogout}
+      />
     </div>
   );
 }

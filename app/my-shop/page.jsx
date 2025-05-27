@@ -12,6 +12,7 @@ import { Plus, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import ListingCard from "@/components/ListingCard";
 import SellerProfileCard from "@/components/SellerProfileCard";
+import UserProfile from "@/components/UserProfile";
 
 export default function MyShopPage() {
   const router = useRouter();
@@ -105,16 +106,15 @@ export default function MyShopPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Shop</h1>
-        <div className="flex space-x-2">
-         
+    <div className='container mx-auto px-4 py-8 max-w-6xl'>
+      <div className='flex items-center justify-between mb-6'>
+        <h1 className='text-2xl font-bold'>My Shop</h1>
+        <div className='flex space-x-2'>
           <Button onClick={() => router.push("/sell")}>
             <Plus className='h-4 w-4 mr-2' />
             Add Product
           </Button>
-          <UserProfile/>
+          <UserProfile />
         </div>
       </div>
 
