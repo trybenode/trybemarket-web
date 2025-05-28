@@ -12,6 +12,7 @@ import { Plus, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import ListingCard from "@/components/ListingCard";
 import SellerProfileCard from "@/components/SellerProfileCard";
+import UserProfile from "@/components/UserProfile"; 
 
 export default function MyShopPage() {
   const router = useRouter();
