@@ -1,13 +1,22 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import SellerProfileCard from "@/components/SellerProfileCard";
 import ListingCard from "@/components/ListingCard";
 import { Loader } from "lucide-react";
 import Link from "next/link";
+import UserProfile from "@/components/UserProfile";
+import BackButton from "@/components/BackButton";
 
 export default function SellerShopPage() {
   const params = useParams();
@@ -33,14 +42,18 @@ export default function SellerShopPage() {
         if (!sellerSnap.exists()) throw new Error("Seller not found");
         console.log("Seller ID from route:", sellerId);
 
-        const sellerData = { id: sellerSnap.id, uid: sellerSnap.id, ...sellerSnap.data() };
+        const sellerData = {
+          id: sellerSnap.id,
+          uid: sellerSnap.id,
+          ...sellerSnap.data(),
+        };
         setSellerInfo(sellerData);
 
         // Fetch seller products
         const productsRef = collection(db, "products");
         const q = query(productsRef, where("userId", "==", sellerId));
         const querySnapshot = await getDocs(q);
-        const fetchedProducts = querySnapshot.docs.map(doc => ({
+        const fetchedProducts = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
@@ -60,9 +73,12 @@ export default function SellerShopPage() {
     setRefreshing(true);
     try {
       if (!sellerId) return;
-      const q = query(collection(db, "products"), where("userId", "==", sellerId));
+      const q = query(
+        collection(db, "products"),
+        where("userId", "==", sellerId)
+      );
       const snapshot = await getDocs(q);
-      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setProducts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     } catch (err) {
       console.error("Refresh error:", err);
     } finally {
@@ -74,6 +90,10 @@ export default function SellerShopPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <div className="flex flex-row justify-between items-center mt-5 px-14">
+        <BackButton />
+        <UserProfile />
+      </div>
       <div className="p-4">
         {sellerInfo ? (
           <SellerProfileCard sellerInfo={sellerInfo} />
@@ -81,15 +101,8 @@ export default function SellerShopPage() {
           <p className="text-red-500 text-center">Seller not found</p>
         )}
 
-        <div className="flex justify-between items-center mt-6 mb-2">
+        <div className="flex justify-center items-center mt-6 mb-2">
           <h2 className="text-lg font-semibold">Products</h2>
-          <button
-            className="text-blue-600 hover:underline text-sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            {refreshing ? "Refreshing..." : "Refresh"}
-          </button>
         </div>
 
         {products.length === 0 ? (
@@ -97,7 +110,7 @@ export default function SellerShopPage() {
             No products found for this seller.
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-4">
             {products.map((product) => (
               <Link key={product.id} href={`/listing/${product.id}`}>
                 <div className="cursor-pointer">
