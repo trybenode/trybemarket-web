@@ -21,7 +21,7 @@ export default function Categories() {
       try {
         const querySnapshot = await getDocs(collection(db, 'categories'))
         const categoryData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-          const shuffledCategories = shuffleArray([...categoryData]).slice(0, 6);
+          const shuffledCategories = shuffleArray([...categoryData]);
         setCategories(shuffledCategories)
       } catch (err) {
         console.error('Error fetching categories:', err)
