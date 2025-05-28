@@ -90,7 +90,7 @@ export default function SellerShopPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="flex flex-row justify-between items-center mt-5 px-14">
+      <div className="flex flex-row justify-between items-center mt-5 px-5">
         <BackButton />
         <UserProfile />
       </div>

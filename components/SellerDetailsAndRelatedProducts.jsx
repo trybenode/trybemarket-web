@@ -342,9 +342,9 @@ export default function SellerDetailsAndRelatedProducts({
       <div className="my-8">
         <h2 className="mb-4 text-center text-lg font-bold">Related Products</h2>
         {relatedProducts.length > 0 ? (
-          <div className="flex flex-wrap justify-between gap-4 lg:gap-2">
+          <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 ">
             {relatedProducts.slice(0, 10).map((item) => (
-              <div key={item.id} className="w-[48%] lg:w-[22%]">
+              <div key={item.id} className="w-[100%] lg:w-[22%]">
                 <div
                   onClick={() => router.push(`/listing/${item.id}`)}
                   className="cursor-pointer"
