@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 export default function SearchBar({ onResults }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,9 +62,10 @@ export default function SearchBar({ onResults }) {
         item.name?.toLowerCase().includes(q) ||
         item.categoryId?.toLowerCase().includes(q) ||
         item.brand?.toLowerCase().includes(q) ||
-        item.subcategory?.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) 
-        
+        (Array.isArray(item.subcategory)
+          ? item.subcategory.some((sub) => sub.toLowerCase().includes(q))
+          : item.subcategory?.toLowerCase().includes(q)) ||
+        item.description?.toLowerCase().includes(q)
       );
     });
 
@@ -74,7 +75,6 @@ export default function SearchBar({ onResults }) {
   const handleClearSearch = () => {
     setSearchQuery("");
   };
-
 
   return (
     <div className="relative">
@@ -89,5 +89,5 @@ export default function SearchBar({ onResults }) {
         onChange={(e) => setSearchQuery(e.target.value)}
       />
     </div>
-  )
+  );
 }

@@ -22,6 +22,7 @@ import {
   CreditCard,
   Pencil,
   CheckCircle2,
+  Heart,
 } from "lucide-react";
 import { MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
@@ -163,6 +164,15 @@ export default function UserProfile() {
               >
                 <Upload className='mr-2 h-4 w-4' />
                 Sell
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href='/favorite'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <Heart className='mr-2 h-4 w-4' />
+                Favorite
               </Link>
             </DropdownMenuItem>
             {!currentUser?.isVerified && (
