@@ -1,29 +1,31 @@
-"use client"; 
+// context/UserContext.js
+"use client"
 
-import React, {
-  createContext,
-  useState,
-  useContext,
-  useEffect,
-  useRef,
-} from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../lib/firebase"; // Adjust path to your firebaseConfig
+import React, { createContext, useState, useContext, useEffect, useRef } from "react"
+import { onAuthStateChanged, setPersistence, browserLocalPersistence } from "firebase/auth"
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore"
+import { auth, db } from "../lib/firebase"
 
-const UserContext = createContext();
+const UserContext = createContext()
 
 export const UserProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const kycListenerRef = useRef(null); // Store the unsubscribe function
+  const [currentUser, setCurrentUser] = useState(null)
+  const [loading, setLoading] = useState(true) // Add loading state
+  const kycListenerRef = useRef(null)
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await user.reload();
+    // Set auth persistence
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => console.log("Auth persistence set to local"))
+      .catch((error) => console.error("Error setting persistence:", error))
 
-        const userRef = doc(db, "users", user.uid);
-        const docSnap = await getDoc(userRef);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      console.log("UserContext auth state:", user ? `User: ${user.uid}` : "No user")
+      setLoading(true) // Ensure loading is true during auth check
+      if (user) {
+        await user.reload()
+        const userRef = doc(db, "users", user.uid)
+        const docSnap = await getDoc(userRef)
 
         let userData = {
           uid: user.uid,
@@ -36,81 +38,79 @@ export const UserProvider = ({ children }) => {
           locationType: "",
           isVerified: false,
           emailVerified: user.emailVerified,
-        };
+        }
 
         if (docSnap.exists()) {
-          userData = { ...userData, ...docSnap.data() };
+          userData = { ...userData, ...docSnap.data() }
         } else {
-          await setDoc(userRef, userData, { merge: true });
+          await setDoc(userRef, userData, { merge: true })
         }
 
         if (user.emailVerified && !userData.emailVerified) {
-          await updateDoc(userRef, { emailVerified: true });
-          userData.emailVerified = true;
+          await updateDoc(userRef, { emailVerified: true })
+          userData.emailVerified = true
         }
 
-        setCurrentUser(userData);
+        setCurrentUser(userData)
 
-        // Clean up any existing KYC listener
+        // Clean up existing KYC listener
         if (kycListenerRef.current) {
-          kycListenerRef.current();
-          kycListenerRef.current = null;
+          kycListenerRef.current()
+          kycListenerRef.current = null
         }
 
         // Set up KYC listener
-        const kycDocRef = doc(db, "kycRequests", user.uid);
+        const kycDocRef = doc(db, "kycRequests", user.uid)
         kycListenerRef.current = onSnapshot(
           kycDocRef,
           async (docSnap) => {
             if (docSnap.exists()) {
-              const kycData = docSnap.data();
-
-              if (kycData.status === "verified" && !currentUser?.isVerified) {
+              const kycData = docSnap.data()
+              console.log("KYC data:", kycData)
+              if (kycData.status === "verified" && !userData.isVerified) {
                 try {
-                  await updateDoc(userRef, { isVerified: true });
+                  await updateDoc(userRef, { isVerified: true })
                   setCurrentUser((prev) => ({
                     ...prev,
                     isVerified: true,
-                  }));
+                  }))
+                  console.log("Updated isVerified to true")
                 } catch (error) {
-                  // Only log errors in development
-                  if (process.env.NODE_ENV === "development") {
-                    console.error("Error updating isVerified:", error);
-                  }
+                  console.error("Error updating isVerified:", error)
                 }
               }
+            } else {
+              console.log("No KYC request found for UID:", user.uid)
             }
           },
           (error) => {
-            if (process.env.NODE_ENV === "development") {
-              console.error("KYC snapshot error:", error);
-            }
+            console.error("KYC snapshot error:", error)
           }
-        );
+        )
       } else {
-        // Clean up KYC listener when signing out
         if (kycListenerRef.current) {
-          kycListenerRef.current();
-          kycListenerRef.current = null;
+          kycListenerRef.current()
+          kycListenerRef.current = null
         }
-        setCurrentUser(null);
+        setCurrentUser(null)
       }
-    });
+      setLoading(false) // Clear loading after auth state is resolved
+    })
 
     return () => {
       if (kycListenerRef.current) {
-        kycListenerRef.current();
-        kycListenerRef.current = null;
+        kycListenerRef.current()
+        kycListenerRef.current = null
       }
-      unsubscribeAuth();
-    };
-  }, []);
+      unsubscribeAuth()
+    }
+  }, [])
 
   return (
-    <UserContext.Provider value={{ currentUser, setCurrentUser }}>
+    <UserContext.Provider value={{ currentUser, setCurrentUser, loading }}>
       {children}
     </UserContext.Provider>
-  );
-};
+  )
+}
 
-export const useUser = () => useContext(UserContext);
+export const useUser = () => useContext(UserContext)

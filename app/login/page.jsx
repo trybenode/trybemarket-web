@@ -11,7 +11,7 @@ import {
   signInWithPopup,
   sendPasswordResetEmail,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "react-hot-toast"; // Updated import
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import useUserStore from "@/lib/userStore";
+import useUniversitySelection from "@/hooks/useUniversitySelection";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,12 +36,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+  const { isFirstTimeUser } = useUniversitySelection();
 
   // Initialize user store
   useEffect(() => {
     useUserStore.getState().loadUser();
   }, []);
 
+  // In LoginPage.js
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -85,10 +88,6 @@ export default function LoginPage() {
         return;
       }
 
-      if (process.env.NODE_ENV === "development") {
-        console.log("User email verified:", user.emailVerified);
-      }
-
       await useUserStore.getState().setUser({
         id: user.uid,
         email: user.email,
@@ -99,11 +98,12 @@ export default function LoginPage() {
         duration: 3000,
       });
 
-      router.replace("/");
+      // Use selectedUniversity from store for redirect
+      const { selectedUniversity } = useUserStore.getState();
+      router.push(selectedUniversity ? "/" : "/select-university");
     } catch (error) {
       console.error("Login error:", error.message);
       let errorMessage = "Failed to login. Please try again.";
-
       switch (error.code) {
         case "auth/user-not-found":
         case "auth/wrong-password":
@@ -122,7 +122,6 @@ export default function LoginPage() {
             "Network error. Please check your internet connection.";
           break;
       }
-
       toast.error(`Login Failed: ${errorMessage}`);
     } finally {
       setLoading(false);
@@ -155,12 +154,9 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-      console.log("Initializing Google provider");
       const provider = new GoogleAuthProvider();
-      console.log("Triggering signInWithPopup");
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
-      console.log("Google Sign-In successful:", user.email);
 
       const userRef = doc(db, "users", user.uid);
       await setDoc(
@@ -188,7 +184,9 @@ export default function LoginPage() {
         duration: 3000,
       });
 
-      router.replace("/");
+      // Use selectedUniversity from store for redirect
+      const { selectedUniversity } = useUserStore.getState();
+      router.push(selectedUniversity ? "/" : "/select-university");
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       let errorMessage = "Something went wrong";

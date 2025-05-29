@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect,} from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -195,7 +195,7 @@ export default function ListingDetailsPage({ params }) {
     categoryId = "",
     brand = "",
     condition = "",
-    subcategory = "",
+    subcategory = [],
     color = "",
     year = "",
   } = product;
@@ -207,6 +207,8 @@ export default function ListingDetailsPage({ params }) {
     { label: "Condition", value: condition },
     { label: "Color", value: color },
     { label: "Year", value: year },
+// console.log("DETAILS ITEM:", item.label, item.value);
+
   ];
 
   return (
@@ -308,7 +310,7 @@ export default function ListingDetailsPage({ params }) {
                   {details.map((item, idx) => (
                     <div key={idx} className="space-y-1">
                       <p className="font-bold text-gray-800">{item.label}</p>
-                      <p className="text-gray-600">{item.value || "N/A"}</p>
+                      <p className="text-gray-600">{Array.isArray(item.value) ? item.value.join(", ") || "N/A" : item.value || "N/A"}</p>
                     </div>
                   ))}
                 </div>

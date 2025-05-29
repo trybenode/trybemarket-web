@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Toaster, toast } from "react-hot-toast"; 
+import { Toaster, toast } from "react-hot-toast";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import {
   Dialog,
@@ -56,8 +56,8 @@ export default function SignupPage() {
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    const { initError, isInitialized } = useUserStore.getState();
-    if (!isInitialized) {
+    const { isReady, initError } = useUserStore.getState();
+    if (!isReady()) {
       toast.error(
         "Store Not Initialized: User store is still loading. Please try again."
       );
@@ -115,6 +115,27 @@ export default function SignupPage() {
         fullName,
       });
 
+      // Ensure store is initialized and check for errors
+      const {
+        selectedUniversity,
+        isInitialized,
+        initError: storeError,
+      } = useUserStore.getState();
+      if (!isInitialized) {
+        toast.error("Store not fully initialized. Please try again.");
+        return;
+      }
+      if (storeError) {
+        toast.error(
+          "Failed to load user data from Firestore. Please try again."
+        );
+        return;
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("Selected University after signup:", selectedUniversity);
+      }
+
       toast.success(
         "Account Created 🎉: A verification email has been sent. Please verify your email.",
         {
@@ -123,11 +144,8 @@ export default function SignupPage() {
         }
       );
 
-      setTimeout(async () => {
-        await auth.signOut();
-        await useUserStore.getState().clearUser();
-        router.push("/login");
-      }, 2000);
+      // Redirect based on selectedUniversity
+      router.push(selectedUniversity ? "/" : "/select-university");
     } catch (err) {
       console.error("Sign up error:", err.message);
       let errorMessage = "Something went wrong. Please try again.";
@@ -163,8 +181,8 @@ export default function SignupPage() {
     }
     setIsGoogleSigningIn(true);
 
-    const { initError, isInitialized } = useUserStore.getState();
-    if (!isInitialized) {
+    const { isReady, initError } = useUserStore.getState();
+    if (!isReady()) {
       toast.error(
         "Store Not Initialized: User store is still loading. Please try again."
       );
@@ -181,12 +199,9 @@ export default function SignupPage() {
 
     try {
       setLoading(true);
-      console.log("Initializing Google provider");
       const provider = new GoogleAuthProvider();
-      console.log("Triggering signInWithPopup");
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
-      console.log("Google Sign-Up successful:", user.email);
 
       const userRef = doc(db, "users", user.uid);
       await setDoc(
@@ -209,12 +224,37 @@ export default function SignupPage() {
         profilePicture: user.photoURL,
       });
 
+      // Ensure store is initialized and check for errors
+      const {
+        selectedUniversity,
+        isInitialized,
+        initError: storeError,
+      } = useUserStore.getState();
+      if (!isInitialized) {
+        toast.error("Store not fully initialized. Please try again.");
+        return;
+      }
+      if (storeError) {
+        toast.error(
+          "Failed to load user data from Firestore. Please try again."
+        );
+        return;
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "Selected University after Google signup:",
+          selectedUniversity
+        );
+      }
+
       toast.success(`Sign Up Successful 🎉: Welcome ${user.displayName}`, {
         position: "top-center",
         duration: 3000,
       });
 
-      router.replace("/");
+      // Redirect based on selectedUniversity
+      router.push(selectedUniversity ? "/" : "/select-university");
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       let errorMessage = "Something went wrong";
@@ -232,7 +272,6 @@ export default function SignupPage() {
     }
   };
 
-  // Sample terms and privacy content (unchanged)
   const termsParagraphs = [
     "1. Eligibility: You must be a student or a verified user aged 16+. Providing false information or fraudulent activity will lead to suspension.",
     "2. Your Account: Keep your account credentials safe. You are responsible for all activities under your account.",
@@ -251,7 +290,6 @@ export default function SignupPage() {
 
   return (
     <div className='min-h-screen flex items-center justify-center bg-gray-50 px-4'>
-      
       <Head>
         <title>Sign Up - Trybe Market</title>
         <meta
