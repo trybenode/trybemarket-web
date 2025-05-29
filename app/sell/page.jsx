@@ -11,7 +11,7 @@ import {
   doc,
   onSnapshot
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db,auth} from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
+import {canUserUpload,  incrementUploadCount } from '../../hooks/UploadLimiter'
 
 export default function SellPage() {
   const router = useRouter();
@@ -310,7 +310,19 @@ export default function SellPage() {
     }
     try {
       setSaving(true);
-      if (!currentUser) throw new Error("Not authenticated");
+      if (!auth.currentUser) throw new Error("Not authenticated");
+
+      // Check user upload limit
+      console.log('Checking if user can upload for UID:', auth.currentUser.uid);
+      const canUpload = await canUserUpload();
+      // console.log('Can upload:', canUpload);
+      if (!canUpload) {
+        toast.error(
+            'You have reached your monthly upload limit. Upgrade to premium to upload more products.',
+        );
+        return;
+      }
+
       const data = {
         name: productName.trim(),
         subcategory: selectedSubcategories,
@@ -327,8 +339,12 @@ export default function SellPage() {
         userId: currentUser.uid,
         ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
       };
+  
       if (isEditMode) await updateDoc(doc(db, "products", productId), data);
-      else await addDoc(collection(db, "products"), data);
+      else {
+        await addDoc(collection(db, "products"), data);
+        await incrementUploadCount();
+      }    
       toast.success(isEditMode ? "Updated" : "Uploaded");
       router.push("/my-shop");
     } catch (err) {
@@ -585,6 +601,7 @@ export default function SellPage() {
                   <SelectContent>
                     <SelectItem value='new'>New</SelectItem>
                     <SelectItem value='like-new'>Like New</SelectItem>
+                    <SelectItem value='used'>Used</SelectItem>
                     <SelectItem value='good'>Good</SelectItem>
                     <SelectItem value='fair'>Fair</SelectItem>
                     <SelectItem value='poor'>Poor</SelectItem>

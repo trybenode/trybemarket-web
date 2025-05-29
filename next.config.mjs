@@ -10,7 +10,7 @@ const nextConfig = {
     unoptimized: true,
   },
    dev: {
-    allowedDevOrigins: ['http://192.168.8.101:3000'], // adjust port as needed
+    allowedDevOrigins: ['http://192.168.8.102:3000'],
   },
 }
 
