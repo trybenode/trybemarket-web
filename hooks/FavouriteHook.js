@@ -1,7 +1,7 @@
 import useFavoritesStore from '../lib/FavouriteStore';
 import { db } from '../lib/firebase'
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 const fetchDocumentsByIdsBatch = async (collectionName, docIds) => {
   if (!docIds || docIds.length === 0) return [];
@@ -33,33 +33,41 @@ export const useFavorites = () => {
   const [loading, setLoading] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [products, setProducts] = useState([]);
-  const { favoriteIds, toggleFavorite } = useFavoritesStore();
+  const { favoriteIds, toggleFavorite, loadFavorites } = useFavoritesStore();
+
+  // Load favorites from localStorage on mount
+  useEffect(() => {
+    loadFavorites();
+  }, [loadFavorites]);
 
   const fetchFavorites = useCallback(async () => {
-    let isMounted = true;
+    if (!favoriteIds || favoriteIds.length === 0) {
+      setProducts([]);
+      return;
+    }
+
     setLoading(true);
+    console.log('Fetching favorites with IDs:', favoriteIds);
 
     try {
       const favoriteProducts = await fetchDocumentsByIdsBatch('products', favoriteIds);
-      if (isMounted) {
-        setProducts(
-          favoriteProducts.map((product) => ({
-            id: product.id,
-            product: {
-              ...product,
-              createdAt: product.createdAt?.toDate?.() || null,
-            },
-          }))
-        );
-      }
+      console.log('Fetched products:', favoriteProducts);
+      
+      // Set the products directly since they already have the correct structure
+      setProducts(favoriteProducts);
     } catch (error) {
       console.error('Error fetching favorites:', error);
+      setProducts([]);
     } finally {
-      if (isMounted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [favoriteIds]);
+
+  // Fetch products whenever favoriteIds changes
+  useEffect(() => {
+    console.log('FavoriteIds changed:', favoriteIds);
+    fetchFavorites();
+  }, [favoriteIds, fetchFavorites]);
 
   const loadMore = async () => {
     return;
