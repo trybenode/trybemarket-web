@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Toaster, toast } from "react-hot-toast"; 
+import { Toaster, toast } from "react-hot-toast";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import {
   Dialog,
@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import useUserStore from "@/lib/userStore";
+// import useUniversitySelection from "@/hooks/useUniversitySelection";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -56,8 +57,8 @@ export default function SignupPage() {
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    const { initError, isInitialized } = useUserStore.getState();
-    if (!isInitialized) {
+    const { isReady, initError } = useUserStore.getState();
+    if (!isReady()) {
       toast.error(
         "Store Not Initialized: User store is still loading. Please try again."
       );
@@ -126,7 +127,7 @@ export default function SignupPage() {
       setTimeout(async () => {
         await auth.signOut();
         await useUserStore.getState().clearUser();
-        router.push("/login");
+        router.push("/select-university"); // Redirect to university selection
       }, 2000);
     } catch (err) {
       console.error("Sign up error:", err.message);
@@ -163,8 +164,8 @@ export default function SignupPage() {
     }
     setIsGoogleSigningIn(true);
 
-    const { initError, isInitialized } = useUserStore.getState();
-    if (!isInitialized) {
+    const { isReady, initError } = useUserStore.getState();
+    if (!isReady()) {
       toast.error(
         "Store Not Initialized: User store is still loading. Please try again."
       );
@@ -214,7 +215,7 @@ export default function SignupPage() {
         duration: 3000,
       });
 
-      router.replace("/");
+      router.push("/select-university"); // Redirect to university selection
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       let errorMessage = "Something went wrong";
@@ -251,7 +252,6 @@ export default function SignupPage() {
 
   return (
     <div className='min-h-screen flex items-center justify-center bg-gray-50 px-4'>
-      
       <Head>
         <title>Sign Up - Trybe Market</title>
         <meta

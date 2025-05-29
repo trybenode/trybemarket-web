@@ -38,6 +38,7 @@ export default function UserProfile() {
       await signOut(auth);
       setCurrentUser(null);
       setIsModalOpen(false);
+      router.push("/");
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
         console.error("Logout error:", error);

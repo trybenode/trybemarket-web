@@ -6,7 +6,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-full max-w-sm p-6 rounded-xl shadow-lg">
+      <div className="bg-white w-full mx-2 max-w-sm p-6 rounded-xl shadow-lg">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
           Are you sure you want to logout?
         </h2>
