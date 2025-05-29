@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import useUserStore from "@/lib/userStore";
+import { db } from "@/lib/firebase"; // adjust path based on your project
+import { doc, updateDoc } from "firebase/firestore";
 
 const useUniversitySelection = () => {
   const router = useRouter();
@@ -61,10 +63,21 @@ const useUniversitySelection = () => {
   // Handle university selection
   const handleSelectUniversity = async (university) => {
     try {
-      await setUniversity(university);
+      await setUniversity(university); // Store in Zustand/localStorage
+
+      // Save to Firestore
+      const userId = user?.id;
+      if (!userId) throw new Error("User ID not found");
+
+      const userRef = doc(db, "users", userId); // Assuming users are stored by UID
+      await updateDoc(userRef, {
+        selectedUniversity: university,
+      });
+
       toast.success(`Selected ${university.name}`);
-      router.push("/"); // Redirect to home page after selection
+      router.push("/");
     } catch (err) {
+      console.error(err);
       toast.error("Failed to save university selection");
     }
   };
