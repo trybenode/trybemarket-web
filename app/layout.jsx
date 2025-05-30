@@ -3,6 +3,7 @@ import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import ToastProvider from "@/components/ToastProvider";
 import ClientUserLoader from "./ClientUserLoader"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 export const metadata = {
   title: "trybemarket",
   description: "student e-commerce platform",
@@ -18,6 +19,7 @@ export default function RootLayout({ children }) {
           <ClientUserLoader />
           {children}
         </UserProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
