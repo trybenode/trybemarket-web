@@ -12,26 +12,17 @@ const useUniversitySelection = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // New: track if selection is in progress
   const [isSelecting, setIsSelecting] = useState(false);
 
-  // Fetch universities once
   useEffect(() => {
     const fetchUniversities = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          "http://universities.hipolabs.com/search?country=Nigeria"
-        );
-        if (!res.ok) throw new Error("Failed to fetch universities");
+        const res = await fetch("/universities.json");
+        if (!res.ok) throw new Error("Failed to load local university list");
         const data = await res.json();
-
-        const cleaned = data.map((uni) =>
-          uni.name.replace(/\s*\([^)]*\)\s*/g, "").trim()
-        );
-        setUniversities(cleaned);
+        setUniversities(data);
       } catch (err) {
         setError(err.message);
         toast.error(`Failed to load universities: ${err.message}`);
@@ -39,20 +30,20 @@ const useUniversitySelection = () => {
         setLoading(false);
       }
     };
+
     fetchUniversities();
   }, []);
 
-  // Filtered universities based on search query
   const filteredUniversities = universities.filter((uni) =>
     uni.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleSelectUniversity = async (university) => {
-    if (isSelecting) return; // block if already selecting
+    if (isSelecting) return;
 
     setIsSelecting(true);
     try {
-      await setUniversity(university); // updates store and Firestore
+      await setUniversity(university);
       toast.success(`Selected ${university}`);
       router.push("/");
     } catch (err) {
@@ -63,7 +54,6 @@ const useUniversitySelection = () => {
     }
   };
 
-  // Redirect first-time users who haven't selected a university
   useEffect(() => {
     if (isReady() && user && isFirstTimeUser() && !selectedUniversity) {
       router.push("/select-university");
@@ -77,7 +67,7 @@ const useUniversitySelection = () => {
     loading,
     error,
     handleSelectUniversity,
-    isSelecting, // expose this flag
+    isSelecting,
     isFirstTimeUser: isFirstTimeUser(),
     selectedUniversity,
   };
