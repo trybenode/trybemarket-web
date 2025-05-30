@@ -1,14 +1,12 @@
+// app/layout.jsx (server component)
 import "./globals.css";
-import { Toaster } from "react-hot-toast";
 import { UserProvider } from "@/context/UserContext";
 import ToastProvider from "@/components/ToastProvider";
+import ClientUserLoader from "./ClientUserLoader"
 export const metadata = {
   title: "trybemarket",
   description: "student e-commerce platform",
-  icons: {
-    // icon: "/logo.png"
-    icon: "/logo.jpeg",
-  },
+  icons: { icon: "/logo.jpeg" },
 };
 
 export default function RootLayout({ children }) {
@@ -16,7 +14,10 @@ export default function RootLayout({ children }) {
     <html lang='en'>
       <body>
         <ToastProvider />
-        <UserProvider>{children}</UserProvider>
+        <UserProvider>
+          <ClientUserLoader />
+          {children}
+        </UserProvider>
       </body>
     </html>
   );

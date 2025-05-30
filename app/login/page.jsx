@@ -36,7 +36,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
-  const { isFirstTimeUser } = useUniversitySelection();
 
   // Initialize user store
   useEffect(() => {

@@ -2,45 +2,36 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import useUserStore from "@/lib/userStore";
-import { db } from "@/lib/firebase"; // adjust path based on your project
-import { doc, updateDoc } from "firebase/firestore";
 
 const useUniversitySelection = () => {
   const router = useRouter();
   const { user, selectedUniversity, isFirstTimeUser, setUniversity, isReady } =
     useUserStore();
+
   const [universities, setUniversities] = useState([]);
-  const [filteredUniversities, setFilteredUniversities] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch universities from the HipoLabs API
+  // New: track if selection is in progress
+  const [isSelecting, setIsSelecting] = useState(false);
+
+  // Fetch universities once
   useEffect(() => {
     const fetchUniversities = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const response = await fetch(
+        const res = await fetch(
           "http://universities.hipolabs.com/search?country=Nigeria"
         );
-        if (!response.ok) throw new Error("Failed to fetch universities");
-        const data = await response.json();
+        if (!res.ok) throw new Error("Failed to fetch universities");
+        const data = await res.json();
 
-        // Transform to clean up university names (remove brackets)
-        const transformedData = data.map((uni) => {
-          const rawName = uni.name;
-          const cleanedName = rawName.replace(/\s*\([^)]*\)\s*/g, "").trim();
-          // console.log("Raw:", rawName, "→ Cleaned:", cleanedName);
-
-          return {
-            name: cleanedName,
-            domain: uni.domains?.[0] || "",
-            website: uni.web_pages?.[0] || "",
-          };
-        });
-
-        setUniversities(transformedData);
-        setFilteredUniversities(transformedData);
+        const cleaned = data.map((uni) =>
+          uni.name.replace(/\s*\([^)]*\)\s*/g, "").trim()
+        );
+        setUniversities(cleaned);
       } catch (err) {
         setError(err.message);
         toast.error(`Failed to load universities: ${err.message}`);
@@ -48,46 +39,36 @@ const useUniversitySelection = () => {
         setLoading(false);
       }
     };
-
     fetchUniversities();
   }, []);
 
-  // Filter universities based on search query
-  useEffect(() => {
-    const filtered = universities.filter((uni) =>
-      uni.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredUniversities(filtered);
-  }, [searchQuery, universities]);
+  // Filtered universities based on search query
+  const filteredUniversities = universities.filter((uni) =>
+    uni.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  // Handle university selection
   const handleSelectUniversity = async (university) => {
+    if (isSelecting) return; // block if already selecting
+
+    setIsSelecting(true);
     try {
-      await setUniversity(university); // Store in Zustand/localStorage
-
-      // Save to Firestore
-      const userId = user?.id;
-      if (!userId) throw new Error("User ID not found");
-
-      const userRef = doc(db, "users", userId); // Assuming users are stored by UID
-      await updateDoc(userRef, {
-        selectedUniversity: university,
-      });
-
-      toast.success(`Selected ${university.name}`);
+      await setUniversity(university); // updates store and Firestore
+      toast.success(`Selected ${university}`);
       router.push("/");
     } catch (err) {
       console.error(err);
       toast.error("Failed to save university selection");
+    } finally {
+      setIsSelecting(false);
     }
   };
 
-  // Redirect first-time users to select-university page
+  // Redirect first-time users who haven't selected a university
   useEffect(() => {
-    if (isReady() && user && isFirstTimeUser && !selectedUniversity) {
+    if (isReady() && user && isFirstTimeUser() && !selectedUniversity) {
       router.push("/select-university");
     }
-  }, [user, isFirstTimeUser, selectedUniversity, router, isReady]);
+  }, [user, selectedUniversity, router, isReady, isFirstTimeUser]);
 
   return {
     universities: filteredUniversities,
@@ -96,7 +77,8 @@ const useUniversitySelection = () => {
     loading,
     error,
     handleSelectUniversity,
-    isFirstTimeUser,
+    isSelecting, // expose this flag
+    isFirstTimeUser: isFirstTimeUser(),
     selectedUniversity,
   };
 };
