@@ -5,20 +5,39 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 
-import { PaystackButton } from "react-paystack";
+// import { PaystackButton } from "react-paystack";
+import dynamic from "next/dynamic";
+
 import toast from "react-hot-toast";
 import BackButton from "@/components/BackButton";
 import UserProfile from "@/components/UserProfile";
 
+const PaystackWrapper = dynamic(() => import("@/components/PaystackWrapper"), {
+  ssr: false,
+});
 export default function SubscriptionPage() {
   const router = useRouter();
   const [currentPlan, setCurrentPlan] = useState(null);
   const [isVerified, setIsVerified] = useState(true); // placeholder for KYC status
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [reference, setReference] = useState(null);
 
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
-  const user = auth.currentUser;
-  const reference = `${user?.uid}-${Date.now()}`;
+
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setReference(`${currentUser.uid}-${Date.now()}`);
+      }
+      setLoadingUser(false); // <- Set to false regardless
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const getFutureDate = (daysToAdd) => {
     const date = new Date();
@@ -155,7 +174,7 @@ export default function SubscriptionPage() {
           </div>
         ) : (
           <div className="mt-4">
-            <PaystackButton
+            {/* <PaystackButton
               {...componentProps}
               className={`w-full py-2 rounded-lg text-white text-center font-medium ${
                 loading
@@ -163,7 +182,18 @@ export default function SubscriptionPage() {
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
               disabled={loading}
-            />
+            /> */}
+            {loadingUser ? (
+              <div className="text-center text-sm text-gray-500">
+                Checking user status...
+              </div>
+            ) : user?.email && reference && publicKey ? (
+              <PaystackWrapper props={componentProps} loading={loading} />
+            ) : (
+              <div className="text-center text-sm text-red-500">
+                Missing payment info. Please reload or contact support.
+              </div>
+            )}
           </div>
         )}
       </div>
