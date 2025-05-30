@@ -1,14 +1,28 @@
-"use client"
-import UserProfile from "@/components/UserProfile"
-import { useFavorites } from "@/hooks/FavouriteHook"
-import ListingCard from "@/components/ListingCard"
-import { Heart, ShoppingBag } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
+"use client";
+import UserProfile from "@/components/UserProfile";
+import { useFavorites } from "@/hooks/FavouriteHook";
+import ListingCard from "@/components/ListingCard";
+import { Heart, ShoppingBag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { auth } from "../../lib/firebase";
 
 export default function FavouritePage() {
-  const { products, loading } = useFavorites()
-  const router = useRouter()
+  // Ensure the user is authenticated before rendering favorites
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        // Redirect to login if not authenticated
+        router.push("/login");
+      }
+    });
+    return () => unsubscribe();
+  }, [auth.currentUser]);
+
+  const { products, loading } = useFavorites();
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -26,7 +40,10 @@ export default function FavouritePage() {
           {/* Grid Skeleton */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div
+                key={i}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+              >
                 <div className="w-full h-48 bg-gray-200 animate-pulse"></div>
                 <div className="p-4 space-y-3">
                   <div className="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
@@ -38,7 +55,7 @@ export default function FavouritePage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -62,9 +79,12 @@ export default function FavouritePage() {
                 <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                   <Heart className="h-10 w-10 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No favourites yet</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  No favourites yet
+                </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  Start exploring and save items you love. Your favourite products will appear here.
+                  Start exploring and save items you love. Your favourite
+                  products will appear here.
                 </p>
               </div>
               <Button
@@ -83,13 +103,18 @@ export default function FavouritePage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">{products.length}</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {products.length}
+                    </div>
                     <div className="text-sm text-gray-600">Saved Items</div>
                   </div>
                   <div className="h-8 w-px bg-gray-200"></div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">
-                     ₦{products.reduce((sum, product) => sum + (product.price || 0), 0).toLocaleString()}
+                      ₦
+                      {products
+                        .reduce((sum, product) => sum + (product.price || 0), 0)
+                        .toLocaleString()}
                     </div>
                     <div className="text-sm text-gray-600">Total Value</div>
                   </div>
@@ -109,7 +134,7 @@ export default function FavouritePage() {
                   }}
                   onClick={() => router.push(`/listing/${product.id}`)}
                 >
-                  <ListingCard product={product}  />
+                  <ListingCard product={product} />
                 </div>
               ))}
             </div>
@@ -130,5 +155,5 @@ export default function FavouritePage() {
         }
       `}</style>
     </div>
-  )
+  );
 }
