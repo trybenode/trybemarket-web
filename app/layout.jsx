@@ -1,4 +1,3 @@
-// app/layout.jsx (server component)
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import ToastProvider from "@/components/ToastProvider";
