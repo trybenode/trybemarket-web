@@ -10,7 +10,6 @@ import { auth } from "../../lib/firebase";
 
 export default function FavouritePage() {
   // Ensure the user is authenticated before rendering favorites
-
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
