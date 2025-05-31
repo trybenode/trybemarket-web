@@ -137,15 +137,16 @@ export default function SignupPage() {
       }
 
       toast.success(
-        "Account Created 🎉: A verification email has been sent. Please verify your email.",
+        "Account Created 🎉: A verification email has been sent. Please verify your email and log in.",
         {
           position: "top-center",
           duration: 3000,
         }
       );
 
-      // Redirect based on selectedUniversity
-      router.push(selectedUniversity ? "/" : "/select-university");
+      await auth.signOut();
+      // Redirect to login page
+      router.push("/login");
     } catch (err) {
       console.error("Sign up error:", err.message);
       let errorMessage = "Something went wrong. Please try again.";
