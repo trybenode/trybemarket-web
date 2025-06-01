@@ -17,10 +17,15 @@ import { Loader } from "lucide-react";
 import Link from "next/link";
 import UserProfile from "@/components/UserProfile";
 import BackButton from "@/components/BackButton";
+import SellerProfileSkeleton from "@/components/ui/SellerProfileSkeleton";
+import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 
 export default function SellerShopPage() {
   const params = useParams();
-  const sellerId = params?.sellerId;
+  // const sellerId = params?.sellerId;
+  const sellerId = Array.isArray(params?.sellerId)
+    ? params.sellerId[0]
+    : params?.sellerId;
 
   const [products, setProducts] = useState([]);
   const [sellerInfo, setSellerInfo] = useState(null);
@@ -69,25 +74,20 @@ export default function SellerShopPage() {
     fetchAllData();
   }, [sellerId]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      if (!sellerId) return;
-      const q = query(
-        collection(db, "products"),
-        where("userId", "==", sellerId)
-      );
-      const snapshot = await getDocs(q);
-      setProducts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    } catch (err) {
-      console.error("Refresh error:", err);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  if (loading) return <Loader className="animate-spin m-6 text-blue-500" />;
-
+  if (loading) {
+    return (
+      <div className="p-4">
+        <div className="mb-4">
+          <SellerProfileSkeleton />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <ListingCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-white">
       <div className="flex flex-row justify-between items-center mt-5 px-5">
@@ -106,9 +106,9 @@ export default function SellerShopPage() {
         </div>
 
         {products.length === 0 ? (
-          <p className="text-center text-gray-500 mt-6">
+          <div role="alert" className="text-center text-gray-500 mt-6">
             No products found for this seller.
-          </p>
+          </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-4">
             {products.map((product) => (

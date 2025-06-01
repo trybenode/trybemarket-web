@@ -131,7 +131,7 @@ export default function HomePage() {
         {productsToDisplay.length > 0 || loading ? (
           <ListingCards
             products={productsToDisplay}
-            // isLoading={loading}
+            isLoading={loading}
             isFetchingMore={isFetchingMore}
             loadMoreProducts={() => {
               if (!hasSearchQuery) fetchProducts(true);
