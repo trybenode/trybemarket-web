@@ -1,0 +1,63 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>KYC Verification Failed</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #fdf2f2;
+        color: #5c1a1a;
+        padding: 20px;
+      }
+      .container {
+        background-color: #fffafa;
+        padding: 30px;
+        border-radius: 8px;
+        max-width: 600px;
+        margin: auto;
+        border: 1px solid #f5c2c2;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      }
+      .footer {
+        margin-top: 30px;
+        font-size: 14px;
+        color: #7c2d2d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <p>Hi, {{name}}</p>
+
+      <p>We regret to inform you that your KYC (Know Your Customer) verification
+        could not be completed at this time.</p>
+
+      <p><strong>Name:</strong> {{name}}</p>
+
+      <p>
+        Please ensure that all submitted documents are clear, valid, and meet
+        the required standards. You may log in to your account and resubmit your
+        KYC request with the correct documents.
+      </p>
+
+      <h4>Tips for Successful KYC:</h4>
+      <ul>
+        <li>Upload clear images of your documents</li>
+        <li>Ensure names and details match your profile</li>
+        <li>Use accepted ID types only</li>
+      </ul>
+
+      <p>
+        If you believe this was a mistake or need assistance, please contact our
+        support team at
+        <a href="mailto:contact@trybenode.space">contact@trybenode.space</a>.
+      </p>
+
+      <div class="footer">
+        Warm regards,<br />
+        The TrybeNode Team<br />
+        <a href="https://trybenode.space">https://trybenode.space</a>
+      </div>
+    </div>
+  </body>
+</html>
