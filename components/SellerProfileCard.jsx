@@ -5,11 +5,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, Loader } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import toast from "react-hot-toast";
 import { useRouter, usePathname } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  getDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Facebook, Instagram, MessageCircleCode, Share } from "lucide-react";
+import SellerProfileSkeleton from "./ui/SellerProfileSkeleton";
 
 const icons = [
   { name: "Facebook", component: Facebook },
@@ -20,8 +30,7 @@ const icons = [
 
 export default function SellerProfileCard({ sellerInfo }) {
   const router = useRouter();
-  const pathname =usePathname()
-  const isOnShopScreen = pathname === '/shop';
+  const pathname = usePathname();
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(!sellerInfo);
@@ -56,16 +65,34 @@ export default function SellerProfileCard({ sellerInfo }) {
     fetchCurrentUser();
   }, [sellerInfo]);
 
-  // const selectedUser = useMemo(() => {
-  //   return isOnShopScreen ? sellerInfo : user;
-  // }, [isOnShopScreen, sellerInfo, user]);
+  useEffect(() => {
+    const storeShopLink = async () => {
+      if (!sellerInfo && auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        const link = `${window.location.origin}/shop/${uid}`;
+        const userRef = doc(db, "users", uid);
+
+        const userSnap = await getDoc(userRef);
+        const existingLink = userSnap.data()?.shopLink;
+
+        if (existingLink !== link) {
+          try {
+            await updateDoc(userRef, { shopLink: link });
+          } catch (err) {
+            console.error("Failed to update shop link:", err.message);
+          }
+        }
+      }
+    };
+
+    storeShopLink();
+  }, [sellerInfo]);
+
+  if (loading) {
+    return <SellerProfileSkeleton />;
+  }
   const selectedUser = sellerInfo || user;
 
-   const handleShopLink = () => {
-    alert('Coming Soon! Your unique shop link feature is coming soon for premium members.');
-  };
-
-  if (loading) return <Loader className="animate-spin my-6 mx-auto" />;
   if (error || !selectedUser) {
     return (
       <div className="flex items-center gap-2 text-red-500 mt-4">
@@ -76,12 +103,12 @@ export default function SellerProfileCard({ sellerInfo }) {
   }
 
   const { profilePicture, fullName, createdAt, address } = selectedUser;
-  const yearCreated = createdAt
-    ? new Date(createdAt).getFullYear()
-    : "Unknown";
+  const yearCreated = createdAt ? new Date(createdAt).getFullYear() : "Unknown";
 
-  const currentUrl =
-    typeof window !== "undefined" ? window.location.href : "";
+  const shopUrl =
+    !sellerInfo && typeof window !== "undefined"
+      ? `${window.location.origin}/shop/${auth.currentUser?.uid}`
+      : "";
 
   return (
     <Card className="mb-8">
@@ -102,26 +129,35 @@ export default function SellerProfileCard({ sellerInfo }) {
             <p className="text-gray-500">{address || "No address provided"}</p>
           </div>
           <div className="flex gap-4">
-            {icons.map(({ name, component: Icon, isLink }) =>
-              isLink ? (
-                <Link
+            {icons.map(({ name, component: Icon, isLink }) => {
+              if (sellerInfo && isLink) return null;
+
+              return isLink ? (
+                <button
                   key={name}
-                  href={currentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  onClick={() => {
+                    navigator.clipboard.writeText(shopUrl);
+                    toast.success("Your shop link has been copied!");
+                  }}
+                  title="Copy your shop link"
                 >
                   <Icon className="cursor-pointer hover:text-blue-600" />
-                </Link>
+                </button>
               ) : (
                 <Icon
                   key={name}
                   className="cursor-pointer hover:text-blue-600"
                 />
-              )
-            )}
+              );
+            })}
           </div>
+
+          {/* Only show Edit Profile button if it's the user's own profile */}
           {!sellerInfo && (
-            <Button variant="outline" onClick={() => router.push("/edit-profile")}>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/edit-profile")}
+            >
               Edit Profile
             </Button>
           )}
@@ -130,3 +166,13 @@ export default function SellerProfileCard({ sellerInfo }) {
     </Card>
   );
 }
+
+// {!sellerInfo && shopUrl && (
+//   <Button
+//     variant="secondary"
+//     onClick={() => router.push(shopUrl)}
+//     className="ml-4"
+//   >
+//     View My Shop
+//   </Button>
+// )}

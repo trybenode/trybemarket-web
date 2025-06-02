@@ -1,17 +1,18 @@
+import React from "react"
 import Image from "next/image"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { formatNumber } from "@/lib/utils"
 
 
-export default function ListingCard({ product = {}, btnName = "View Details" }) {
+export default React.memo( function ListingCard({ product = {}, btnName = "View Details" }) {
   const imageUri =
     Array.isArray(product.images) && product.images.length > 0
       ? product.images[0]?.url || product.images[0]
       : product.image || null
 
   return (
-    <Card className="overflow-hidden rounded-xl shadow-md h-full flex flex-col">
+    <Card className=" bg-gray-300 overflow-hidden rounded-xl shadow-md h-full flex flex-col">
       {/* Product Image */}
       {imageUri ? (
         <div className="relative h-40 w-full">
@@ -21,6 +22,7 @@ export default function ListingCard({ product = {}, btnName = "View Details" }) 
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={true}
           />
         </div>
       ) : (
@@ -36,7 +38,7 @@ export default function ListingCard({ product = {}, btnName = "View Details" }) 
         {/* Original Price */}
         {product.originalPrice ? (
           <p className="mt-1 text-sm font-bold line-through text-blue-600">
-            ₦{formatNumber(product.originalPrice.toLocaleString())}
+           ₦{product.originalPrice ? formatNumber(product.originalPrice) : "N/A"}
           </p>
         ) : null}
 
@@ -52,4 +54,4 @@ export default function ListingCard({ product = {}, btnName = "View Details" }) 
       </CardFooter>
     </Card>
   )
-}
+})

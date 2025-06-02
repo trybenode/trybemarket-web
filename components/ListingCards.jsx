@@ -1,12 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React,{ useState, useEffect, useRef} from "react"
 import { useRouter } from "next/navigation"
-import ListingCard from "./ListingCard"
-import ListingCardSkeleton from "./ui/ListingCardSkeleton"
-import Categories from "./Categories"
+import dynamic from "next/dynamic"
 
-export default function ListingCards({
+const ListingCard = dynamic(() => import("./ListingCard"), {
+  loading: () => {Array.from({ length: 8 }).map((_, i) => (
+          <ListingCardSkeleton key={i} />
+        ))},
+  ssr: false,
+})
+
+const Categories = dynamic(() => import("./Categories"), {
+  ssr: false,
+})
+import ListingCardSkeleton from "./ui/ListingCardSkeleton"
+
+
+export default React.memo(function ListingCards({
   products = [],
   isFetchingMore,
   loadMoreProducts,
@@ -35,6 +46,25 @@ export default function ListingCards({
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+//   const bottomRef = useRef(null)
+
+// useEffect(() => {
+//   const observer = new IntersectionObserver(
+//     (entries) => {
+//       if (entries[0].isIntersecting && loadMoreProducts && !isFetchingMore) {
+//         loadMoreProducts()
+//       }
+//     },
+//     { rootMargin: "200px" }
+//   )
+
+//   if (bottomRef.current) observer.observe(bottomRef.current)
+
+//   return () => {
+//     if (bottomRef.current) observer.unobserve(bottomRef.current)
+//   }
+// }, [bottomRef.current, loadMoreProducts, isFetchingMore])
+
 
   // Load more products when user scrolls to bottom
   useEffect(() => {
@@ -45,8 +75,8 @@ export default function ListingCards({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {Array.from({ length: 6 }).map((_, i) => (
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-4 transition-opacity duration-300 ease-in-out opacity-100">
+        {Array.from({ length: 8 }).map((_, i) => (
           <ListingCardSkeleton key={i} />
         ))}
       </div>
@@ -92,6 +122,8 @@ export default function ListingCards({
           Refresh
         </button>
       )}
+      {/* <div ref={bottomRef}></div> */}
+
     </div>
   )
-}
+})

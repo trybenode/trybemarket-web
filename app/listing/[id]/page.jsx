@@ -1,19 +1,25 @@
 "use client";
 
-import React, { useState, useEffect,} from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import dynamic from 'next/dynamic'
+import { useInView } from 'react-intersection-observer'
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, MessageCircle, ChevronLeft } from "lucide-react";
+import { Heart, MessageCircle, ChevronLeft, Loader } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
 import useFavoritesStore from "@/lib/FavouriteStore";
+const LazyComponent = dynamic(() => import('@/components/SellerDetailsAndRelatedProducts'), {
+  loading: () => <Loader />,
+  ssr: false,
+})
 
 import {
   getUserIdOfSeller,
@@ -24,6 +30,7 @@ import SellerDetailsAndRelatedProducts from "@/components/SellerDetailsAndRelate
 export default function ListingDetailsPage({ params }) {
   const router = useRouter();
   const { id } = React.use(params);
+  const { ref, inView } = useInView({ triggerOnce: true })
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
   const itemId = id || product?.id;
@@ -85,23 +92,6 @@ export default function ListingDetailsPage({ params }) {
     });
     return () => unsubscribe();
   }, []);
-
-  //messaging logic
-  // useEffect(() => {
-  //   if (currentProduct?.userId) {
-  //     setSellerID(currentProduct.userId);
-  //   } else if (itemId) {
-  //     const fetchSeller = async () => {
-  //       try {
-  //         const id = await getUserIdOfSeller(itemId);
-  //         if (id) setSellerID(id);
-  //       } catch (error) {
-  //         console.error("Error fetching seller ID:", error);
-  //       }
-  //     };
-  //     fetchSeller();
-  //   }
-  // }, [currentProduct, itemId]);
 
   const handleSendMessage = async () => {
     try {
@@ -207,8 +197,7 @@ export default function ListingDetailsPage({ params }) {
     { label: "Condition", value: condition },
     { label: "Color", value: color },
     { label: "Year", value: year },
-// console.log("DETAILS ITEM:", item.label, item.value);
-
+    // console.log("DETAILS ITEM:", item.label, item.value);
   ];
 
   return (
@@ -238,7 +227,10 @@ export default function ListingDetailsPage({ params }) {
               <Image
                 src={selectedImage}
                 alt={name}
-                fill
+                // fill
+                width={600}
+                height={600}
+                  priority
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
@@ -310,7 +302,11 @@ export default function ListingDetailsPage({ params }) {
                   {details.map((item, idx) => (
                     <div key={idx} className="space-y-1">
                       <p className="font-bold text-gray-800">{item.label}</p>
-                      <p className="text-gray-600">{Array.isArray(item.value) ? item.value.join(", ") || "N/A" : item.value || "N/A"}</p>
+                      <p className="text-gray-600">
+                        {Array.isArray(item.value)
+                          ? item.value.join(", ") || "N/A"
+                          : item.value || "N/A"}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -349,11 +345,16 @@ export default function ListingDetailsPage({ params }) {
       <Separator className="my-8" />
 
       {/* Seller Info */}
-      <SellerDetailsAndRelatedProducts
+      {/* <SellerDetailsAndRelatedProducts
         key={effectiveProductId}
         productId={effectiveProductId}
         product={currentProduct}
-      />
+      /> */}
+      <div ref={ref} >
+        {inView && <LazyComponent  key={effectiveProductId}
+        productId={effectiveProductId}
+        product={currentProduct}/>}
+      </div>
     </div>
   );
 }

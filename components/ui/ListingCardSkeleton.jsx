@@ -3,7 +3,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ListingCardSkeleton() {
   return (
-    <Card className="overflow-hidden rounded-xl shadow-md h-full flex flex-col">
+    // <Card className="overflow-hidden rounded-xl shadow-md h-full flex flex-col">
+    <Card className="overflow-hidden rounded-xl shadow-md flex flex-col w-full min-h-[280px]">
+
       {/* Image Skeleton */}
       <Skeleton className="h-40 w-full rounded-none" />
 

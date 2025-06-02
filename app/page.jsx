@@ -1,5 +1,5 @@
 "use client";
-import Head from 'next/head';
+import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -12,9 +12,27 @@ import {
   limit,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import ListingCards from "@/components/ListingCards";
-import SearchBar from "@/components/SearchBar";
-import UserProfile from "@/components/UserProfile";
+import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
+
+const ListingCards = dynamic(() => import("@/components/ListingCards"), {
+  loading: () => (
+    <div className="grid grid-cols-2 mt-5 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <ListingCardSkeleton key={i} />
+      ))}
+    </div>
+  ),
+  ssr: false,
+});
+
+const SearchBar = dynamic(() => import("@/components/SearchBar"), {
+  loading: () => <div className="h-12 bg-gray-100 rounded-md animate-pulse" />,
+  ssr: false,
+});
+const UserProfile = dynamic(() => import("@/components/UserProfile"), {
+  ssr: false,
+});
+
 
 const PAGE_SIZE = 8;
 
