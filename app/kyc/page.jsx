@@ -109,6 +109,7 @@ export default function KycPage() {
         frontID: frontIDUrl,
         backID: backIDUrl,
         status: "pending",
+        notificationSent: false,
         submittedAt: new Date(),
       });
       await fetch("/api/kyc-notify", {
@@ -120,6 +121,7 @@ export default function KycPage() {
           matricNumber,
         }),
       });
+      
 
       setModalMessage(
         "Your KYC request has been submitted. Please wait for verification."
