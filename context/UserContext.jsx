@@ -78,10 +78,11 @@ export const UserProvider = ({ children }) => {
               const kycData = docSnap.data();
               console.log("KYC data:", kycData);
 
-              // Handle KYC status notification for verified or rejected
+              // Only proceed if notification hasn't been sent
               if (
-                kycData.status === "verified" ||
-                kycData.status === "rejected"
+                (kycData.status === "verified" ||
+                  kycData.status === "rejected") &&
+                !kycData.notificationSent
               ) {
                 const status = kycData.status;
                 try {
@@ -95,6 +96,9 @@ export const UserProvider = ({ children }) => {
                       status,
                     }),
                   });
+
+                  // Update Firestore to mark notification as sent
+                  await updateDoc(kycDocRef, { notificationSent: true });
 
                   if (status === "verified" && !userData.isVerified) {
                     await updateDoc(userRef, { isVerified: true });

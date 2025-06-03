@@ -9,7 +9,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot
+  onSnapshot, Timestamp
 } from "firebase/firestore";
 import { db,auth} from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
@@ -311,9 +311,9 @@ export default function SellPage() {
     try {
       setSaving(true);
       if (!auth.currentUser) throw new Error("Not authenticated");
-
+      const userId = auth.currentUser.uid;
       // Check user upload limit
-      console.log('Checking if user can upload for UID:', auth.currentUser.uid);
+      // console.log('Checking if user can upload for UID:', auth.currentUser.uid);
       const canUpload = await canUserUpload();
       // console.log('Can upload:', canUpload);
       if (!canUpload) {
@@ -322,6 +322,12 @@ export default function SellPage() {
         );
         return;
       }
+      //add university from user collection to product collection
+       const userRef = doc(db, "users", userId);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) throw new Error("User not found");
+      const userData = userSnap.data();
+      const university = userData.selectedUniversity || "Unknown";
 
       const data = {
         name: productName.trim(),
@@ -336,7 +342,8 @@ export default function SellPage() {
         originalPrice: parseFloat(originalPrice) || 0,
         year: year.trim(),
         images,
-        userId: currentUser.uid,
+        userId,
+        university,
         ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
       };
   
