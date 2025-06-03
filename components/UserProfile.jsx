@@ -33,11 +33,13 @@ import { MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
+import { useRouter } from "next/navigation";
 
 export default function UserProfile() {
   const { currentUser, setCurrentUser } = useUser();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isLoggedIn = !!currentUser;
+  const router = useRouter();
 
   const handleLogout = async () => {
     try {
