@@ -1,21 +1,20 @@
-"use client"
+"use client";
 
-import React,{ useState, useEffect, useRef} from "react"
-import { useRouter } from "next/navigation"
-import dynamic from "next/dynamic"
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 
 const ListingCard = dynamic(() => import("./ListingCard"), {
-  loading: () => {Array.from({ length: 8 }).map((_, i) => (
-          <ListingCardSkeleton key={i} />
-        ))},
+  loading: () => {
+    Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />);
+  },
   ssr: false,
-})
+});
 
 const Categories = dynamic(() => import("./Categories"), {
   ssr: false,
-})
-import ListingCardSkeleton from "./ui/ListingCardSkeleton"
-
+});
+import ListingCardSkeleton from "./ui/ListingCardSkeleton";
 
 export default React.memo(function ListingCards({
   products = [],
@@ -25,53 +24,52 @@ export default React.memo(function ListingCards({
   refreshing = false,
   isLoading = false,
 }) {
-  const router = useRouter()
-  const [isAtBottom, setIsAtBottom] = useState(false)
+  const router = useRouter();
+  const [isAtBottom, setIsAtBottom] = useState(false);
 
   // Handle infinite scroll
   useEffect(() => {
     const handleScroll = () => {
-      const scrollTop = window.scrollY
-      const scrollHeight = document.documentElement.scrollHeight
-      const clientHeight = document.documentElement.clientHeight
+      const scrollTop = window.scrollY;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = document.documentElement.clientHeight;
 
       // Check if user has scrolled to bottom
       if (scrollTop + clientHeight >= scrollHeight - 100) {
-        setIsAtBottom(true)
+        setIsAtBottom(true);
       } else {
-        setIsAtBottom(false)
+        setIsAtBottom(false);
       }
-    }
+    };
 
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
-//   const bottomRef = useRef(null)
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+  //   const bottomRef = useRef(null)
 
-// useEffect(() => {
-//   const observer = new IntersectionObserver(
-//     (entries) => {
-//       if (entries[0].isIntersecting && loadMoreProducts && !isFetchingMore) {
-//         loadMoreProducts()
-//       }
-//     },
-//     { rootMargin: "200px" }
-//   )
+  // useEffect(() => {
+  //   const observer = new IntersectionObserver(
+  //     (entries) => {
+  //       if (entries[0].isIntersecting && loadMoreProducts && !isFetchingMore) {
+  //         loadMoreProducts()
+  //       }
+  //     },
+  //     { rootMargin: "200px" }
+  //   )
 
-//   if (bottomRef.current) observer.observe(bottomRef.current)
+  //   if (bottomRef.current) observer.observe(bottomRef.current)
 
-//   return () => {
-//     if (bottomRef.current) observer.unobserve(bottomRef.current)
-//   }
-// }, [bottomRef.current, loadMoreProducts, isFetchingMore])
-
+  //   return () => {
+  //     if (bottomRef.current) observer.unobserve(bottomRef.current)
+  //   }
+  // }, [bottomRef.current, loadMoreProducts, isFetchingMore])
 
   // Load more products when user scrolls to bottom
   useEffect(() => {
-    if (isAtBottom && loadMoreProducts && !isFetchingMore) {
-      loadMoreProducts()
+    if (isAtBottom && loadMoreProducts && !isFetchingMore && !refreshing ) {
+      loadMoreProducts();
     }
-  }, [isAtBottom, loadMoreProducts, isFetchingMore])
+  }, [isAtBottom, loadMoreProducts, isFetchingMore, refreshing ]);
 
   if (isLoading) {
     return (
@@ -80,7 +78,7 @@ export default React.memo(function ListingCards({
           <ListingCardSkeleton key={i} />
         ))}
       </div>
-    )
+    );
   }
 
   if (!products.length) {
@@ -88,7 +86,7 @@ export default React.memo(function ListingCards({
       <div className="flex items-center justify-center py-10">
         <p className="text-gray-500 text-lg">No products found</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -98,32 +96,32 @@ export default React.memo(function ListingCards({
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-4">
         {products.map((item) => (
           <div key={item.id} className="mb-4">
-            <div className="cursor-pointer" onClick={() => router.push(`/listing/${item.id}`)}>
+            <div
+              className="cursor-pointer"
+              onClick={() => router.push(`/listing/${item.id}`)}
+            >
               <ListingCard product={item.product} btnName="View" />
             </div>
           </div>
         ))}
       </div>
 
-      {isFetchingMore && (
-        <div className="flex justify-center my-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      )}
+      {(isFetchingMore || refreshing) && (
+  <div className="flex justify-center my-4">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  </div>
+)}
 
-      {refreshing && (
-        <div className="flex justify-center my-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      )}
 
       {!isFetchingMore && products.length > 0 && (
-        <button onClick={refreshControl} className="mx-auto my-4 text-blue-600 hover:underline">
+        <button
+          onClick={refreshControl}
+          className="mx-auto my-4 text-blue-600 hover:underline"
+        >
           Refresh
         </button>
       )}
       {/* <div ref={bottomRef}></div> */}
-
     </div>
-  )
-})
+  );
+});
