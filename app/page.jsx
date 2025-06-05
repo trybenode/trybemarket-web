@@ -236,7 +236,7 @@ import ToolBarSkeleton from "@/components/ui/ToolBarSkeleton";
 
 
 const ListingCards = dynamic(() => import("@/components/ListingCards"), {
-  ssr: false,
+  ssr: true,
   loading: () => null,
 });
 const SearchBar = dynamic(() => import("@/components/SearchBar"), {
@@ -245,7 +245,8 @@ const SearchBar = dynamic(() => import("@/components/SearchBar"), {
 });
 const ToolBar = dynamic(() => import("@/components/ToolBar"), {
   ssr: false,
-  loading: () => <ToolBarSkeleton />,
+    loading: () => <ToolBarSkeleton />,
+
 });
 
 
@@ -414,3 +415,6 @@ export default function HomePage() {
     </div>
   );
 }
+
+// next build
+// next start

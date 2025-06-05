@@ -13,11 +13,6 @@ export default function ToolBarSkeleton() {
         className="object-contain"
       />
 
-      {/* Navigation buttons skeleton */}
-      <div className="flex gap-4">
-        <div className="h-8 w-20 bg-gray-200 rounded-xl" />
-        <div className="h-8 w-24 bg-gray-200 rounded-xl" />
-      </div>
 
       {/* User profile skeleton */}
       <div className="h-10 w-10 bg-gray-200 rounded-full" />
