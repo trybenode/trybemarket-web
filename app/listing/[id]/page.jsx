@@ -82,7 +82,7 @@ export default function ListingDetailsPage({ params }) {
 
   useEffect(() => {
     if (product) {
-      console.log("Seller ID:", product.userId);
+      // console.log("Seller ID:", product.userId);
     }
   }, [product]);
 
@@ -333,7 +333,7 @@ export default function ListingDetailsPage({ params }) {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
-              <Button onClick={handleSendMessage} className="rounded-l-none">
+              <Button onClick={handleSendMessage} className="rounded-l-none" disabled={sendingMessage}>
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Send
               </Button>

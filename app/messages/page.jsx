@@ -75,6 +75,11 @@ export default function MessagesPage() {
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
+  const truncateText = (text, maxLength = 50) => {
+    if (!text) return "";
+    return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -134,9 +139,9 @@ export default function MessagesPage() {
                         <p
                           className={`${
                             hasUnread ? "text-gray-900" : "text-gray-500"
-                          } text-sm`}
+                          } text-sm truncate`}
                         >
-                          {conversation.lastMessage?.text}
+                          {truncateText(conversation.lastMessage?.text)}
                         </p>
                       </div>
 
