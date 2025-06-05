@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import ToolBarSkeleton from "@/components/ui/ToolBarSkeleton";
 
 const ToolBar = dynamic(() => import("@/components/ToolBar"), {
-  loading: () => <ToolBarSkeleton />,
   ssr: false,
 });
 
