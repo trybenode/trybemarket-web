@@ -27,7 +27,7 @@ function ListingCard({ product = {}, btnName = "View Details" }) {
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            priority={false} // set true only if critical
+            priority={false} 
             placeholder="blur"
             blurDataURL="/placeholder.svg"
           />
