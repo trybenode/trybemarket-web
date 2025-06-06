@@ -3,17 +3,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-
+import CategoryBarSkeleton from "@/components/ui/CategoryBarSkeleton"
 const ListingCard = dynamic(() => import("./ListingCard"), {
-  loading: () => {
-    Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />);
-  },
+  // loading: () => {
+  //   Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />);
+  // },
   ssr: false,
 });
 
-const Categories = dynamic(() => import("./Categories"), {
-  ssr: false,
-});
+
 import ListingCardSkeleton from "./ui/ListingCardSkeleton";
 
 export default React.memo(function ListingCards({
@@ -91,7 +89,7 @@ export default React.memo(function ListingCards({
 
   return (
     <div className="flex flex-col">
-      <Categories />
+     
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-4">
         {products.map((item) => (
