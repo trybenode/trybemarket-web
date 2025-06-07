@@ -7,9 +7,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { email, senderName, productName } = req.body;
+  const { email, senderName, productName, chatLink } = req.body;
 
-  if (!email || !senderName || !productName) {
+  if (!email || !senderName || !productName  || !chatLink) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -39,7 +39,11 @@ export default async function handler(req, res) {
       to: email,
       subject: `📩 New message about ${productName}`,
       template: "newMessage",
-      context: { senderName, productName },
+      context: {
+        senderName,
+        productName,
+        chatLink,
+      },
     });
 
     return res.status(200).json({ success: true });

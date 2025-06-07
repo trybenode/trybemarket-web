@@ -137,16 +137,14 @@ export default function ListingDetailsPage({ params }) {
         id: effectiveProductId,
       };
 
-      // console.log(AllUserInfo.email)
-      // console.log(AllUserInfo.fullName)
-      // console.log(productDetails.name)
       await fetch("/api/send-message-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: AllUserInfo.email, // grab from user's Firestore data
-          senderName: AllUserInfo.fullname,
+          senderName: AllUserInfo.fullName,
           productName: productDetails.name,
+          chatLink: `/chat/${currentUserId}${sellerID}${effectiveProductId}`,
         }),
       }); 
 
