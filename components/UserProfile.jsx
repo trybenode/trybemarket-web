@@ -34,12 +34,14 @@ import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 export default React.memo( function UserProfile() {
   const { currentUser, setCurrentUser } = useUser();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isLoggedIn = !!currentUser;
   const router = useRouter();
+  const hasUnreadMessages = useUnreadMessages();
 
   const handleLogout = async () => {
     try {
@@ -78,18 +80,23 @@ export default React.memo( function UserProfile() {
               className='focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full transition-all duration-200'
               aria-label='Open user profile menu'
             >
-              <Avatar className='h-10 w-10 cursor-pointer border-2 border-blue-500 hover:border-blue-600 transition-colors duration-200 aspect-square'>
-                <AvatarImage
-                  src={
-                    currentUser?.profilePicture || "/images/default-avatar.png"
-                  }
-                  alt={currentUser?.fullName || "User"}
-                  className='object-cover w-full h-full'
-                />
-                <AvatarFallback className='bg-gray-100 text-gray-600'>
-                  <User className='h-5 w-5' />
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className='h-10 w-10 cursor-pointer border-2 border-blue-500 hover:border-blue-600 transition-colors duration-200 aspect-square'>
+                  <AvatarImage
+                    src={
+                      currentUser?.profilePicture || "/images/default-avatar.png"
+                    }
+                    alt={currentUser?.fullName || "User"}
+                    className='object-cover w-full h-full'
+                  />
+                  <AvatarFallback className='bg-gray-100 text-gray-600'>
+                    <User className='h-5 w-5' />
+                  </AvatarFallback>
+                </Avatar>
+                {hasUnreadMessages && (
+                  <div className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-blue-500 border-2 border-white" />
+                )}
+              </div>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -160,7 +167,12 @@ export default React.memo( function UserProfile() {
                 href='/messages'
                 className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
               >
-                <MessageSquare className='mr-2 h-4 w-4' />
+                <div className="relative">
+                  <MessageSquare className='mr-2 h-4 w-4' />
+                  {hasUnreadMessages && (
+                    <div className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-blue-500" />
+                  )}
+                </div>
                 Messages
               </Link>
             </DropdownMenuItem>
