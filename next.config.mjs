@@ -8,6 +8,10 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    loader: "custom",
+    loaderFile: "./lib/cloudinaryLoader.js",
+    domains: ["res.cloudinary.com"],
+
   },
   
 }
