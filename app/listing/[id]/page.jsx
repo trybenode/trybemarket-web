@@ -94,7 +94,6 @@ export default function ListingDetailsPage({ params }) {
         if (userInfo) {
           setAllUserInfo(userInfo);
           // console.log(userInfo.email)
-
         } else {
           console.warn("Seller not found");
         }
@@ -104,7 +103,7 @@ export default function ListingDetailsPage({ params }) {
     };
 
     fetchSellerInfo();
-  }, [sellerID])
+  }, [sellerID]);
 
   useEffect(() => {
     if (product) {
@@ -137,17 +136,6 @@ export default function ListingDetailsPage({ params }) {
         id: effectiveProductId,
       };
 
-      await fetch("/api/send-message-notification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: AllUserInfo.email, // grab from user's Firestore data
-          senderName: AllUserInfo.fullName,
-          productName: productDetails.name,
-          chatLink: `/chat/${currentUserId}${sellerID}${effectiveProductId}`,
-        }),
-      }); 
-
       const conversationId = await initiateConversation(
         message,
         currentUserId,
@@ -158,7 +146,23 @@ export default function ListingDetailsPage({ params }) {
       setMessage("");
 
       if (conversationId) {
+        // Navigate user immediately
         router.push(`/chat/${conversationId}`);
+
+        // Fire and forget the email notification
+        fetch("/api/send-message-notification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: AllUserInfo.email,
+            senderName: AllUserInfo.fullName,
+            productName: productDetails.name,
+            chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
+          }),
+        }).catch((error) => {
+          console.error("Error sending email notification:", error);
+          // Don't show this error to user since chat is already working
+        });
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -170,7 +174,7 @@ export default function ListingDetailsPage({ params }) {
       setSendingMessage(false);
     }
   };
-
+  
   useEffect(() => {
     if (id) {
       setLiked(favoriteIds.includes(id));
