@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, {  useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import CategoryBarSkeleton from "@/components/ui/CategoryBarSkeleton"
 const ListingCard = dynamic(() => import("./ListingCard"), {
-  // loading: () => {
-  //   Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />);
-  // },
+  loading: () => <ListingCardSkeleton />,
   ssr: false,
 });
 
@@ -23,51 +20,50 @@ export default React.memo(function ListingCards({
   isLoading = false,
 }) {
   const router = useRouter();
-  const [isAtBottom, setIsAtBottom] = useState(false);
-
-  // Handle infinite scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = document.documentElement.clientHeight;
-
-      // Check if user has scrolled to bottom
-      if (scrollTop + clientHeight >= scrollHeight - 100) {
-        setIsAtBottom(true);
-      } else {
-        setIsAtBottom(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-  //   const bottomRef = useRef(null)
-
   // useEffect(() => {
-  //   const observer = new IntersectionObserver(
-  //     (entries) => {
-  //       if (entries[0].isIntersecting && loadMoreProducts && !isFetchingMore) {
-  //         loadMoreProducts()
-  //       }
-  //     },
-  //     { rootMargin: "200px" }
-  //   )
+  //   const handleScroll = () => {
+  //     const scrollTop = window.scrollY;
+  //     const scrollHeight = document.documentElement.scrollHeight;
+  //     const clientHeight = document.documentElement.clientHeight;
 
-  //   if (bottomRef.current) observer.observe(bottomRef.current)
+  //     // Check if user has scrolled to bottom
+  //     if (scrollTop + clientHeight >= scrollHeight - 100) {
+  //       setIsAtBottom(true);
+  //     } else {
+  //       setIsAtBottom(false);
+  //     }
+  //   };
 
-  //   return () => {
-  //     if (bottomRef.current) observer.unobserve(bottomRef.current)
-  //   }
-  // }, [bottomRef.current, loadMoreProducts, isFetchingMore])
+  //   window.addEventListener("scroll", handleScroll);
+  //   return () => window.removeEventListener("scroll", handleScroll);
+  // }, []);
+    const bottomRef = useRef(null)
+// const bottomRef = useRef(null);
 
-  // Load more products when user scrolls to bottom
-  useEffect(() => {
-    if (isAtBottom && loadMoreProducts && !isFetchingMore && !refreshing ) {
-      loadMoreProducts();
-    }
-  }, [isAtBottom, loadMoreProducts, isFetchingMore, refreshing ]);
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (
+        entries[0].isIntersecting &&
+        loadMoreProducts &&
+        !isFetchingMore &&
+        !refreshing
+      ) {
+        loadMoreProducts();
+      }
+    },
+    { rootMargin: "200px" }
+  );
+
+  const current = bottomRef.current;
+  if (current) observer.observe(current);
+
+  return () => {
+    if (current) observer.unobserve(current);
+  };
+}, [loadMoreProducts, isFetchingMore, refreshing]);
+
+
 
   if (isLoading) {
     return (
@@ -87,21 +83,27 @@ export default React.memo(function ListingCards({
     );
   }
 
+
+const productCards = useMemo(() => {
+  return products.map((item) => (
+    <div key={item.id} className="mb-4">
+      <div
+        className="cursor-pointer"
+        onClick={() => router.push(`/listing/${item.id}`)}
+      >
+        <ListingCard product={item.product} btnName="View" />
+      </div>
+    </div>
+  ));
+}, [products, router]);
+
   return (
     <div className="flex flex-col">
      
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-4">
-        {products.map((item) => (
-          <div key={item.id} className="mb-4">
-            <div
-              className="cursor-pointer"
-              onClick={() => router.push(`/listing/${item.id}`)}
-            >
-              <ListingCard product={item.product} btnName="View" />
-            </div>
-          </div>
-        ))}
+        
+        {productCards}
       </div>
 
       {(isFetchingMore || refreshing) && (
@@ -119,7 +121,7 @@ export default React.memo(function ListingCards({
           Refresh
         </button>
       )}
-      {/* <div ref={bottomRef}></div> */}
+      <div ref={bottomRef}></div>
     </div>
   );
 });

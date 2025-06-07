@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React,{ useState, useEffect } from "react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs,} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import CategoryBarSkeleton from "./ui/CategoryBarSkeleton";
 
-export default function Categories() {
+export default React.memo(function Categories() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categories, setCategories] = useState([]);
@@ -69,4 +69,4 @@ export default function Categories() {
       </ScrollArea>
     </div>
   );
-}
+})
