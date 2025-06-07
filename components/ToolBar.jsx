@@ -9,7 +9,7 @@ const UserProfile = dynamic(() => import("@/components/UserProfile"), {
   ssr: false,
 });
 
-export default function ToolBar() {
+export default React.memo (function ToolBar() {
   const router = useRouter();
 
 
@@ -40,4 +40,4 @@ export default function ToolBar() {
 </header>
 
   );
-}
+})

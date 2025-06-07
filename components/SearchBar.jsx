@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React,{ useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
-export default function SearchBar({ onResults }) {
+export default React.memo(function SearchBar({ onResults }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [products, setProducts] = useState([]);
@@ -90,4 +90,4 @@ export default function SearchBar({ onResults }) {
       />
     </div>
   );
-}
+})
