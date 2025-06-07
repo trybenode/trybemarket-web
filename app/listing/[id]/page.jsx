@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import dynamic from 'next/dynamic'
-import { useInView } from 'react-intersection-observer'
+import dynamic from "next/dynamic";
+import { useInView } from "react-intersection-observer";
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, MessageCircle, ChevronLeft, Loader } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
+import { getUserInfo } from "@/utils/userInfo";
 import useFavoritesStore from "@/lib/FavouriteStore";
-const LazyComponent = dynamic(() => import('@/components/SellerDetailsAndRelatedProducts'), {
-  loading: () => <Loader />,
-  ssr: false,
-})
+const LazyComponent = dynamic(
+  () => import("@/components/SellerDetailsAndRelatedProducts"),
+  {
+    loading: () => <Loader />,
+    ssr: false,
+  }
+);
 
 import {
   getUserIdOfSeller,
@@ -30,7 +34,7 @@ import SellerDetailsAndRelatedProducts from "@/components/SellerDetailsAndRelate
 export default function ListingDetailsPage({ params }) {
   const router = useRouter();
   const { id } = React.use(params);
-  const { ref, inView } = useInView({ triggerOnce: true })
+  const { ref, inView } = useInView({ triggerOnce: true });
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
   const itemId = id || product?.id;
@@ -42,6 +46,7 @@ export default function ListingDetailsPage({ params }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [liked, setLiked] = useState(false);
   const [message, setMessage] = useState("");
+  const [AllUserInfo, setAllUserInfo] = useState({});
   const [sendingMessage, setSendingMessage] = useState(false);
   const effectiveProductId = itemId || currentProduct?.id;
 
@@ -81,6 +86,27 @@ export default function ListingDetailsPage({ params }) {
   }, [id]);
 
   useEffect(() => {
+    const fetchSellerInfo = async () => {
+      if (!sellerID) return;
+
+      try {
+        const userInfo = await getUserInfo(sellerID);
+        if (userInfo) {
+          setAllUserInfo(userInfo);
+          // console.log(userInfo.email)
+
+        } else {
+          console.warn("Seller not found");
+        }
+      } catch (error) {
+        console.error("Error fetching seller info:", error);
+      }
+    };
+
+    fetchSellerInfo();
+  }, [sellerID])
+
+  useEffect(() => {
     if (product) {
       // console.log("Seller ID:", product.userId);
     }
@@ -110,6 +136,19 @@ export default function ListingDetailsPage({ params }) {
         imageUrl: images[0]?.url || images[0] || "",
         id: effectiveProductId,
       };
+
+      // console.log(AllUserInfo.email)
+      // console.log(AllUserInfo.fullName)
+      // console.log(productDetails.name)
+      await fetch("/api/send-message-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: AllUserInfo.email, // grab from user's Firestore data
+          senderName: AllUserInfo.fullname,
+          productName: productDetails.name,
+        }),
+      }); 
 
       const conversationId = await initiateConversation(
         message,
@@ -230,7 +269,7 @@ export default function ListingDetailsPage({ params }) {
                 // fill
                 width={600}
                 height={600}
-                  priority
+                priority
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
@@ -333,7 +372,11 @@ export default function ListingDetailsPage({ params }) {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
-              <Button onClick={handleSendMessage} className="rounded-l-none" disabled={sendingMessage}>
+              <Button
+                onClick={handleSendMessage}
+                className="rounded-l-none"
+                disabled={sendingMessage}
+              >
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Send
               </Button>
@@ -350,10 +393,14 @@ export default function ListingDetailsPage({ params }) {
         productId={effectiveProductId}
         product={currentProduct}
       /> */}
-      <div ref={ref} >
-        {inView && <LazyComponent  key={effectiveProductId}
-        productId={effectiveProductId}
-        product={currentProduct}/>}
+      <div ref={ref}>
+        {inView && (
+          <LazyComponent
+            key={effectiveProductId}
+            productId={effectiveProductId}
+            product={currentProduct}
+          />
+        )}
       </div>
     </div>
   );
