@@ -20,14 +20,14 @@ function ListingCard({ product = {}, btnName = "View Details" }) {
   return (
     <Card className="bg-gray-300 overflow-hidden rounded-xl shadow-md h-full flex flex-col">
       {imageUri ? (
-        <div className="relative h-40 w-full">
+        <div className="relative h-40 w-50">
           <Image
             src={imageUri}
             alt={product.name ? `${product.name} image` : "Product image"}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            priority={false} 
+            loading="lazy"
             placeholder="blur"
             blurDataURL="/placeholder.svg"
           />

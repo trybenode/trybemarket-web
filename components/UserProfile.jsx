@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ import { auth } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 
-export default function UserProfile() {
+export default React.memo( function UserProfile() {
   const { currentUser, setCurrentUser } = useUser();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isLoggedIn = !!currentUser;
@@ -229,4 +229,4 @@ export default function UserProfile() {
       />
     </div>
   );
-}
+})
