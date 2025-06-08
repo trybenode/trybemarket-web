@@ -38,7 +38,8 @@ export default function ListingDetailsPage({ params }) {
   const { ref, inView } = useInView({ triggerOnce: true });
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
-  const CurrentUserName = useUserStore((state) => state.user.fullName);
+  const currentUser = useUserStore((state) => state.user);
+  const getUserFullName = useUserStore((state) => state.getUserFullName);
   const itemId = id || product?.id;
   const [sellerID, setSellerID] = useState(null);
   const [currentProduct, setCurrentProduct] = useState(null);
@@ -138,12 +139,15 @@ export default function ListingDetailsPage({ params }) {
         id: effectiveProductId,
       };
 
+      // Get user's full name from the store
+      const instigatorName = getUserFullName() || currentUser?.fullName || "Anonymous User";
+
       const conversationId = await initiateConversation(
         message,
         currentUserId,
         sellerID,
         productDetails,
-        CurrentUserName
+        instigatorName
       );
 
       setMessage("");
@@ -158,13 +162,12 @@ export default function ListingDetailsPage({ params }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: AllUserInfo.email,
-            senderName: AllUserInfo.fullName,
+            senderName: instigatorName,
             productName: productDetails.name,
             chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
           }),
         }).catch((error) => {
           console.error("Error sending email notification:", error);
-          // Don't show this error to user since chat is already working
         });
       }
     } catch (error) {
