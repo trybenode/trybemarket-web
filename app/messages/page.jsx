@@ -75,9 +75,11 @@ export default function MessagesPage() {
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
-  const truncateText = (text, maxLength = 50) => {
+  const truncateText = (text, maxLength = 30) => {
     if (!text) return "";
-    return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+    return text.length > maxLength
+      ? text.substring(0, maxLength) + "..."
+      : text;
   };
 
   if (loading) {
@@ -100,8 +102,10 @@ export default function MessagesPage() {
           {[...conversations]
             .sort((a, b) => {
               // Sort by updatedAt timestamp or lastMessage timestamp
-              const timeA = a.updatedAt?.seconds || a.lastMessage?.timestamp || 0;
-              const timeB = b.updatedAt?.seconds || b.lastMessage?.timestamp || 0;
+              const timeA =
+                a.updatedAt?.seconds || a.lastMessage?.timestamp || 0;
+              const timeB =
+                b.updatedAt?.seconds || b.lastMessage?.timestamp || 0;
               return timeB - timeA; // Descending order
             })
             .map((conversation) => {
@@ -115,7 +119,12 @@ export default function MessagesPage() {
                   key={conversation.id}
                   className="hover:shadow-md transition-shadow"
                 >
-                  <CardContent className="p-4">
+                  <CardContent
+                    className="p-4"
+                    onClick={() => {
+                      router.push(`/chat/${conversation.id}`);
+                    }}
+                  >
                     <div className="flex items-center">
                       <div className="relative h-12 w-12 rounded-lg overflow-hidden">
                         <Image
@@ -151,15 +160,9 @@ export default function MessagesPage() {
                             conversation.lastMessage?.timestamp || 0
                           )}
                         </p>
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto text-xs text-blue-600"
-                          onClick={() => {
-                            router.push(`/chat/${conversation.id}`);
-                          }}
-                        >
-                          View
-                        </Button>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {conversation.instigatorName || "Unknown Buyer"}
+                        </p>
                       </div>
                     </div>
                   </CardContent>

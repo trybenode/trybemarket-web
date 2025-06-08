@@ -17,6 +17,7 @@ import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
 import { getUserInfo } from "@/utils/userInfo";
 import useFavoritesStore from "@/lib/FavouriteStore";
+import useUserStore from "@/lib/userStore";
 const LazyComponent = dynamic(
   () => import("@/components/SellerDetailsAndRelatedProducts"),
   {
@@ -37,6 +38,7 @@ export default function ListingDetailsPage({ params }) {
   const { ref, inView } = useInView({ triggerOnce: true });
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
+  const CurrentUserName = useUserStore((state) => state.user.fullName);
   const itemId = id || product?.id;
   const [sellerID, setSellerID] = useState(null);
   const [currentProduct, setCurrentProduct] = useState(null);
@@ -140,7 +142,8 @@ export default function ListingDetailsPage({ params }) {
         message,
         currentUserId,
         sellerID,
-        productDetails
+        productDetails,
+        CurrentUserName
       );
 
       setMessage("");
@@ -174,7 +177,7 @@ export default function ListingDetailsPage({ params }) {
       setSendingMessage(false);
     }
   };
-  
+
   useEffect(() => {
     if (id) {
       setLiked(favoriteIds.includes(id));
