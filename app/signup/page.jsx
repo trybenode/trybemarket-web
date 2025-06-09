@@ -232,7 +232,7 @@ export default function SignupPage() {
         initError: storeError,
       } = useUserStore.getState();
       if (!isInitialized) {
-        toast.error("Store not fully initialized. Please try again.");
+        toast.error("Failed. Please try again.");
         return;
       }
       if (storeError) {
