@@ -9,11 +9,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
 import { getAllConversations } from "@/utils/messaginghooks";
 import UserProfile from "@/components/UserProfile";
+import useUserStore from "@/lib/userStore";
+
 
 export default function MessagesPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const getUserID = useUserStore((state) => state.getUserId); 
   const [refreshing, setRefreshing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   // Check if user is authenticated
@@ -161,7 +164,7 @@ export default function MessagesPage() {
                           )}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {conversation.instigatorName || "Unknown Buyer"}
+                          { conversation.instigatorInfo?.id === currentUserId ? "" : conversation.instigatorInfo?.name || "Unknown Buyer" }
                         </p>
                       </div>
                     </div>

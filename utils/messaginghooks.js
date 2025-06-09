@@ -36,7 +36,7 @@ const getUserIdOfSeller = async(productID) => {
   }
 };
 
-const initiateConversation = async (message, senderID, receiverID, productDetails, instigatorName) => {
+const initiateConversation = async (message, senderID, receiverID, productDetails, instigatorInfo) => {
   try {
     const convoID = `${senderID}${receiverID}${productDetails.id}`;
     
@@ -55,7 +55,6 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
         lastMessage: messageObj,
         updatedAt: serverTimestamp(),
         unreadBy: [receiverID],
-        instigatorName,
       });
     } else {
       await setDoc(conversationRef, {
@@ -65,7 +64,7 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
         updatedAt: serverTimestamp(),
         lastMessage: messageObj,
         unreadBy: [receiverID],
-        instigatorName,
+        instigatorInfo,
         product: {
           name: productDetails.name,
           imageUrl: productDetails.imageUrl,

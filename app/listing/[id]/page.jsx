@@ -140,14 +140,18 @@ export default function ListingDetailsPage({ params }) {
       };
 
       // Get user's full name from the store
-      const instigatorName = getUserFullName() || currentUser?.fullName || "Anonymous User";
-
+      const instigatorName =
+        getUserFullName() || currentUser?.fullName || "Anonymous User";
+      const instigatorInfo = {
+        id: currentUser,
+        name: instigatorName,
+      };
       const conversationId = await initiateConversation(
         message,
         currentUserId,
         sellerID,
         productDetails,
-        instigatorName
+        instigatorInfo
       );
 
       setMessage("");
