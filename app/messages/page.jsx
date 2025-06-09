@@ -163,7 +163,7 @@ export default function MessagesPage() {
                             conversation.lastMessage?.timestamp || 0
                           )}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-blue-500 mt-1">
                           { conversation.instigatorInfo?.id === currentUserId ? " " : conversation.instigatorInfo?.name || "Unknown Buyer" }
                         </p>
                       </div>
