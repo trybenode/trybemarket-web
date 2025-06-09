@@ -143,7 +143,7 @@ export default function ListingDetailsPage({ params }) {
       const instigatorName =
         getUserFullName() || currentUser?.fullName || "Anonymous User";
       const instigatorInfo = {
-        id: currentUser,
+        id: currentUserId,
         name: instigatorName,
       };
       const conversationId = await initiateConversation(

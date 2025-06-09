@@ -164,7 +164,7 @@ export default function MessagesPage() {
                           )}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          { conversation.instigatorInfo?.id === currentUserId ? "" : conversation.instigatorInfo?.name || "Unknown Buyer" }
+                          { conversation.instigatorInfo?.id === currentUserId ? " " : conversation.instigatorInfo?.name || "Unknown Buyer" }
                         </p>
                       </div>
                     </div>
