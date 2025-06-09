@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Heart,
   Loader,
+  Compass,
 } from "lucide-react";
 import { MdPeople, MdPeopleOutline, MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
@@ -135,6 +136,15 @@ export default React.memo( function UserProfile() {
               >
                 <Home className='mr-2 h-4 w-4' />
                 Marketplace
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href='/explore'
+                className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+              >
+                <Compass className='mr-2 h-4 w-4' />
+                Explore Services
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

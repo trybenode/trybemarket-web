@@ -3,7 +3,7 @@
 import { useState } from "react";
 import CategoryTabs from "../../components/CategoryTabs";
 import ServiceCard from "../../components/ServiceCard";
-
+import UserProfile from "@/components/UserProfile";
 const services = [
   {
     id: 1,
@@ -31,7 +31,7 @@ const services = [
   },
   {
     id: 4,
-    category: "Beauty and Personal Care",
+    category: "Beauty & Personal Care",
     title: "Funky Hairs Salon",
     description:
       "Specializing in trendy haircuts, braids, and personalized styling for all hair types.",
@@ -61,9 +61,8 @@ export default function Explore() {
     "Tutoring",
     "Creative",
     "Craft",
-    "Beauty and Personal Care",
+    "Beauty & Personal Care",
     "Food & Catering",
-    // "Craft & Fabrication",
   ];
   const [selectedCategory, setSelectedCategory] = useState("All");
 
@@ -73,30 +72,29 @@ export default function Explore() {
       : services.filter((s) => s.category === selectedCategory);
 
   return (
-    <div className='min-h-screen bg-gray-10 px-4 py-6'>
-      <div className='max-w-6xl mx-auto'>
-        <h1 className='text-2xl font-bold text-gray-800 mb-4'>
-          Explore Services
-        </h1>
+    <div className='max-w-6xl mx-auto py-6 px-4'>
+      <div className='flex justify-between items-center mb-4'>
+        <h1 className='text-2xl font-bold text-gray-800'>Explore Services</h1>
+        <UserProfile />
+      </div>
 
-        <div className='mb-4'>
-          <input
-            type='text'
-            placeholder='Search for services...'
-            className='w-full px-4 py-2 border border-gray-200 rounded-3xl focus:outline-none focus:ring-1 focus:ring-yellow-500'
-          />
-        </div>
-
-        <CategoryTabs
-          categories={categories}
-          onSelectCategory={setSelectedCategory}
+      <div className='mb-4'>
+        <input
+          type='text'
+          placeholder='Search for services...'
+          className='w-full px-4 py-2 border border-gray-200 rounded-3xl focus:outline-none focus:ring-1 focus:ring-yellow-500'
         />
+      </div>
 
-        <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6'>
-          {filteredServices.map((service) => (
-            <ServiceCard key={service.id} {...service} />
-          ))}
-        </div>
+      <CategoryTabs
+        categories={categories}
+        onSelectCategory={setSelectedCategory}
+      />
+
+      <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6'>
+        {filteredServices.map((service) => (
+          <ServiceCard key={service.id} {...service} />
+        ))}
       </div>
     </div>
   );
