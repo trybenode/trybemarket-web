@@ -284,6 +284,9 @@ export default function SignupPage() {
     "8. Limitation of Liability: TrybeMarket  is not liable for buyer‑seller disputes, product/service quality issues, delivery problems, or off-platform transactions.",
     "9. Suspension & Termination: We may suspend or terminate accounts that violate these Terms without prior notice.",
     "10. Changes to Terms: We may update these Terms. Substantial changes will be communicated via the app or email. Continued use indicates acceptance.",
+    "11. Model Training & AI Use: By using TrybeMarket, you acknowledge and consent that anonymized or aggregated data (e.g., usage patterns, metadata) may be used to train or fine‑tune our in‑house AI models, provided data cannot be traced to individuals.",
+  "12. Prohibition of External AI Use: You agree not to use TrybeMarket content (e.g., listings, chat logs) to train external AI or machine learning systems unless you obtain explicit written consent from TrybeMarket.",
+  "13. Opt‑Out & Consent: At any time, you may withdraw consent for your data to be used in AI training. After opting out, your data will no longer be included in future model training/analysis."
   ];
 
   const privacyParagraphs = [
@@ -299,6 +302,9 @@ export default function SignupPage() {
     "10. Data Retention & Cross-border Transfers :We retain personal data only for as long as needed to provide services or as mandated by law.",
     "11. Transfers of data outside Nigeria occur only with appropriate safeguards (e.g., contractual clauses, NDPC-approved mechanisms) ",
     "12. Changes to Privacy Policy: We may update this policy; major changes will be communicated via the app or email. Continued use indicates acceptance.",
+    "13. AI Training Data Usage: We may use anonymized or aggregated platform data (e.g., usage metadata, non‑identifiable content) to train or fine‑tune internal AI models to improve services. Any personal data used for AI purposes will be pseudonymized or anonymized beforehand.",
+  "14. Withdrawal of AI Consent: You have the right under NDPA to withdraw consent for your data being used in AI training. Requests to opt out will be processed within 30 days and apply prospectively.",
+  "15. No External AI Access: TrybeMarket does not share user data with external parties for AI or ML model training unless you have explicitly agreed to such use in writing."
   ];
 
   return (
@@ -497,7 +503,7 @@ export default function SignupPage() {
               If you have any questions about these Terms, please contact our
               support team.
             </p>
-            <p className="text-sm text-gray-500">Last Updated: May 2023</p>
+            <p className="text-sm text-gray-500">Last Updated: May 2025</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -521,12 +527,14 @@ export default function SignupPage() {
               </p>
             ))}
             <p className="text-sm text-gray-700 mt-4">
+              I consent to Market Trybe using my anonymized data (e.g., usage stats and metadata) to train internal AI systems to improve app features. I understand I can withdraw this consent at any time.
+              <br />
               <strong>Contact Us</strong>
               <br />
               If you have any questions regarding this Privacy Policy, please
               contact us.
             </p>
-            <p className="text-sm text-gray-500">Last Updated: May 2023</p>
+            <p className="text-sm text-gray-500">Last Updated: May 2025</p>
           </div>
         </DialogContent>
       </Dialog>
