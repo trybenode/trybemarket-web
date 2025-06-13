@@ -47,6 +47,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {canUserUpload,  incrementUploadCount } from '../../hooks/UploadLimiter'
+import Header from "@/components/Header";
 
 export default function SellPage() {
   const router = useRouter();
@@ -247,23 +248,6 @@ export default function SellPage() {
     if (!files.length) return;
     const arr = Array.from(files)
     try {
-      // const urls = await Promise.all(
-      //   arr.map(async (file) => {
-      //     const data = new FormData();
-      //     data.append("file", file);
-      //     data.append("upload_preset", "ProductImage");
-      //     data.append("cloud_name", "dj21x4jnt");
-      //     data.append("folder", "market_trybe_products");
-      //     const res = await fetch(
-      //       "https://api.cloudinary.com/v1_1/dj21x4jnt/image/upload",
-      //       { method: "POST", body: data }
-      //     );
-      //     const json = await res.json();
-      //     if (!json.secure_url) throw new Error("Upload failed");
-      //     return json.secure_url;
-      //   })
-      // );
-      // setImages((prev) => [...prev, ...urls]);
       const urls = await Promise.all(
         arr.map(async (file) => {
           const data = new FormData();
@@ -388,7 +372,7 @@ export default function SellPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="flex items-center mb-6 justify-between">
+      {/* <div className="flex items-center mb-6 justify-between">
         <Button
           variant="ghost"
           className="p-0 mr-2"
@@ -400,7 +384,8 @@ export default function SellPage() {
           {isEditMode ? "Edit Product" : "Add New Product"}
         </h1>
         <UserProfile />
-      </div>
+      </div> */}
+      <Header title={isEditMode ? "Edit Product" : "Add New Product"}/>
 
       <AlertDialog
         open={openVerificationDialog}
@@ -695,8 +680,6 @@ export default function SellPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    your product from our servers.
                     This action cannot be undone. This will permanently delete
                     your product from our servers.
                   </AlertDialogDescription>
