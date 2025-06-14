@@ -47,7 +47,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {canUserUpload,  incrementUploadCount } from '../../hooks/UploadLimiter'
-
+import {compressImage} from '@/utils/imageCompress'
 export default function SellPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -266,8 +266,9 @@ export default function SellPage() {
       // setImages((prev) => [...prev, ...urls]);
       const urls = await Promise.all(
         arr.map(async (file) => {
+          const compressed = await compressImage(file);
           const data = new FormData();
-          data.append("file", file);
+          data.append("file", compressed);
           data.append("upload_preset", "ProductImage");
           data.append("cloud_name", "dj21x4jnt");
           data.append("folder", "market_trybe_products");
