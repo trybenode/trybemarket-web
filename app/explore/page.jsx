@@ -100,10 +100,6 @@ export default function Explore() {
   );
 }
 
-
-
-
-
 // "use client";
 
 // import { useState } from "react";
@@ -111,15 +107,7 @@ export default function Explore() {
 // import ServiceCard from "../../components/ServiceCard";
 // import UserProfile from "@/components/UserProfile";
 // import { useServices } from "@/hooks/useServices";
-
-// // Skeleton loader component (simple version, adapt as needed)
-// const ServiceCardSkeleton = () => (
-//   <div className="bg-gray-100 rounded-lg p-4 animate-pulse">
-//     <div className="h-32 bg-gray-200 rounded mb-4"></div>
-//     <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-//     <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-//   </div>
-// );
+// import ServiceCardSkeleton from "@/components/ui/ServiceCardSkeleton";
 
 // const categories = [
 //   "All",
@@ -132,20 +120,21 @@ export default function Explore() {
 
 // export default function Explore() {
 //   const [selectedCategory, setSelectedCategory] = useState("All");
-//   const { services, initialLoading, isFetchingMore, error, hasMore, loadMore } = useServices(selectedCategory);
+//   const { services, initialLoading, isFetchingMore, error, hasMore, loadMore } =
+//     useServices(selectedCategory);
 
 //   return (
-//     <div className="max-w-6xl mx-auto py-6 px-4">
-//       <div className="flex justify-between items-center mb-4">
-//         <h1 className="text-2xl font-bold text-gray-800">Explore Services</h1>
+//     <div className='max-w-6xl mx-auto py-6 px-4'>
+//       <div className='flex justify-between items-center mb-4'>
+//         <h1 className='text-2xl font-bold text-gray-800'>Explore Services</h1>
 //         <UserProfile />
 //       </div>
 
-//       <div className="mb-4">
+//       <div className='mb-4'>
 //         <input
-//           type="text"
-//           placeholder="Search for services..."
-//           className="w-full px-4 py-2 border border-gray-200 rounded-3xl focus:outline-none focus:ring-1 focus:ring-yellow-500"
+//           type='text'
+//           placeholder='Search for services...'
+//           className='w-full px-4 py-2 border border-gray-200 rounded-3xl focus:outline-none focus:ring-1 focus:ring-yellow-500'
 //         />
 //       </div>
 
@@ -155,20 +144,20 @@ export default function Explore() {
 //       />
 
 //       {initialLoading ? (
-//         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+//         <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6'>
 //           {Array.from({ length: 6 }).map((_, i) => (
 //             <ServiceCardSkeleton key={i} />
 //           ))}
 //         </div>
 //       ) : services.length ? (
-//         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+//         <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6'>
 //           {services.map((service) => (
 //             <ServiceCard key={service.id} {...service} />
 //           ))}
 //         </div>
 //       ) : (
-//         <div className="flex flex-col items-center justify-center h-[50vh]">
-//           <p className="text-center text-lg text-red-500">
+//         <div className='flex flex-col items-center justify-center h-[50vh]'>
+//           <p className='text-center text-lg text-red-500'>
 //             {selectedUniversity
 //               ? `No services in ${selectedUniversity} yet. Be the first to upload!`
 //               : "No services found. Please check your internet connection or try again."}
@@ -177,7 +166,7 @@ export default function Explore() {
 //       )}
 
 //       {isFetchingMore && (
-//         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+//         <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6'>
 //           {Array.from({ length: 6 }).map((_, i) => (
 //             <ServiceCardSkeleton key={i} />
 //           ))}
@@ -185,17 +174,17 @@ export default function Explore() {
 //       )}
 
 //       {hasMore && !isFetchingMore && services.length > 0 && (
-//         <div className="flex justify-center mt-6">
+//         <div className='flex justify-center mt-6'>
 //           <button
 //             onClick={loadMore}
-//             className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+//             className='px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600'
 //           >
 //             Load More
 //           </button>
 //         </div>
 //       )}
 
-//       {error && <p className="text-center text-red-500 mt-4">Error: {error}</p>}
+//       {error && <p className='text-center text-red-500 mt-4'>Error: {error}</p>}
 //     </div>
 //   );
 // }
