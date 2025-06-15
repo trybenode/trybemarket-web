@@ -72,13 +72,22 @@ export const UserProvider = ({ children }) => {
 
         const kycDocRef = doc(db, "kycRequests", user.uid);
         kycListenerRef.current = onSnapshot(
-          kycDocRef,
           async (docSnap) => {
             if (docSnap.exists()) {
               const kycData = docSnap.data();
               console.log("KYC data:", kycData);
 
-              // Only proceed if notification hasn't been sent
+              // Update isVerified immediately if status is verified
+              if (kycData.status === "verified" && !userData.isVerified) {
+                try {
+                  await updateDoc(userRef, { isVerified: true });
+                  setCurrentUser((prev) => ({ ...prev, isVerified: true }));
+                } catch (err) {
+                  console.error("Error updating isVerified:", err);
+                }
+              }
+
+              // Handle notification separately
               if (
                 (kycData.status === "verified" ||
                   kycData.status === "rejected") &&
@@ -99,11 +108,6 @@ export const UserProvider = ({ children }) => {
 
                   // Update Firestore to mark notification as sent
                   await updateDoc(kycDocRef, { notificationSent: true });
-
-                  if (status === "verified" && !userData.isVerified) {
-                    await updateDoc(userRef, { isVerified: true });
-                    setCurrentUser((prev) => ({ ...prev, isVerified: true }));
-                  }
                 } catch (err) {
                   console.error("Error notifying KYC:", err);
                 }
