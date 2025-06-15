@@ -340,7 +340,7 @@ export default function SellPage() {
         condition,
         color,
         price: parseFloat(price) || 0,
-        originalPrice: parseFloat(originalPrice) || 0,
+        originalPrice: parseFloat(originalPrice) || "",
         year: year.trim(),
         images,
         userId,
