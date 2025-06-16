@@ -42,7 +42,7 @@ export default function LoginPage() {
     useUserStore.getState().loadUser();
   }, []);
 
-  // In LoginPage.js
+ 
   const handleLogin = async (e) => {
     e.preventDefault();
 
