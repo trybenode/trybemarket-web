@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+
+import Link from "next/link";
+
 import dynamic from "next/dynamic";
 import { useInView } from "react-intersection-observer";
 import { doc, getDoc } from "firebase/firestore";
@@ -13,7 +16,11 @@ import { Separator } from "@/components/ui/separator";
 import { Heart, MessageCircle, ChevronLeft, Loader } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
+import { getUserInfo } from "@/utils/userInfo";
 import useFavoritesStore from "@/lib/FavouriteStore";
+import useUserStore from "@/lib/userStore";
+
+
 const LazyComponent = dynamic(
   () => import("@/components/SellerDetailsAndRelatedProducts"),
   {
@@ -27,10 +34,14 @@ import { initiateConversation } from "@/utils/messaginghooks";
 export default function ListingDetailsPage({ params }) {
   const router = useRouter();
   const { id } = React.use(params);
+
   // const { id } = params;
+
   const { ref, inView } = useInView({ triggerOnce: true });
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
+  const currentUser = useUserStore((state) => state.user);
+  const getUserFullName = useUserStore((state) => state.getUserFullName);
   const itemId = id || product?.id;
   const [sellerID, setSellerID] = useState(null);
   const [currentProduct, setCurrentProduct] = useState(null);
@@ -40,6 +51,7 @@ export default function ListingDetailsPage({ params }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [liked, setLiked] = useState(false);
   const [message, setMessage] = useState("");
+  const [AllUserInfo, setAllUserInfo] = useState({});
   const [sendingMessage, setSendingMessage] = useState(false);
   const effectiveProductId = itemId || currentProduct?.id;
 
@@ -82,8 +94,33 @@ export default function ListingDetailsPage({ params }) {
   //   }
   // }, [product]);
   useEffect(() => {
+
+    const fetchSellerInfo = async () => {
+      if (!sellerID) return;
+
+      try {
+        const userInfo = await getUserInfo(sellerID);
+        if (userInfo) {
+          setAllUserInfo(userInfo);
+          // console.log(userInfo.email)
+        } else {
+          console.warn("Seller not found");
+        }
+      } catch (error) {
+        console.error("Error fetching seller info:", error);
+      }
+    };
+
+    fetchSellerInfo();
+  }, [sellerID]);
+
+  useEffect(() => {
+//     if (product) {
+      // console.log("Seller ID:", product.userId);
+
     if (id) {
       setLiked(favoriteIds.includes(id));
+
     }
   }, [id, favoriteIds]);
 
@@ -158,17 +195,40 @@ export default function ListingDetailsPage({ params }) {
         id: effectiveProductId,
       };
 
+      // Get user's full name from the store
+      const instigatorName =
+        getUserFullName() || currentUser?.fullName || "Anonymous User";
+      const instigatorInfo = {
+        id: currentUserId,
+        name: instigatorName,
+      };
       const conversationId = await initiateConversation(
         message,
         currentUserId,
         sellerID,
-        productDetails
+        productDetails,
+        instigatorInfo
       );
 
       setMessage("");
 
       if (conversationId) {
+        // Navigate user immediately
         router.push(`/chat/${conversationId}`);
+
+        // Fire and forget the email notification
+        fetch("/api/send-message-notification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: AllUserInfo.email,
+            senderName: instigatorName,
+            productName: productDetails.name,
+            chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
+          }),
+        }).catch((error) => {
+          console.error("Error sending email notification:", error);
+        });
       }
     } catch (error) {
       // console.error("Error sending message:", error);
@@ -228,7 +288,6 @@ export default function ListingDetailsPage({ params }) {
                 // fill
                 width={600}
                 height={600}
-                // priority
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
                 loading="lazy"
@@ -332,7 +391,11 @@ export default function ListingDetailsPage({ params }) {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
-              <Button onClick={handleSendMessage} className="rounded-l-none">
+              <Button
+                onClick={handleSendMessage}
+                className="rounded-l-none"
+                disabled={sendingMessage}
+              >
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Send
               </Button>

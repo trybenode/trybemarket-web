@@ -9,11 +9,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { RefreshCw } from "lucide-react";
 import { getAllConversations } from "@/utils/messaginghooks";
 import UserProfile from "@/components/UserProfile";
+import useUserStore from "@/lib/userStore";
+
 
 export default function MessagesPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const getUserID = useUserStore((state) => state.getUserId); 
   const [refreshing, setRefreshing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   // Check if user is authenticated
@@ -75,6 +78,13 @@ export default function MessagesPage() {
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
+  const truncateText = (text, maxLength = 30) => {
+    if (!text) return "";
+    return text.length > maxLength
+      ? text.substring(0, maxLength) + "..."
+      : text;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -95,8 +105,10 @@ export default function MessagesPage() {
           {[...conversations]
             .sort((a, b) => {
               // Sort by updatedAt timestamp or lastMessage timestamp
-              const timeA = a.updatedAt?.seconds || a.lastMessage?.timestamp || 0;
-              const timeB = b.updatedAt?.seconds || b.lastMessage?.timestamp || 0;
+              const timeA =
+                a.updatedAt?.seconds || a.lastMessage?.timestamp || 0;
+              const timeB =
+                b.updatedAt?.seconds || b.lastMessage?.timestamp || 0;
               return timeB - timeA; // Descending order
             })
             .map((conversation) => {
@@ -110,7 +122,12 @@ export default function MessagesPage() {
                   key={conversation.id}
                   className="hover:shadow-md transition-shadow"
                 >
-                  <CardContent className="p-4">
+                  <CardContent
+                    className="p-4"
+                    onClick={() => {
+                      router.push(`/chat/${conversation.id}`);
+                    }}
+                  >
                     <div className="flex items-center">
                       <div className="relative h-12 w-12 rounded-lg overflow-hidden">
                         <Image
@@ -134,9 +151,9 @@ export default function MessagesPage() {
                         <p
                           className={`${
                             hasUnread ? "text-gray-900" : "text-gray-500"
-                          } text-sm`}
+                          } text-sm truncate`}
                         >
-                          {conversation.lastMessage?.text}
+                          {truncateText(conversation.lastMessage?.text)}
                         </p>
                       </div>
 
@@ -146,15 +163,9 @@ export default function MessagesPage() {
                             conversation.lastMessage?.timestamp || 0
                           )}
                         </p>
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto text-xs text-blue-600"
-                          onClick={() => {
-                            router.push(`/chat/${conversation.id}`);
-                          }}
-                        >
-                          View
-                        </Button>
+                        <p className="text-xs text-blue-500 mt-1">
+                          { conversation.instigatorInfo?.id === currentUserId ? " " : conversation.instigatorInfo?.name || "Unknown Buyer" }
+                        </p>
                       </div>
                     </div>
                   </CardContent>
