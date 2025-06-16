@@ -28,4 +28,5 @@ next-env.d.ts
 
 serviceAccountKey.json
 seed.js 
+serviceCategories.json 
 
