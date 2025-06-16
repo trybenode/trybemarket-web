@@ -15,7 +15,7 @@ import { Upload, X } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useServiceForm } from "@/hooks/useServiceForm";
 
-const category = [{ id: 1, label: "cat" }];
+
 
 export default function ServiceUpload() {
   const { currentUser, loading: authLoading } = useUser();
@@ -28,12 +28,6 @@ export default function ServiceUpload() {
       </div>
     );
   }
-  // const [serviceName, setServiceName] = useState("");
-  // const [serviceDescription, setServiceDescription] = useState("");
-  // const [price, setPrice] = useState("");
-  // const [selectedCategory, setSelectedCategory] = useState("");
-  // const [selectedAvailability, setSelectedAvailability] = useState("");
-  // const [images, setImages] = useState([]);
 
   return (
     <div className="flex flex-col min-h-screen">

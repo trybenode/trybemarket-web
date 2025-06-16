@@ -37,15 +37,14 @@ export const useServiceForm = (currentUser) => {
           label: doc.data().name,
           value: doc.data().name,
         }));
-        console.log("Fetched categories:", serviceCategoryData);
         if (serviceCategoryData.length === 0) {
           setCategory([{ label: "Test Category", value: "test-cat" }]);
         } else {
           setCategory(serviceCategoryData);
         }
       } catch (error) {
-        console.error("🔥 Error fetching categories:", error);
-        setCategory([{ label: "Test Category", value: "test-cat" }]); // fallback
+        toast.error("🔥 Error fetching categories:", error);
+        setCategory([{ label: "Test Category", value: "test-cat" }]); 
       }
 
       // setCategory(serviceCategoryData);
