@@ -439,7 +439,7 @@ export default function SellPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {category.map((cat) => (
-                      <SelectItem key={cat.label} value={cat.label}>
+                      <SelectItem key={cat.value} value={cat.value}>
                         {cat.label}
                       </SelectItem>
                     ))}
