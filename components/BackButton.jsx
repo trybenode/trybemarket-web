@@ -20,7 +20,7 @@ export default function BackBtn() {
       className="flex items-center space-x-1 text-yellow-600 hover:text-yellow-800"
     >
       <ArrowLeft size={20} className="text-yellow-600 hover:text-yellow-800" />
-      <span>Go Back</span>
+      {/* <span>Go Back</span> */}
     </button>
   );
 }
