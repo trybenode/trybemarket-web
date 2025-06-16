@@ -1,26 +1,23 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-
 import Link from "next/link";
-
 import dynamic from "next/dynamic";
 import { useInView } from "react-intersection-observer";
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-
+import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, MessageCircle, ChevronLeft, Loader } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
 import { getUserInfo } from "@/utils/userInfo";
 import useFavoritesStore from "@/lib/FavouriteStore";
 import useUserStore from "@/lib/userStore";
-
-
 const LazyComponent = dynamic(
   () => import("@/components/SellerDetailsAndRelatedProducts"),
   {
@@ -29,14 +26,15 @@ const LazyComponent = dynamic(
   }
 );
 
-import { initiateConversation } from "@/utils/messaginghooks";
+import {
+  getUserIdOfSeller,
+  initiateConversation,
+} from "@/utils/messaginghooks";
+import SellerDetailsAndRelatedProducts from "@/components/SellerDetailsAndRelatedProducts";
 
 export default function ListingDetailsPage({ params }) {
   const router = useRouter();
   const { id } = React.use(params);
-
-  // const { id } = params;
-
   const { ref, inView } = useInView({ triggerOnce: true });
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
@@ -57,44 +55,40 @@ export default function ListingDetailsPage({ params }) {
 
   //product fetch
   useEffect(() => {
-    if (!id) return;
-
-    async function fetchProduct() {
+    const fetchProduct = async () => {
       try {
-        setLoading(true);
+        if (!id) return;
+
         const docRef = doc(db, "products", id);
         const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const productData = { id: docSnap.id, ...docSnap.data() };
-          setProduct(productData);
 
-          if (productData.images?.length) {
+        if (docSnap.exists()) {
+          const productData = {
+            id: docSnap.id,
+            ...docSnap.data(),
+          };
+          setProduct(productData);
+          // console.log("Fetched product:", productData.userId);
+          setSellerID(productData.userId);
+          if (productData.images?.length > 0) {
             setSelectedImage(
               productData.images[0]?.url || productData.images[0]
             );
           }
         } else {
-          toast.error("Product not found");
-          setProduct(null);
+          console.warn("Product not found");
         }
-      } catch (err) {
-        // console.error(err);
-        toast.error("Failed to fetch product data");
+      } catch (error) {
+        console.error("Error fetching product:", error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchProduct();
   }, [id]);
 
-  // useEffect(() => {
-  //   if (product) {
-  //     console.log("Seller ID:", product.userId);
-  //   }
-  // }, [product]);
   useEffect(() => {
-
     const fetchSellerInfo = async () => {
       if (!sellerID) return;
 
@@ -115,69 +109,19 @@ export default function ListingDetailsPage({ params }) {
   }, [sellerID]);
 
   useEffect(() => {
-//     if (product) {
+    if (product) {
       // console.log("Seller ID:", product.userId);
-
-    if (id) {
-      setLiked(favoriteIds.includes(id));
-
     }
-  }, [id, favoriteIds]);
+  }, [product]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) setCurrentUserId(user.uid);
-      // setCurrentUserId(user ? user.uid : null);
     });
     return () => unsubscribe();
   }, []);
 
-  // const {
-  //   name = "",
-  //   description = "",
-  //   price = 0,
-  //   originalPrice = 0,
-  //   negotiable = false,
-  //   images = [],
-  //   categoryId = "",
-  //   brand = "",
-  //   condition = "",
-  //   subcategory = [],
-  //   color = "",
-  //   year = "",
-  // } = product;
-
-  const details = useMemo(() => {
-    if (!product) return [];
-    return [
-      { label: "Category", value: product.categoryId || "N/A" },
-      { label: "Sub Categories", value: product.subcategory || [] },
-      { label: "Brand", value: product.brand || "N/A" },
-      { label: "Condition", value: product.condition || "N/A" },
-      { label: "Color", value: product.color || "N/A" },
-      { label: "Year", value: product.year || "N/A" },
-    ];
-  }, [product]);
-
-  const handleLiked = useCallback(() => {
-    if (!currentUserId) {
-      toast.error("Please login to add items to favorites", {
-        duration: 4000,
-        position: "top-right",
-      });
-      router.push("/login");
-      return;
-    }
-
-    toggleFavorite(id);
-    setLiked(!liked);
-    toast.success(liked ? "Removed from favorites" : "Added to favorites", {
-      duration: 2000,
-      position: "top-right",
-    });
-  }, [currentUserId, id, liked, router, toggleFavorite]);
-
-  const handleSendMessage = useCallback(async () => {
+  const handleSendMessage = async () => {
     try {
       if (!message.trim() || !currentUserId || !sellerID) {
         toast.error("Message and user information required", {
@@ -231,7 +175,7 @@ export default function ListingDetailsPage({ params }) {
         });
       }
     } catch (error) {
-      // console.error("Error sending message:", error);
+      console.error("Error sending message:", error);
       toast.error("Failed to send message", {
         duration: 4000,
         position: "top-right",
@@ -239,7 +183,31 @@ export default function ListingDetailsPage({ params }) {
     } finally {
       setSendingMessage(false);
     }
-  }, [message, currentUserId, product, router]);
+  };
+
+  useEffect(() => {
+    if (id) {
+      setLiked(favoriteIds.includes(id));
+    }
+  }, [id, favoriteIds]);
+
+  const handleLiked = () => {
+    if (!currentUserId) {
+      toast.error("Please login to add items to favorites", {
+        duration: 4000,
+        position: "top-right",
+      });
+      router.push("/login");
+      return;
+    }
+
+    toggleFavorite(id);
+    setLiked(!liked);
+    toast.success(liked ? "Removed from favorites" : "Added to favorites", {
+      duration: 2000,
+      position: "top-right",
+    });
+  };
 
   if (loading) {
     return (
@@ -257,6 +225,31 @@ export default function ListingDetailsPage({ params }) {
       </div>
     );
   }
+
+  const {
+    name = "",
+    description = "",
+    price = 0,
+    originalPrice = 0,
+    negotiable = false,
+    images = [],
+    categoryId = "",
+    brand = "",
+    condition = "",
+    subcategory = [],
+    color = "",
+    year = "",
+  } = product;
+
+  const details = [
+    { label: "Category", value: categoryId },
+    { label: "Sub Categories", value: subcategory },
+    { label: "Brand", value: brand },
+    { label: "Condition", value: condition },
+    { label: "Color", value: color },
+    { label: "Year", value: year },
+    // console.log("DETAILS ITEM:", item.label, item.value);
+  ];
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -284,13 +277,13 @@ export default function ListingDetailsPage({ params }) {
             {selectedImage ? (
               <Image
                 src={selectedImage}
-                alt={product.name}
+                alt={name}
                 // fill
                 width={600}
                 height={600}
+                priority
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 50vw"
-                loading="lazy"
               />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -300,7 +293,7 @@ export default function ListingDetailsPage({ params }) {
           </div>
 
           <div className="flex space-x-2 overflow-x-auto pb-2">
-            {product.images?.map((image, index) => {
+            {images.map((image, index) => {
               const imgSrc = image.url || image;
               return (
                 <div
@@ -318,7 +311,6 @@ export default function ListingDetailsPage({ params }) {
                     fill
                     className="object-cover"
                     sizes="80px"
-                    loading="lazy"
                   />
                 </div>
               );
@@ -330,20 +322,18 @@ export default function ListingDetailsPage({ params }) {
         <div className="space-y-6">
           {/* Price Card */}
           <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {product.name}
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{name}</h1>
             <div className="flex items-center mt-2">
               <p className="text-2xl font-extrabold text-green-600">
-                ₦{formatNumber(product.price)}
+                ₦{formatNumber(price)}
               </p>
-              {product.originalPrice > 0 && (
+              {originalPrice > 0 && (
                 <p className="ml-2 text-sm text-gray-500 line-through">
-                  ₦{formatNumber(product.originalPrice)}
+                  ₦{formatNumber(originalPrice)}
                 </p>
               )}
             </div>
-            {product.negotiable && (
+            {negotiable && (
               <span className="inline-block bg-green-600 text-white text-xs px-3 py-1 rounded-full mt-2">
                 Negotiable
               </span>
@@ -351,34 +341,37 @@ export default function ListingDetailsPage({ params }) {
           </div>
 
           {/* Tabs for Details & Description */}
-          <div>
-            <div className="text-center font-semibold text-gray-800 border-b-2 border-black pb-1">
-              Details
-            </div>
+          <Tabs defaultValue="details">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="description">Description</TabsTrigger>
+            </TabsList>
 
-            {/* Details Section */}
-            <div className="p-4 rounded-xl border bg-white shadow-sm">
-              <div className="grid grid-cols-2 gap-4">
-                {details.map((item, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <p className="font-bold text-gray-800">{item.label}</p>
-                    <p className="text-gray-600">
-                      {Array.isArray(item.value)
-                        ? item.value.join(", ") || "N/A"
-                        : item.value || "N/A"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <TabsContent value="details" className="mt-4">
+              <Card className="p-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {details.map((item, idx) => (
+                    <div key={idx} className="space-y-1">
+                      <p className="font-bold text-gray-800">{item.label}</p>
+                      <p className="text-gray-600">
+                        {Array.isArray(item.value)
+                          ? item.value.join(", ") || "N/A"
+                          : item.value || "N/A"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </TabsContent>
 
-            {/* Description Section */}
-            <div className="p-4 mt-4 rounded-xl border bg-white shadow-sm">
-              <p className="text-gray-700 whitespace-pre-line">
-                {product.description || "No description available"}
-              </p>
-            </div>
-          </div>
+            <TabsContent value="description" className="mt-4">
+              <Card className="p-4">
+                <p className="text-gray-700 whitespace-pre-line">
+                  {description || "No description available"}
+                </p>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
           {/* Offer Box */}
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -424,5 +417,3 @@ export default function ListingDetailsPage({ params }) {
     </div>
   );
 }
-
-// priority={index === 0}
