@@ -9,9 +9,22 @@ import { useServiceCategories } from "@/hooks/useServiceCategories";
 import ServiceCardSkeleton from "@/components/ui/ServiceCardSkeleton";
 import CategoryBarSkeleton from "@/components/ui/CategoryBarSkeleton";
 import useUserStore from "@/lib/userStore";
+import dynamic from "next/dynamic";
+
+const ServiceSearchBar = dynamic(
+  () => import("@/components/ServiceSearchBar"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className='h-12 bg-gray-100 rounded-md animate-pulse' />
+    ),
+  }
+);
 
 export default function Explore() {
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [filteredServices, setFilteredServices] = useState([]);
+  const [hasSearch, setHasSearch] = useState(false);
   const {
     services,
     initialLoading,
@@ -25,7 +38,6 @@ export default function Explore() {
     loading: categoriesLoading,
     error: categoriesError,
   } = useServiceCategories();
-  // Define selectedUniversity using useUserStore
   const selectedUniversity = useUserStore((state) =>
     state.getSelectedUniversity()
   );
@@ -37,6 +49,13 @@ export default function Explore() {
     }
   }, [categories, categoriesLoading, selectedCategory]);
 
+  // Sync filteredServices with services when no search is active
+  useEffect(() => {
+    if (!hasSearch) {
+      setFilteredServices(services);
+    }
+  }, [services, hasSearch]);
+
   return (
     <div className='max-w-6xl mx-auto py-6 px-4'>
       <div className='flex justify-between items-center mb-4'>
@@ -45,10 +64,12 @@ export default function Explore() {
       </div>
 
       <div className='mb-4'>
-        <input
-          type='text'
-          placeholder='Search for services...'
-          className='w-full px-4 py-2 border border-gray-200 rounded-3xl focus:outline-none focus:ring-1 focus:ring-yellow-500'
+        <ServiceSearchBar
+          services={services}
+          onResults={(filtered, active) => {
+            setFilteredServices(filtered);
+            setHasSearch(active);
+          }}
         />
       </div>
 
@@ -71,18 +92,20 @@ export default function Explore() {
             <ServiceCardSkeleton key={i} />
           ))}
         </div>
-      ) : services.length ? (
+      ) : filteredServices.length ? (
         <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6'>
-          {services.map((service) => (
+          {filteredServices.map((service) => (
             <ServiceCard key={service.id} {...service} />
           ))}
         </div>
       ) : (
         <div className='flex flex-col items-center justify-center h-[50vh]'>
           <p className='text-center text-lg text-red-500'>
-            {selectedUniversity
-              ? `No services of this category in ${selectedUniversity} yet. Be the first to upload!`
-              : "No services found. Please check your internet connection or try again."}
+            {hasSearch
+              ? "No services found for this search."
+              : selectedUniversity
+                ? `No services of this category in ${selectedUniversity} yet. Be the first to upload!`
+                : "No services found. Please check your internet connection or try again."}
           </p>
         </div>
       )}
@@ -95,16 +118,19 @@ export default function Explore() {
         </div>
       )}
 
-      {hasMore && !isFetchingMore && services.length > 0 && (
-        <div className='flex justify-center mt-6'>
-          <button
-            onClick={loadMore}
-            className='px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600'
-          >
-            Load More
-          </button>
-        </div>
-      )}
+      {hasMore &&
+        !isFetchingMore &&
+        filteredServices.length > 0 &&
+        !hasSearch && (
+          <div className='flex justify-center mt-6'>
+            <button
+              onClick={loadMore}
+              className='px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600'
+            >
+              Load More
+            </button>
+          </div>
+        )}
 
       {(servicesError || categoriesError) && (
         <p className='text-center text-red-500 mt-4'>
