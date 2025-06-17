@@ -1,12 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { db } from "../lib/firebase";
 import useUserStore from "../lib/userStore";
-import { collection, query, where, limit, orderBy, startAfter, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  limit,
+  orderBy,
+  startAfter,
+  getDocs,
+} from "firebase/firestore";
 
 // Session seed for consistent shuffling
 const sessionSeed = Math.random();
 
-// Shuffle with seed (adapted from team member's shuffleWithSeed)
+// Shuffle with seed
 const shuffleWithSeed = (arr, seed) => {
   const out = [...arr];
   for (let i = out.length - 1; i > 0; i--) {
@@ -29,11 +37,11 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
   const [hasMore, setHasMore] = useState(true);
   const lastDocRef = useRef(null);
 
-  // Access selectedUniversity and readiness from useUserStore
-  const selectedUniversity = useUserStore((state) => state.getSelectedUniversity());
+  const selectedUniversity = useUserStore((state) =>
+    state.getSelectedUniversity()
+  );
   const isReady = useUserStore((state) => state.isReady());
 
-  // Fetch services based on category, university, and pagination
   const fetchServices = useCallback(
     async (loadMore = false) => {
       if (!isReady || !selectedUniversity) {
@@ -46,21 +54,18 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
         if (loadMore) setIsFetchingMore(true);
         else setInitialLoading(true);
 
-        // Base query: filter by university
         let q = query(
           collection(db, "services"),
           where("university", "==", selectedUniversity)
         );
 
-        // Add category filter if not "All"
+        // Use categoryId instead of category
         if (selectedCategory !== "All") {
-          q = query(q, where("category", "==", selectedCategory));
+          q = query(q, where("categoryId", "==", selectedCategory));
         }
 
-        // Sort by createdAt descending
         q = query(q, orderBy("createdAt", "desc"), limit(itemsPerPage));
 
-        // Handle pagination
         if (loadMore && lastDocRef.current) {
           q = query(q, startAfter(lastDocRef.current));
         }
@@ -73,11 +78,10 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
           updatedAt: doc.data().updatedAt?.toDate(),
         }));
 
-        // Update lastDocRef
-        lastDocRef.current = querySnapshot.docs[querySnapshot.docs.length - 1] ?? null;
+        lastDocRef.current =
+          querySnapshot.docs[querySnapshot.docs.length - 1] ?? null;
         setHasMore(batch.length === itemsPerPage);
 
-        // Update services and shuffled services
         setServices((prev) => {
           if (!loadMore) return batch;
           const ids = new Set(prev.map((s) => s.id));
@@ -88,7 +92,9 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
           if (!loadMore) return shuffleWithSeed(batch, sessionSeed);
           const prevIds = new Set(prev.map((s) => s.id));
           const fresh = batch.filter((s) => !prevIds.has(s.id));
-          return fresh.length ? [...prev, ...shuffleWithSeed(fresh, sessionSeed)] : prev;
+          return fresh.length
+            ? [...prev, ...shuffleWithSeed(fresh, sessionSeed)]
+            : prev;
         });
       } catch (err) {
         setError(err.message);
@@ -101,7 +107,6 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
     [isReady, selectedUniversity, selectedCategory, itemsPerPage]
   );
 
-  // Reset and fetch when category, selectedUniversity, or readiness changes
   useEffect(() => {
     if (isReady && selectedUniversity) {
       lastDocRef.current = null;
@@ -113,7 +118,6 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
     }
   }, [isReady, selectedUniversity, selectedCategory, fetchServices]);
 
-  // Load more services
   const loadMore = useCallback(() => {
     if (hasMore && !isFetchingMore) {
       fetchServices(true);
