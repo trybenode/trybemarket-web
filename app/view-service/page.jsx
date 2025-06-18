@@ -24,13 +24,12 @@ export default function ServicePage() {
       <div className="relative mx-4 mb-6">
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
           <Image
-            src={require("/public/assets/photographer-hero.jpg")}
+            src="/assets/photographer-hero.jpg"
             alt="Professional photographer working with camera equipment"
             fill
             className="object-cover"
             priority
           />
-
           {/* Navigation arrows */}
           <Button
             variant="ghost"
@@ -39,7 +38,6 @@ export default function ServicePage() {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-
           <Button
             variant="ghost"
             size="icon"
