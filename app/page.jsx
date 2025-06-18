@@ -36,6 +36,7 @@ const ToolBar = dynamic(() => import("@/components/ToolBar"), {
 
 const PAGE_SIZE = 6;
 
+//algorithm to randomize product 
 const sessionSeed = Math.random();
 function shuffleWithSeed(arr, seed) {
   const out = [...arr];
@@ -163,7 +164,7 @@ export default function HomePage() {
           },
         }));
 
-        // ⚠️ Update ref instead of state
+        //  Update ref instead of state
         lastDocRef.current = snap.docs.at(-1) ?? null;
         setHasMore(batch.length === PAGE_SIZE);
 
