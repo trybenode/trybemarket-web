@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,8 +23,16 @@ export default function KycPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalIconType, setModalIconType] = useState("success");
-
+  const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
   const router = useRouter();
+
+  // revoke object URLs when the component unmounts or when image previews change
+  useEffect(() => {
+    return () => {
+      if (frontIDPreview) URL.revokeObjectURL(frontIDPreview);
+      if (backIDPreview) URL.revokeObjectURL(backIDPreview);
+    };
+  }, [frontIDPreview, backIDPreview]);
 
   // Handle file selection and preview
   const pickImage = (setImage, setPreview) => {
@@ -34,6 +42,15 @@ export default function KycPage() {
     input.onchange = (event) => {
       const file = event.target.files?.[0];
       if (file) {
+        if (!VALID_IMAGE_TYPES.includes(file.type)) {
+          toast.error("Only JPEG, PNG, or GIF images are allowed.");
+          return;
+        }
+        // Validate file size (e.g., max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error("Image size must be less than 5MB.");
+          return;
+        }
         setImage(file);
         setPreview(URL.createObjectURL(file));
       }
@@ -43,14 +60,19 @@ export default function KycPage() {
 
   // Upload image to Cloudinary
   const uploadImageToCloudinary = async (file) => {
+    if (!VALID_IMAGE_TYPES.includes(file.type)) {
+      throw new Error("Only JPEG, PNG, or GIF images are allowed.");
+    }
     const data = new FormData();
     data.append("file", file);
-    data.append("upload_preset", "KycUploads");
-    data.append("cloud_name", "dj21x4jnt");
+    data.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET);
+    data.append("cloud_name", process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
 
     try {
       const response = await fetch(
-        "https://api.cloudinary.com/v1_1/dj21x4jnt/image/upload",
+        `https://api.cloudinary.com/v1_1/${
+          process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        }/image/upload`,
         {
           method: "POST",
           body: data,
@@ -83,8 +105,8 @@ export default function KycPage() {
       const user = auth.currentUser;
 
       if (!user) {
-        setLoading(false);
-        toast.error("Authentication Error: Please log in first.");
+        toast.error("Please log in to submit KYC.");
+        router.push("/login");
         return;
       }
 
@@ -121,7 +143,6 @@ export default function KycPage() {
           matricNumber,
         }),
       });
-      
 
       setModalMessage(
         "Your KYC request has been submitted. Please wait for verification."
@@ -130,7 +151,7 @@ export default function KycPage() {
       setModalVisible(true);
     } catch (error) {
       console.error("Error in handleSubmit:", error);
-      toast.error(`Failed to submit KYC: ${error.message}`);
+      toast.error("Failed to submit Kyc, Please try again.");
     } finally {
       setLoading(false);
     }
