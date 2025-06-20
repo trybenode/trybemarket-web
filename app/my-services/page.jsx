@@ -1,7 +1,10 @@
+"use client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 export default function MyServicesPage() {
+    const router = useRouter();
   const services = [
     {
       id: 1,
@@ -52,6 +55,7 @@ export default function MyServicesPage() {
               .filter((service) => service.isActive)
               .map((service) => (
                 <div
+                onClick={() => router.push(`/view-service/${service.id}`)}
                   key={service.id}
                   className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
