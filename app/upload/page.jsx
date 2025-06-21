@@ -20,11 +20,11 @@ export default function Upload() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col px-4  min-h-screen bg-white">
+    <div className="flex flex-col px-4  max-w-6xl min-h-screen mx-auto bg-white">
       {/* <ToolBar /> */}
       <Header title={"List Your Hustle"} />
 
-      <div className=" grid grid-cols-1 sm:grid-cols-2 gap-6 justify-items-center">
+      <div className=" grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8 justify-items-center">
         {options.map((opt) => (
           <button
             key={opt.id}
