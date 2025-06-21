@@ -2,9 +2,11 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
+import React from "react";
 
 export default function MyServicesPage() {
-    const router = useRouter();
+  const router = useRouter();
   const services = [
     {
       id: 1,
@@ -35,13 +37,7 @@ export default function MyServicesPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-100">
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-lg font-semibold text-gray-900">My Services</h1>
-        <div className="w-8" /> {/* Spacer for centering */}
-      </div>
+      <Header title={""} />
 
       <div className="p-4">
         {/* Active Services Section */}
@@ -55,7 +51,7 @@ export default function MyServicesPage() {
               .filter((service) => service.isActive)
               .map((service) => (
                 <div
-                onClick={() => router.push(`/view-service/${service.id}`)}
+                  onClick={() => router.push(`/view-service/${service.id}`)}
                   key={service.id}
                   className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
