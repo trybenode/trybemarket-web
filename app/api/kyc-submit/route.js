@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import vision from "@google-cloud/vision";
 import path from "path";
-import { adminDB } from "@/lib/firebaseAdmin"; // <-- new
+import { adminDB } from "../../../lib/firebaseAdmin";
 import nodemailer from "nodemailer";
 import hbs from "nodemailer-express-handlebars";
 
