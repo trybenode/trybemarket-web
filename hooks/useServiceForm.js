@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { collection, doc, getDoc, getDocs, addDoc } from "firebase/firestore";
+import { collection, doc, getDoc, addDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import toast from "react-hot-toast";
 import { compressImage } from "@/utils/compressImage";
+import serviceCategories from "@/public/serviceCategories.json"; // Adjust path as needed
 
 export const useServiceForm = (currentUser) => {
   const router = useRouter();
@@ -16,10 +17,13 @@ export const useServiceForm = (currentUser) => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [selectedAvailability, setSelectedAvailability] = useState(true);
+  const [availabilityType, setAvailabilityType] = useState("on_contact");
+  const [availabilityStart, setAvailabilityStart] = useState("");
+  const [availabilityEnd, setAvailabilityEnd] = useState("");
   const [images, setImages] = useState([]);
   const [isAgreed, setIsAgreed] = useState(false);
 
+  // Check user authentication and verification
   useEffect(() => {
     if (!currentUser) {
       router.push("/login");
@@ -29,32 +33,38 @@ export const useServiceForm = (currentUser) => {
     setIsLoading(false);
   }, [currentUser]);
 
+  // Load and transform categories from serviceCategories.json
   useEffect(() => {
-    const fetchServiceCategory = async () => {
-      try {
-        const snapShot = await getDocs(collection(db, "serviceCategories"));
-        const serviceCategoryData = snapShot.docs.map((doc) => ({
-          label: doc.data().name,
-          value: doc.data().name,
-        }));
-        if (serviceCategoryData.length === 0) {
-          setCategory([{ label: "Test Category", value: "test-cat" }]);
-        } else {
-          setCategory(serviceCategoryData);
-        }
-      } catch (error) {
-        toast.error("🔥 Error fetching categories:", error);
-        setCategory([{ label: "Test Category", value: "test-cat" }]); 
-      }
+    try {
+      // Transform data to { label, value } format
+      const transformedCategories = serviceCategories.map((item) => {
+        // Handle both { name: string } and { label: string, value: string } formats
+        const label = item.label || item.name;
+        const value =
+          item.value ||
+          item.name
+            .toLowerCase()
+            .replace(/ & /g, "-")
+            .replace(/[^a-z0-9-]/g, "")
+            .replace(/\s+/g, "-");
+        return { label, value };
+      });
 
-      // setCategory(serviceCategoryData);
-    };
-    fetchServiceCategory();
+      if (transformedCategories.length === 0) {
+        setCategory([{ label: "Test Category", value: "test-cat" }]);
+        toast.error("No categories found in serviceCategories.json");
+      } else {
+        setCategory(transformedCategories);
+      }
+    } catch (error) {
+      toast.error(`Error loading categories: ${error.message}`);
+      setCategory([{ label: "Test Category", value: "test-cat" }]);
+    }
   }, []);
 
   const handleImageUpload = async (e) => {
     const files = e.target.files;
-    if (!files.length) return;
+    if (!files?.length) return;
     const arr = Array.from(files);
     try {
       const urls = await Promise.all(
@@ -83,17 +93,37 @@ export const useServiceForm = (currentUser) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    // Validate form fields
     if (
       !serviceName ||
       !selectedCategory ||
       !serviceDescription ||
       !price ||
-      !selectedAvailability ||
+      !availabilityType ||
       images.length === 0
     ) {
-      toast.error("Fill all fields & add images");
+      toast.error("Fill all required fields & add images");
       return;
+    }
+
+    // Validate specific timeframe if selected
+    if (availabilityType === "specific_time") {
+      if (!availabilityStart || !availabilityEnd) {
+        toast.error("Please provide both start and end times.");
+        return;
+      }
+      // Compare times assuming same day
+      const [startHours, startMinutes] = availabilityStart
+        .split(":")
+        .map(Number);
+      const [endHours, endMinutes] = availabilityEnd.split(":").map(Number);
+      const startTotalMinutes = startHours * 60 + startMinutes;
+      const endTotalMinutes = endHours * 60 + endMinutes;
+      if (endTotalMinutes <= startTotalMinutes) {
+        toast.error("End time must be after start time.");
+        return;
+      }
     }
 
     try {
@@ -102,12 +132,21 @@ export const useServiceForm = (currentUser) => {
       const userSnap = await getDoc(doc(db, "users", userId));
       const university = userSnap.data()?.selectedUniversity || "Unknown";
 
+      // Prepare availability data
+      const availability = {
+        type: availabilityType,
+        ...(availabilityType === "specific_time" && {
+          start: availabilityStart, // e.g., "14:30"
+          end: availabilityEnd, // e.g., "16:30"
+        }),
+      };
+
       const data = {
         name: serviceName.trim(),
         categoryId: selectedCategory,
         description: serviceDescription.trim(),
         price: parseFloat(price),
-        availability: selectedAvailability,
+        availability,
         images,
         userId,
         university,
@@ -138,8 +177,12 @@ export const useServiceForm = (currentUser) => {
     setServiceDescription,
     price,
     setPrice,
-    selectedAvailability,
-    setSelectedAvailability,
+    availabilityType,
+    setAvailabilityType,
+    availabilityStart,
+    setAvailabilityStart,
+    availabilityEnd,
+    setAvailabilityEnd,
     images,
     setImages,
     isAgreed,
