@@ -1,7 +1,6 @@
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import ToastProvider from "@/components/ToastProvider";
-import ClientUserLoader from "./ClientUserLoader"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 export const metadata = {
   title: "trybemarket",
@@ -15,7 +14,6 @@ export default function RootLayout({ children }) {
       <body>
         <ToastProvider />
         <UserProvider>
-          <ClientUserLoader />
           {children}
         </UserProvider>
         <SpeedInsights />

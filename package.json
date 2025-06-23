@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google-cloud/vision": "^5.2.0",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.9.1",
     "@paystack/inline-js": "^2.22.4",
@@ -49,6 +50,7 @@
     "dotenv": "^16.5.0",
     "embla-carousel-react": "8.5.1",
     "firebase": "latest",
+    "firebase-admin": "^13.4.0",
     "handlebars": "^4.7.8",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",

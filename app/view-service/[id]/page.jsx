@@ -1,3 +1,4 @@
+"use client"
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,15 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import BackBtn from "@/components/BackButton";
 
 export default function ServicePage() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-white">
       {/* Header with back button */}
       <div className="flex items-center p-4">
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
+        <BackBtn />
       </div>
 
       {/* Hero Image Section */}

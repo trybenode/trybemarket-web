@@ -14,7 +14,7 @@ const ServiceCard = ({ id, categoryId, name, description, images }) => {
 
   // Handle card click to navigate to service details
   const handleClick = () => {
-    router.push(`/services/${id}`);
+    router.push(`/view-services/${id}`);
   };
 
   return (
