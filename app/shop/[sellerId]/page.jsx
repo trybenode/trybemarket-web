@@ -92,7 +92,7 @@ export default function SellerShopPage() {
     );
   }
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen mx-auto max-w-6xl bg-white">
       <div className="flex flex-row justify-between items-center mt-5 px-5">
         <BackButton />
         <UserProfile />
