@@ -23,7 +23,7 @@ export const useAddSellerReview = () => {
     try {
       setSubmitting(true);
 
-      // Path: reviews/{sellerId}/userReviews/{buyerId}
+    
       const reviewRef = doc(db, "reviews", sellerId, "userReviews", buyerId);
 
       const payload = {
@@ -34,7 +34,6 @@ export const useAddSellerReview = () => {
         createdAt: new Date().toISOString(),
       };
 
-      console.log("📤 Submitting to:", reviewRef.path, payload);
       await setDoc(reviewRef, payload);
 
       // Calculate average
@@ -51,7 +50,7 @@ export const useAddSellerReview = () => {
 
       toast.success("Rating Submitted");
     } catch (error) {
-      console.error("🔥 Firestore error:", error.code, error.message, error);
+      console.error(" Firestore error:", error.code, error.message, error);
       toast.error("Failed to submit review");
     } finally {
       setSubmitting(false);
