@@ -40,6 +40,7 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
   try {
     const convoID = `${senderID}${receiverID}${productDetails.id}`;
     
+    // const sellerId = receiverID
     const messageObj = {
       senderID,
       text: message,
@@ -65,10 +66,12 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
         lastMessage: messageObj,
         unreadBy: [receiverID],
         instigatorInfo,
+        
         product: {
           name: productDetails.name,
           imageUrl: productDetails.imageUrl,
-          id: productDetails.id
+          id: productDetails.id,
+          sellerId: productDetails.sellerID
         }
       });
     }
