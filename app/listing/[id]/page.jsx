@@ -30,7 +30,8 @@ import {
   getUserIdOfSeller,
   initiateConversation,
 } from "@/utils/messaginghooks";
-import SellerDetailsAndRelatedProducts from "@/components/SellerDetailsAndRelatedProducts";
+
+import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 
 export default function ListingDetailsPage({ params }) {
   const router = useRouter();
@@ -255,7 +256,7 @@ export default function ListingDetailsPage({ params }) {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
-      <div className="mb-6 flex items-center">
+      {/* <div className="mb-6 flex items-center">
         <Button
           variant="ghost"
           className="p-0 mr-2"
@@ -269,7 +270,9 @@ export default function ListingDetailsPage({ params }) {
             className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
           />
         </Button>
-      </div>
+      </div> */}
+      <ProductDetailsHeader/>
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Images */}

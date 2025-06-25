@@ -19,13 +19,13 @@ import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
 import BackBtn from "@/components/BackButton";
 import { formatNumber } from "@/lib/utils";
+import ProductDetailsHeader from "@/components/ProductDetailsHeader"
 
 export default function ServicePage() {
   const router = useRouter();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [message, setMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [liked, setLiked] = useState(false);
 
  
   const service = {
@@ -112,18 +112,12 @@ export default function ServicePage() {
     }
   };
 
-  const handleLiked = () => {
-    setLiked(!liked);
-    toast.success(liked ? "Removed from favorites" : "Added to favorites", {
-      duration: 2000,
-      position: "top-right",
-    });
-  };
+  
 
   return (
     <div className='container mx-auto px-4 py-8 max-w-6xl'>
       {/* Header */}
-      <div className='mb-6 flex items-center'>
+      {/* <div className='mb-6 flex items-center'>
         <Button
           variant='ghost'
           className='p-0 mr-2'
@@ -137,7 +131,8 @@ export default function ServicePage() {
             className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
           />
         </Button>
-      </div>
+      </div> */}
+      <ProductDetailsHeader/>
 
       {/* Two Equal Columns */}
       <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
@@ -157,7 +152,7 @@ export default function ServicePage() {
                   width={600}
                   height={600}
                   priority={currentImageIndex === 0}
-                  className='object-contain w-full h-full'
+                  className='object-cover w-full h-full'
                   sizes='(max-width: 768px) 100vw, 50vw'
                 />
               </motion.div>
