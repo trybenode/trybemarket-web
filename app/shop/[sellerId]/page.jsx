@@ -79,7 +79,7 @@ export default function SellerShopPage() {
 
   if (loading) {
     return (
-      <div className="p-4">
+      <div className="p-4 min-h-screen mx-auto max-w-6xl">
         <div className="mb-4">
           <SellerProfileSkeleton />
         </div>

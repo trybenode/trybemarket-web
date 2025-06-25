@@ -112,7 +112,7 @@ export default function Explore() {
 
       {isFetchingMore && (
         <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6'>
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: 8 }).map((_, i) => (
             <ServiceCardSkeleton key={i} />
           ))}
         </div>
