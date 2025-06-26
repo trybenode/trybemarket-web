@@ -1,14 +1,33 @@
 import { Heart } from "lucide-react";
 import BackButton from "../components/BackButton";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
+import useFavoritesStore from "@/lib/FavouriteStore";
 
 import {Button} from "../components/ui/button";
 
-export default function ProductDetailsHeader() {
+export default function ProductDetailsHeader({id, currentUserId}) {
   const [liked, setLiked] = useState(false);
+    const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
+    
+  
+useEffect(() => {
+    if (id) {
+      setLiked(favoriteIds.includes(id));
+    }
+  }, [id, favoriteIds]);
+const handleLiked = () => {
+    if (!currentUserId) {
+      toast.error("Please login to add items to favorites", {
+        duration: 4000,
+        position: "top-right",
+      });
+      router.push("/login");
+      return;
+    }
 
-  const handleLiked = () => {
+    toggleFavorite(id);
     setLiked(!liked);
     toast.success(liked ? "Removed from favorites" : "Added to favorites", {
       duration: 2000,
