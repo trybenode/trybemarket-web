@@ -37,8 +37,6 @@ export default function ListingDetailsPage({ params }) {
   const router = useRouter();
   const { id } = React.use(params);
   const { ref, inView } = useInView({ triggerOnce: true });
-  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
-  const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
   const currentUser = useUserStore((state) => state.user);
   const getUserFullName = useUserStore((state) => state.getUserFullName);
   const itemId = id || product?.id;
@@ -187,29 +185,8 @@ export default function ListingDetailsPage({ params }) {
     }
   };
 
-  useEffect(() => {
-    if (id) {
-      setLiked(favoriteIds.includes(id));
-    }
-  }, [id, favoriteIds]);
 
-  const handleLiked = () => {
-    if (!currentUserId) {
-      toast.error("Please login to add items to favorites", {
-        duration: 4000,
-        position: "top-right",
-      });
-      router.push("/login");
-      return;
-    }
-
-    toggleFavorite(id);
-    setLiked(!liked);
-    toast.success(liked ? "Removed from favorites" : "Added to favorites", {
-      duration: 2000,
-      position: "top-right",
-    });
-  };
+ 
 
   if (loading) {
     return (
@@ -255,23 +232,8 @@ export default function ListingDetailsPage({ params }) {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* Header */}
-      {/* <div className="mb-6 flex items-center">
-        <Button
-          variant="ghost"
-          className="p-0 mr-2"
-          onClick={() => router.back()}
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
-        <h1 className="text-2xl font-bold">Product Details</h1>
-        <Button variant="ghost" className="ml-auto" onClick={handleLiked}>
-          <Heart
-            className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
-          />
-        </Button>
-      </div> */}
-      <ProductDetailsHeader/>
+      
+      <ProductDetailsHeader id={id} currentUserId={currentUserId}/>
 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

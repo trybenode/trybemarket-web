@@ -220,8 +220,8 @@ export default function ServicePage({ params }) {
             className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
           />
         </Button>
-      </div> */}
-      <ProductDetailsHeader/>
+   
+      <ProductDetailsHeader id={id} currentUser />
 
       {/* Two Equal Columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
