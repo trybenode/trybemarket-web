@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { auth } from "../../lib/firebase";
+import ProductCard from "@/components/ProductCard";
 
 export default function FavouritePage() {
   // Ensure the user is authenticated before rendering favorites
@@ -135,7 +136,8 @@ export default function FavouritePage() {
                       }}
                       onClick={() => router.push(`/listing/${product.id}`)}
                     >
-                      <ListingCard product={product} />
+                      {/* <ListingCard product={product} /> */}
+                      <ProductCard product={product} />
                     </div>
                   ))}
                 </div>
