@@ -1,7 +1,9 @@
 "use client";
 import UserProfile from "@/components/UserProfile";
+import { Card } from "@/components/ui/card";
 import { useFavorites } from "@/hooks/FavouriteHook";
 import ListingCard from "@/components/ListingCard";
+import ServiceCard from "@/components/ServiceCard";
 import { Heart, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -20,7 +22,7 @@ export default function FavouritePage() {
     return () => unsubscribe();
   }, [auth.currentUser]);
 
-  const { products, loading } = useFavorites();
+  const { products, services, loading } = useFavorites();
   const router = useRouter();
 
   if (loading) {
@@ -71,7 +73,7 @@ export default function FavouritePage() {
         </div>
 
         {/* Content */}
-        {!products || products.length === 0 ? (
+        {(!products || products.length === 0) && (!services || services.length === 0) ? (
           <div className="flex flex-col items-center justify-center py-20 px-4">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 max-w-md w-full text-center">
               <div className="mb-6">
@@ -83,7 +85,7 @@ export default function FavouritePage() {
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
                   Start exploring and save items you love. Your favourite
-                  products will appear here.
+                  products and services will appear here.
                 </p>
               </div>
               <Button
@@ -96,47 +98,91 @@ export default function FavouritePage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Stats Bar */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {products.length}
+          <div className="space-y-10">
+            {/* Products Section */}
+            {products && products.length > 0 && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-gray-900">
+                          {products.length}
+                        </div>
+                        <div className="text-sm text-gray-600">Saved Products</div>
+                      </div>
+                      <div className="h-8 w-px bg-gray-200"></div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          ₦
+                          {products
+                            .reduce((sum, product) => sum + (product.price || 0), 0)
+                            .toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Product Value</div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">Saved Items</div>
                   </div>
-                  <div className="h-8 w-px bg-gray-200"></div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      ₦
-                      {products
-                        .reduce((sum, product) => sum + (product.price || 0), 0)
-                        .toLocaleString()}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {products.map((product, index) => (
+                    <div
+                      key={product.id}
+                      className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                      style={{
+                        animationDelay: `${index * 100}ms`,
+                        animation: "fadeInUp 0.6s ease-out forwards",
+                      }}
+                      onClick={() => router.push(`/listing/${product.id}`)}
+                    >
+                      <ListingCard product={product} />
                     </div>
-                    <div className="text-sm text-gray-600">Total Value</div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </div>
-
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {products.map((product, index) => (
-                <div
-                  key={product.id}
-                  className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                  style={{
-                    animationDelay: `${index * 100}ms`,
-                    animation: "fadeInUp 0.6s ease-out forwards",
-                  }}
-                  onClick={() => router.push(`/listing/${product.id}`)}
-                >
-                  <ListingCard product={product} />
+            )}
+            {/* Services Section */}
+            {services && services.length > 0 && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-gray-900">
+                          {services.length}
+                        </div>
+                        <div className="text-sm text-gray-600">Saved Services</div>
+                      </div>
+                      <div className="h-8 w-px bg-gray-200"></div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          ₦
+                          {services
+                            .reduce((sum, service) => sum + (service.price || 0), 0)
+                            .toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Service Value</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {services.map((service, index) => (
+                    <div
+                      key={service.id}
+                      className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                      style={{
+                        animationDelay: `${index * 100}ms`,
+                        animation: "fadeInUp 0.6s ease-out forwards",
+                      }}
+                      onClick={() => router.push(`/view-service/${service.id}`)}
+                    >
+                      <ServiceCard service={service} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
