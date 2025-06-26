@@ -42,6 +42,13 @@ async function sendKycEmail({ email, fullName, status }) {
   });
 }
 
+function normalize(str) {
+  return str
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9]/gi, "");
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -60,7 +67,6 @@ export async function POST(req) {
       );
     }
 
-    // Use only the email from the request body (from userStore/localStorage)
     const email = emailFromBody;
     if (!email) {
       return NextResponse.json(
@@ -75,12 +81,13 @@ export async function POST(req) {
     });
     const frontText = frontResult.textAnnotations?.[0]?.description || "";
     const combinedText = frontText.toLowerCase();
+    const normalizedText = normalize(combinedText);
 
-    // Check for match (only in front image)
-    const nameMatch = combinedText.includes(fullName.trim().toLowerCase());
-    const matricMatch = combinedText.includes(
-      matricNumber.trim().toLowerCase()
-    );
+    // console.log("Front OCR Result:", frontResult);
+    console.log("Normalized OCR Text:", normalizedText);
+
+    const matricMatch = normalizedText.includes(normalize(matricNumber));
+    const nameMatch = normalizedText.includes(normalize(fullName));
     const status = nameMatch && matricMatch ? "verified" : "rejected";
 
     // Update Firestore KYC status
@@ -93,7 +100,6 @@ export async function POST(req) {
     // Send email
     await sendKycEmail({ email, fullName, status });
 
-    // Respond immediately
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("KYC Submit Error:", error);
