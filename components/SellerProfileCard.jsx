@@ -111,8 +111,8 @@ export default function SellerProfileCard({ sellerInfo }) {
       : "";
 
   return (
-    <Card className="mb-8">
-      <CardContent className="p-6">
+    <Card className="mb-2">
+      <CardContent className="p-2">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="relative w-24 h-24 rounded-full overflow-hidden">
             <Image

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import toast from "react-hot-toast";
 import { compressImage } from "@/utils/compressImage";
-import serviceCategories from "@/public/serviceCategories.json"; // Adjust path as needed
+// import serviceCategories from "@/public/serviceCategories.json"; // Adjust path as needed
 
 export const useServiceForm = (currentUser) => {
   const router = useRouter();

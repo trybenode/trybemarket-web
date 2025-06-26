@@ -3,20 +3,19 @@ import UserProfile from "@/components/UserProfile";
 import { Card } from "@/components/ui/card";
 import { useFavorites } from "@/hooks/FavouriteHook";
 import ListingCard from "@/components/ListingCard";
-import ServiceCard from "@/components/ServiceCard";
 import { Heart, ShoppingBag } from "lucide-react";
+import FavoriteLoader from '@/components/ui/FavouriteLoader'
+import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { auth } from "../../lib/firebase";
-import ProductCard from "@/components/ProductCard";
 
 export default function FavouritePage() {
   // Ensure the user is authenticated before rendering favorites
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
-        // Redirect to login if not authenticated
         router.push("/login");
       }
     });
@@ -28,35 +27,7 @@ export default function FavouritePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
-          {/* Header Skeleton */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
-              <div className="w-32 h-8 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-          </div>
-
-          {/* Grid Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
-              >
-                <div className="w-full h-48 bg-gray-200 animate-pulse"></div>
-                <div className="p-4 space-y-3">
-                  <div className="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="w-1/2 h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="w-1/3 h-6 bg-gray-200 rounded animate-pulse"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <FavoriteLoader />
     );
   }
 
@@ -64,14 +35,7 @@ export default function FavouritePage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Enhanced Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Favourites</h1>
-            </div>
-          </div>
-          <UserProfile />
-        </div>
+        <Header title={"Favorites"}/>
 
         {/* Content */}
         {(!products || products.length === 0) && (!services || services.length === 0) ? (

@@ -1,36 +1,3 @@
-// import { useAddSellerReview } from "../hooks/useAddSellerReview";
-// import useUserStore from "@/lib/userStore";
-// import StarRating from "./ui/starRating";
-// import { useState } from "react";
-// import { Button } from "../components/ui/button";
-
-// export default React.memo(function ReviewForm({ sellerId }) {
-//   const { currentUser } = useUserStore();
-//   const [rating, setRating] = useState(0);
-//   const [review, setReview] = useState("");
-//   const { submitSellerReview, submitting } = useAddSellerReview();
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     await submitSellerReview({
-//       buyerId: currentUser.uid,
-//       sellerId,
-//       rating,
-//       review,
-//     });
-//   };
-//   return (
-//     <form onSubmit={handleSubmit}>
-//       <StarRating value={rating} onChange={setRating} />
-//       <textarea value={review} onChange={(e) => setReview(e.target.value)} />
-//       <Button variant="secondary" type="submit" disabled={submitting}>
-//         Submit Review
-//       </Button>
-//     </form>
-//   );
-// });
-
-// File: components/RateSellerDialog.jsx
 'use client';
 
 import React, { useState } from 'react';

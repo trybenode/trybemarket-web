@@ -375,19 +375,8 @@ export default function SellPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
-      {/* <div className="flex items-center mb-6 justify-between">
-        <Button
-          variant="ghost"
-          className="p-0 mr-2"
-          onClick={() => router.back()}
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
-        <h1 className="text-2xl font-bold">
-          {isEditMode ? "Edit Product" : "Add New Product"}
-        </h1>
-        <UserProfile />
-      </div> */}
+    
+      
       <Header title={isEditMode ? "Edit Product" : "Add New Product"}/>
 
       <AlertDialog

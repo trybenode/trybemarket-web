@@ -23,6 +23,7 @@ import { getServiceById } from "@/utils/servicesHooks";
 import useUserStore from "@/lib/userStore";
 import { initiateConversation } from "@/utils/messaginghooks";
 import useFavoritesStore from "@/lib/FavouriteStore";
+import ProductDetailsHeader from "@/components/ProductDetailsHeader"
 
 export default function ServicePage({ params }) {
   const router = useRouter();
@@ -209,7 +210,7 @@ export default function ServicePage({ params }) {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
-      <div className="mb-6 flex items-center">
+      {/* <div className='mb-6 flex items-center'>
         <Button
           variant="ghost"
           className="p-0 mr-2"
@@ -223,7 +224,8 @@ export default function ServicePage({ params }) {
             className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
           />
         </Button>
-      </div>
+   
+      <ProductDetailsHeader id={id} currentUser />
 
       {/* Two Equal Columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

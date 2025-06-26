@@ -7,11 +7,12 @@ import { db } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 import SellerProfileSkeleton from "@/components/ui/SellerProfileSkeleton";
+import Header from "@/components/Header";
 const ListingCard = dynamic(() => import("@/components/ListingCard"), {
   loading: () => <ListingCardSkeleton />,
   ssr: false,
@@ -23,9 +24,7 @@ const SellerProfileCard = dynamic(
     ssr: false,
   }
 );
-const UserProfile = dynamic(() => import("@/components/UserProfile"), {
-  ssr: false,
-});
+
 
 export default function MyShopPage() {
   const router = useRouter();
@@ -77,7 +76,6 @@ export default function MyShopPage() {
     };
   }, [currentUser]);
 
-
   if (loading || authLoading) {
     return (
       <div className="p-4">
@@ -94,20 +92,14 @@ export default function MyShopPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">My Shop</h1>
-        <div className="flex space-x-2">
-          <Button onClick={() => router.push("/sell")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
-          <UserProfile />
-        </div>
-      </div>
+    <div className="container mx-auto px-4 max-w-6xl">
+      <Header title={"My Shop"} />
 
       <SellerProfileCard userProfile={currentUser} />
-
+      <Button onClick={() => router.push("/sell")} className="mb-2">
+        <Plus className="h-4 w-4 mr-2" />
+        Add Product
+      </Button>
       <Tabs
         defaultValue="products"
         value={activeTab}
@@ -156,7 +148,6 @@ export default function MyShopPage() {
 
         <TabsContent value="sales">
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            {/* <p className="text-lg text-gray-500">No sales history yet.</p> */}
             <p className="text-lg text-gray-500">Coming Soon.</p>
           </div>
         </TabsContent>
@@ -165,7 +156,6 @@ export default function MyShopPage() {
           <div className="flex flex-col items-center justify-center py-12 px-4">
             {/* <p className="text-lg text-gray-500">No purchase history yet.</p> */}
             <p className="text-lg text-gray-500">Coming Soon.</p>
-
           </div>
         </TabsContent>
       </Tabs>

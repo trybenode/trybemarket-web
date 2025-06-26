@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
@@ -13,14 +12,12 @@ import {
 import { db } from "@/lib/firebase";
 import SellerProfileCard from "@/components/SellerProfileCard";
 import ListingCard from "@/components/ListingCard";
-import { Loader } from "lucide-react";
 import Link from "next/link";
-import UserProfile from "@/components/UserProfile";
-import BackButton from "@/components/BackButton";
 import SellerProfileSkeleton from "@/components/ui/SellerProfileSkeleton";
 import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ReviewCard from "@/components/ReviewCard"
+import Header from "@/components/Header";
 
 export default function SellerShopPage() {
   const params = useParams();
@@ -93,10 +90,7 @@ export default function SellerShopPage() {
   }
   return (
     <div className="min-h-screen mx-auto max-w-6xl bg-white">
-      <div className="flex flex-row justify-between items-center mt-5 px-5">
-        <BackButton />
-        <UserProfile />
-      </div>
+      <Header title={"Seller's Shop"}/>
       <div className="p-2">
         {sellerInfo ? (
           <SellerProfileCard sellerInfo={sellerInfo} />
@@ -104,9 +98,7 @@ export default function SellerShopPage() {
           <p className="text-red-500 text-center">Seller not found</p>
         )}
 
-        {/* <div className="flex justify-center items-center mt-6 mb-2">
-          <h2 className="text-lg font-semibold">Products</h2>
-        </div> */}
+        
         <Tabs
           defaultValue="products"
           value={activeTab}
@@ -114,8 +106,8 @@ export default function SellerShopPage() {
         >
           <TabsList className="mb-2">
             <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="purchases">Service</TabsTrigger>
             <TabsTrigger value="review">Reviews</TabsTrigger>
-            <TabsTrigger value="purchases">Purchases</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
