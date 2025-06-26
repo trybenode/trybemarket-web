@@ -1,4 +1,3 @@
-// File: components/ui/StarRating.jsx
 'use client';
 
 import React from 'react';
