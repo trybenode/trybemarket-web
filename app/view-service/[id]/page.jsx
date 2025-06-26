@@ -177,6 +177,7 @@ export default function ServicePage({ params }) {
       router.push("/login");
       return;
     }
+    console.log(service.id, "service ID in handleLiked");
     toggleFavorite(service.id);
     setLiked(!liked);
     toast.success(liked ? "Removed from favorites" : "Added to favorites", {
