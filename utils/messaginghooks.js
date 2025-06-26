@@ -36,7 +36,7 @@ const getUserIdOfSeller = async(productID) => {
   }
 };
 
-const initiateConversation = async (message, senderID, receiverID, productDetails, instigatorInfo) => {
+const initiateConversation = async (message, senderID, receiverID, productDetails, instigatorInfo, persona) => {
   try {
     const convoID = `${senderID}${receiverID}${productDetails.id}`;
     
@@ -66,7 +66,7 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
         lastMessage: messageObj,
         unreadBy: [receiverID],
         instigatorInfo,
-        
+        persona,
         product: {
           name: productDetails.name,
           imageUrl: productDetails.imageUrl,

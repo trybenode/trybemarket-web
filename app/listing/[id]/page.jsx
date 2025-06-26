@@ -151,7 +151,8 @@ export default function ListingDetailsPage({ params }) {
         currentUserId,
         sellerID,
         productDetails,
-        instigatorInfo
+        instigatorInfo,
+        "product"
       );
 
       setMessage("");

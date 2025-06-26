@@ -1,20 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
-const ServiceCard = ({ id, categoryId, name, description, images }) => {
+export default function ServiceCard({ service }) {
   const router = useRouter();
-
-  // Select the first image with Cloudinary optimization or fallback
-  const displayImage = images?.[0]
-    ? `${images[0]}?f_auto,q_auto,w_300,h_200,c_fill`
-    : "/placeholder-image.jpg";
 
   // Handle card click to navigate to service details
   const handleClick = () => {
-    router.push(`/view-services/${id}`);
+    router.push(`/view-services/${service.id}`);
   };
 
   return (
@@ -25,28 +19,28 @@ const ServiceCard = ({ id, categoryId, name, description, images }) => {
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && handleClick()}
     >
-      <img
-        src={displayImage}
-        alt={name || "Service"}
-        className='w-full h-36 object-cover'
-        loading='lazy'
-      />
-      <CardContent className='p-4 flex flex-col gap-2'>
-        <h3 className='text-sm font-semibold text-gray-900 line-clamp-1'>
-          {name || "Untitled Service"}
+      <div className='w-full h-32 bg-gray-100 rounded mb-4 flex items-center justify-center'>
+        {service.images && service.images[0] ? (
+          <img
+            src={service.images[0]}
+            alt={service.name}
+            className='object-contain h-full w-full rounded'
+          />
+        ) : (
+          <span className='text-gray-400'>No Image</span>
+        )}
+      </div>
+      <div className='w-full text-center'>
+        <h3 className='font-semibold text-lg text-gray-900 mb-1'>
+          {service.name}
         </h3>
-        <p className='text-sm text-gray-600 line-clamp-2'>
-          {description || "No description available"}
+        <p className='text-gray-600 text-sm mb-2'>
+          {service.categoryId || "Service"}
         </p>
-      </CardContent>
-      <CardFooter className='px-4 pb-4 pt-2 flex justify-between items-center'>
-        <span className='text-xs text-blue-600 font-medium'>
-          {categoryId || "Uncategorized"}
-        </span>
-        <ChevronRightIcon className='w-5 h-5 text-gray-400' />
-      </CardFooter>
+        <p className='text-green-600 font-bold text-lg'>
+          ₦{service.price?.toLocaleString() || 0}
+        </p>
+      </div>
     </Card>
   );
-};
-
-export default ServiceCard;
+}

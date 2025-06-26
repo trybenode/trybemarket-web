@@ -125,20 +125,23 @@ export default function ServicePage({ params }) {
         name: service.name,
         imageUrl: service.images?.[0] || "",
         id: service.id,
-        sellerID: service.userID,
+        sellerID: service.userId,
       };
+      console.log("Product Details:", productDetails);
       const instigatorName =
         getUserFullName() || currentUser?.fullName || "Anonymous User";
       const instigatorInfo = {
         id: currentUser.id,
         name: instigatorName,
       };
+      console.log("Instigator Info:", instigatorInfo);
       const conversationId = await initiateConversation(
         message,
         currentUser.id,
-        service.userID,
+        service.userId,
         productDetails,
-        instigatorInfo
+        instigatorInfo,
+        "service_provider"
       );
       setMessage("");
       toast.success("Message sent successfully", {
@@ -178,6 +181,7 @@ export default function ServicePage({ params }) {
       router.push("/login");
       return;
     }
+    console.log(service.id, "service ID in handleLiked");
     toggleFavorite(service.id);
     setLiked(!liked);
     toast.success(liked ? "Removed from favorites" : "Added to favorites", {
@@ -214,7 +218,7 @@ export default function ServicePage({ params }) {
         >
           <ChevronLeft className="h-6 w-6" />
         </Button>
-        {/* <h1 className='text-2xl font-bold text-gray-900'>{service.categoryId}</h1> */}
+        <h1 className='text-2xl font-bold text-gray-900'>Service Details</h1>
         <Button variant="ghost" className="ml-auto" onClick={handleLiked}>
           <Heart
             className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
