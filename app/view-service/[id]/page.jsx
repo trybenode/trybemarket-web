@@ -139,7 +139,8 @@ export default function ServicePage({ params }) {
         currentUser.id,
         service.userId,
         productDetails,
-        instigatorInfo
+        instigatorInfo,
+        "service_provider"
       );
       setMessage("");
       toast.success("Message sent successfully", {

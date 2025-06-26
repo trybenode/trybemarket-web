@@ -118,6 +118,15 @@ export default function ChatPage() {
     })
   }
 
+  const handleProcuctClick = () => {
+    // Prefer persona from product, then conversation, fallback to product
+    const personaValue = product?.persona || conversation?.persona || null;
+    if (personaValue === "service_provider") {
+      router.push(`/view-service/${product.id}`);
+    } else {
+      router.push(`/listing/${product.id}`);
+    }
+  }
   // {showReviewForm && (
   //   <ReviewForm sellerId={product.sellerId} />
   // )}
@@ -182,7 +191,7 @@ export default function ChatPage() {
                 <Button
                   variant="link"
                   className="p-0 h-auto text-sm text-blue-600"
-                  onClick={() => router.push(`/listing/${product.id}`)}
+                  onClick={handleProcuctClick}
                 >
                   View Product
                 </Button>
