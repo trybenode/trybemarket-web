@@ -49,9 +49,7 @@ export default function SelectUniversityPage() {
 
     try {
       await handleSelectUniversity(university);
-      // If handleSelectUniversity does redirect internally,
-      // no need to do anything else here
-      // If not, you can do router.replace(...) here
+
     } catch (err) {
       // If error occurs, reset state so user can retry
       setIsSelecting(false);
@@ -96,6 +94,10 @@ export default function SelectUniversityPage() {
               <CardDescription>
                 Search and select your university to continue.
               </CardDescription>
+              <CardDescription className='text-sm text-gray-500'>
+                These are the universities we’re currently present in. More will
+                be added soon, so stay tuned!
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className='space-y-4'>
@@ -120,7 +122,8 @@ export default function SelectUniversityPage() {
                     <p className='text-center text-red-500'>{error}</p>
                   ) : universities.length === 0 ? (
                     <p className='text-center text-gray-500'>
-                      No universities found.
+                      No universities found. More universities will be added
+                      soon - stay tuned!
                     </p>
                   ) : (
                     <ul className='space-y-2'>

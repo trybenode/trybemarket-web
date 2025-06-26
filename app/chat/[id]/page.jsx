@@ -6,6 +6,7 @@ import Image from "next/image"
 import { auth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import ReviewForm from "@/components/ReviewForm"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ChevronLeft, Send } from "lucide-react"
@@ -24,6 +25,8 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [otherUser, setOtherUser] = useState(null)
+
+  const [showReviewForm, setShowReviewForm] = useState(false);
 
   const messagesEndRef = useRef(null)
 
@@ -115,6 +118,9 @@ export default function ChatPage() {
     })
   }
 
+  // {showReviewForm && (
+  //   <ReviewForm sellerId={product.sellerId} />
+  // )}
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
     const dateLabel = formatDate(message.timestamp)
@@ -146,6 +152,7 @@ export default function ChatPage() {
       </div>
     )
   }
+  // console.log("Product loaded:", product);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -160,7 +167,7 @@ export default function ChatPage() {
       {product && (
         <Card className="mb-4">
           <CardHeader className="p-4">
-            <div className="flex items-center">
+            <div className="flex items-center justify-between">
               <div className="relative h-16 w-16 rounded-lg overflow-hidden">
                 <Image
                   src={product.imageUrl || "/placeholder.svg?height=64&width=64"}
@@ -179,6 +186,14 @@ export default function ChatPage() {
                 >
                   View Product
                 </Button>
+              </div>
+              <div>
+                {/* <Button variant="ghost" onClick={() => setShowReviewForm(true)}>
+                  Rate Seller
+                </Button> */}
+                {product?.sellerId && (
+  <ReviewForm sellerId={product.sellerId} />
+)}
               </div>
             </div>
           </CardHeader>

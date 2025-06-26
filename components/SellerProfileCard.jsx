@@ -119,7 +119,7 @@ export default function SellerProfileCard({ sellerInfo }) {
               src={profilePicture || "/placeholder.svg?height=96&width=96"}
               alt="Profile"
               fill
-              className="object-cover"
+              className="object-cover bg-gray-50"
               sizes="96px"
             />
           </div>

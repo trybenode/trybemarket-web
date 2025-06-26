@@ -137,6 +137,7 @@ export default function ListingDetailsPage({ params }) {
         name,
         imageUrl: images[0]?.url || images[0] || "",
         id: effectiveProductId,
+        sellerID,
       };
 
       // Get user's full name from the store
