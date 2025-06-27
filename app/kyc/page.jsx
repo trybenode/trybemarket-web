@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, CheckCircle, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import convertToBase64 from "@/hooks/useConvertToBase64";
-import useUserStore from "@/lib/userStore";
+
 
 export default function KycPage() {
   const [fullName, setFullName] = useState("");
@@ -200,17 +200,8 @@ export default function KycPage() {
 
   return (
     <div className='min-h-screen bg-white'>
-      <div className='container mx-auto px-4 py-8 max-w-lg'>
-        <div className='flex items-center mb-6'>
-          <Button
-            variant='ghost'
-            className='p-0 mr-2'
-            onClick={() => router.back()}
-          >
-            <ChevronLeft className='h-6 w-6' />
-          </Button>
-          <h1 className='text-2xl font-bold'>KYC Registration</h1>
-        </div>
+      <div className='container mx-auto px-4 py-4 max-w-lg'>
+        <Header title={"KYC Registration"}/>
 
         <Card className='border border-gray-200'>
           <CardContent className='space-y-4 pt-6'>

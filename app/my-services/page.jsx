@@ -35,7 +35,7 @@ export default function MyServicesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen py-4 bg-white">
       {/* Header */}
       <Header title={""} />
 
