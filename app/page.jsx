@@ -267,3 +267,10 @@ export default function HomePage() {
     </div>
   );
 }
+
+// query(
+//   collection(db, "products"),
+//   where("approved", "==", true),
+//   orderBy("averageRating", "desc"),
+//   orderBy("totalRatings", "desc")
+// );

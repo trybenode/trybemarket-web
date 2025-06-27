@@ -13,6 +13,7 @@ import { FiCamera } from "react-icons/fi";
 import { ChevronLeft } from "lucide-react";
 import { useUser } from "../../context/UserContext";
 import toast from "react-hot-toast"; // Using react-hot-toast
+import Header from "@/components/Header";
 
 export default function EditProfilePage() {
   const { currentUser, setCurrentUser } = useUser();
@@ -126,17 +127,8 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className='container mx-auto px-4 py-8 max-w-lg'>
-      <div className='flex items-center mb-6'>
-        <Button
-          variant='ghost'
-          className='p-0 mr-2'
-          onClick={() => router.back()}
-        >
-          <ChevronLeft className='h-6 w-6' />
-        </Button>
-        <h1 className='text-2xl font-bold'>Edit Profile</h1>
-      </div>
+    <div className='container mx-auto px-4 py-4 mb-4 max-w-lg'>
+     <Header title={"Edit Profile"}/>
 
       <Card className='border border-gray-200'>
         
