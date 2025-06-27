@@ -6,13 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-
   MessageCircle,
   ChevronLeft,
   ChevronRight,
   MapPin,
   Calendar,
-
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -23,7 +21,7 @@ import { getServiceById } from "@/utils/servicesHooks";
 import useUserStore from "@/lib/userStore";
 import { initiateConversation } from "@/utils/messaginghooks";
 import useFavoritesStore from "@/lib/FavouriteStore";
-import ProductDetailsHeader from "@/components/ProductDetailsHeader"
+import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 
 export default function ServicePage({ params }) {
   const router = useRouter();
@@ -209,16 +207,17 @@ export default function ServicePage({ params }) {
 
   return (
     <div className="container mx-auto px-4  py-4 max-w-6xl">
-    
-        <ProductDetailsHeader id={id} currentUserId={currentUser} />
+      <ProductDetailsHeader id={id} currentUserId={currentUser} />
+
+      {/* Header */}
+
+      {/* {/* Two Equal Columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left Column - Images */}
         <div className="space-y-4">
           <div className="relative rounded-lg overflow-hidden bg-gray-100 aspect-square">
             {service.images[currentImageIndex] ? (
-              <div
-                key={currentImageIndex}
-              >
+              <div key={currentImageIndex}>
                 <Image
                   src={service.images[currentImageIndex]}
                   alt={`${service.name} image ${currentImageIndex + 1}`}

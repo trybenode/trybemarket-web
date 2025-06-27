@@ -122,7 +122,7 @@ export default function FavouritePage() {
                         <div className="text-sm text-gray-600">Saved Services</div>
                       </div>
                       <div className="h-8 w-px bg-gray-200"></div>
-                      <div className="text-center">
+                      {/* <div className="text-center">
                         <div className="text-2xl font-bold text-green-600">
                           ₦
                           {services
@@ -130,7 +130,7 @@ export default function FavouritePage() {
                             .toLocaleString()}
                         </div>
                         <div className="text-sm text-gray-600">Total Service Value</div>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </div>
