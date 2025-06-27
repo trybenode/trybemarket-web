@@ -15,13 +15,7 @@ const ServiceCardSkeleton = () => (
       <Skeleton className="h-4 w-2/3 rounded" />
     </CardContent>
 
-    <CardFooter className="px-4 pb-4 pt-2 flex justify-between items-center">
-      {/* Category Skeleton */}
-      <Skeleton className="h-3 w-1/4 rounded" />
-
-      {/* Chevron Icon Skeleton */}
-      <Skeleton className="h-5 w-5 rounded-full" />
-    </CardFooter>
+    
   </Card>
 );
 
