@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { useFavorites } from "@/hooks/FavouriteHook";
 import ListingCard from "@/components/ListingCard";
 import { Heart, ShoppingBag } from "lucide-react";
+import Header from "@/components/Header";
+import ProductCard from "@/components/ProductCard";
 import FavoriteLoader from '@/components/ui/FavouriteLoader'
 import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
