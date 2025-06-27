@@ -44,7 +44,7 @@ const LogoutModal = dynamic(() => import("@/components/LogoutModal"), {
 
 const menuItems = [
   { label: "Marketplace", href: "/", icon: Home },
-  { label: "Explore Services[Beta]", href: "/explore", icon: Compass },
+  { label: "Explore Services[Beta]", href: "/explore-services", icon: Compass },
   { label: "My Shop", href: "/my-shop", icon: Store },
   { label: "Messages", href: "/messages", icon: MessageSquare },
   { label: "Sell", href: "/upload", icon: Upload },
