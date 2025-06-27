@@ -9,8 +9,7 @@ import { db, auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
 
 import toast from "react-hot-toast";
-import BackButton from "@/components/BackButton";
-import UserProfile from "@/components/UserProfile";
+import Header from "@/components/Header";
 
 const PaystackWrapper = dynamic(() => import("@/components/PaystackWrapper"), {
   ssr: false,
@@ -57,20 +56,7 @@ export default function SubscriptionPage() {
     amountInKobo: 150000,
   };
 
-  // useEffect(() => {
-  //   const fetchUserData = async () => {
-  //     const user = auth.currentUser;
-  //     if (!user) return;
-  //     const docRef = doc(db, "users", user.uid);
-  //     const docSnap = await getDoc(docRef);
-  //     if (docSnap.exists()) {
-  //       const userData = docSnap.data();
-  //       setCurrentPlan(userData.subscriptionPlan);
-  //       setIsVerified(userData.kycVerified);
-  //     }
-  //   };
-  //   fetchUserData();
-  // }, []);
+
   useEffect(() => {
     const fetchSubscription = async () => {
       const user = auth.currentUser;
@@ -140,12 +126,9 @@ export default function SubscriptionPage() {
     onClose: () => toast.error("Payment was cancelled"),
   };
   return (
-    <div className=" bg-white min-h-screen py-4 justify-center flex ">
+    <div className=" bg-white min-h-screen my-4 justify-center flex ">
       <div className="">
-        <div className="flex flex-row justify-between items-center">
-          {" "}
-          <BackButton /> <h4> Subscriptions</h4> <UserProfile />
-        </div>
+       <Header title={"Subscription"}/>
 
         <p className="text-center text-gray-500 mb-6">
           Unlock exclusive features to grow your store faster.

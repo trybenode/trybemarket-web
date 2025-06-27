@@ -6,16 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Heart,
+
   MessageCircle,
   ChevronLeft,
   ChevronRight,
   MapPin,
   Calendar,
-  User,
+
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-// import { motion } from "framer-motion";
+
 import { toast } from "react-hot-toast";
 import BackBtn from "@/components/BackButton";
 import { formatNumber } from "@/lib/utils";
@@ -208,26 +208,9 @@ export default function ServicePage({ params }) {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* Header */}
-      {/* <div className='mb-6 flex items-center'>
-        <Button
-          variant="ghost"
-          className="p-0 mr-2"
-          onClick={() => router.back()}
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
-        <h1 className='text-2xl font-bold text-gray-900'>Service Details</h1>
-        <Button variant="ghost" className="ml-auto" onClick={handleLiked}>
-          <Heart
-            className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
-          />
-        </Button>
-   
-      <ProductDetailsHeader id={id} currentUser />
-
-      {/* Two Equal Columns */}
+    <div className="container mx-auto px-4  py-4 max-w-6xl">
+    
+        <ProductDetailsHeader id={id} currentUserId={currentUser} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left Column - Images */}
         <div className="space-y-4">
@@ -235,9 +218,6 @@ export default function ServicePage({ params }) {
             {service.images[currentImageIndex] ? (
               <div
                 key={currentImageIndex}
-                // initial={{ opacity: 0 }}
-                // animate={{ opacity: 1 }}
-                // transition={{ duration: 0.5 }}
               >
                 <Image
                   src={service.images[currentImageIndex]}

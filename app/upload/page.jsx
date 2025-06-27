@@ -20,7 +20,7 @@ export default function Upload() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col px-4  max-w-6xl min-h-screen mx-auto bg-white">
+    <div className="flex flex-col px-4  py-4 max-w-6xl min-h-screen mx-auto bg-white">
       {/* <ToolBar /> */}
       <Header title={"List Your Hustle"} />
 

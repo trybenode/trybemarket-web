@@ -89,7 +89,7 @@ export default function SellerShopPage() {
     );
   }
   return (
-    <div className="min-h-screen mx-auto max-w-6xl bg-white">
+    <div className="min-h-screen mx-auto py-4 max-w-6xl bg-white">
       <Header title={"Seller's Shop"}/>
       <div className="p-2">
         {sellerInfo ? (
