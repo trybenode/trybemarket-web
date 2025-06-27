@@ -43,10 +43,7 @@ async function sendKycEmail({ email, fullName, status }) {
 }
 
 function normalize(str) {
-  return str
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/[^a-z0-9]/gi, "");
+  return str.toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
 }
 
 export async function POST(req) {
@@ -83,11 +80,23 @@ export async function POST(req) {
     const combinedText = frontText.toLowerCase();
     const normalizedText = normalize(combinedText);
 
+    const nameParts = fullName.toLowerCase().split(" ").filter(Boolean); // split name into words
+
+    // Count how many name words are in the normalized text
+    let nameMatchCount = 0;
+    nameParts.forEach((word) => {
+      if (normalizedText.includes(word.toLowerCase())) {
+        nameMatchCount++;
+      }
+    });
+
+    const nameMatch = nameMatchCount >= 2;
+
     // console.log("Front OCR Result:", frontResult);
     console.log("Normalized OCR Text:", normalizedText);
 
     const matricMatch = normalizedText.includes(normalize(matricNumber));
-    const nameMatch = normalizedText.includes(normalize(fullName));
+    // const nameMatch = normalizedText.includes(normalize(fullName));
     const status = nameMatch && matricMatch ? "verified" : "rejected";
 
     // Update Firestore KYC status
