@@ -33,7 +33,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
 // Skeleton Avatar Component
 const SkeletonAvatar = () => (
-  <div className='h-10 w-10 rounded-full bg-gray-200 animate-pulse border-2 border-gray-300' />
+  <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse border-2 border-gray-300" />
 );
 
 // Dynamic import for LogoutModal with SkeletonAvatar as fallback
@@ -80,18 +80,18 @@ export default React.memo(function UserProfile() {
   };
 
   return (
-    <div className='relative'>
+    <div className="relative">
       {!isLoggedIn && !isLoading ? (
-        <div className='flex items-center space-x-4'>
+        <div className="flex items-center space-x-4">
           <Link
-            href='/login'
-            className='text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 border border-blue-500 rounded-md px-4 py-2'
+            href="/login"
+            className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 border border-blue-500 rounded-md px-4 py-2"
           >
             Login
           </Link>
           <Link
-            href='/signup'
-            className='text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 border border-blue-500 rounded-md px-4 py-2'
+            href="/signup"
+            className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 border border-blue-500 rounded-md px-4 py-2"
           >
             Sign Up
           </Link>
@@ -100,99 +100,105 @@ export default React.memo(function UserProfile() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className='focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full transition-all duration-200'
-              aria-label='Open user profile menu'
+              className="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full transition-all duration-200"
+              aria-label="Open user profile menu"
             >
-              <div className='relative'>
+              <div className="relative">
                 {isLoading ? (
                   <SkeletonAvatar />
                 ) : (
-                  <Avatar className='h-10 w-10 cursor-pointer border-2 border-blue-500 hover:border-blue-600 transition-colors duration-200 aspect-square'>
+                  <Avatar className="h-10 w-10 cursor-pointer border-2 border-blue-500 hover:border-blue-600 transition-colors duration-200 aspect-square">
                     <AvatarImage
                       src={
                         currentUser?.profilePicture ||
                         "/images/default-avatar.png"
                       }
                       alt={currentUser?.fullName || "User"}
-                      className='object-cover w-full h-full'
+                      className="object-cover w-full h-full"
                     />
-                    <AvatarFallback className='bg-gray-100 text-gray-600'>
-                      <User className='h-5 w-5' />
+                    <AvatarFallback className="bg-gray-100 text-gray-600">
+                      <User className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
                 )}
                 {!isLoading && hasUnreadMessages && (
-                  <div className='absolute -right-1 -top-1 h-3 w-3 rounded-full bg-blue-500 border-2 border-white' />
+                  <div className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-blue-500 border-2 border-white" />
                 )}
               </div>
             </button>
           </DropdownMenuTrigger>
           {!isLoading && (
             <DropdownMenuContent
-              align='end'
-              className='w-64 bg-white shadow-lg rounded-lg border border-gray-100 p-2 mt-2'
+              align="end"
+              className="w-64 bg-white shadow-lg rounded-lg border border-gray-100 p-2 mt-2"
             >
-              <div className='flex items-center gap-3 p-3'>
-                <Avatar className='h-10 w-10 aspect-square'>
+              <div className="flex items-center gap-3 p-3">
+                <Avatar className="h-10 w-10 aspect-square">
                   <AvatarImage
                     src={
                       currentUser?.profilePicture ||
                       "/images/default-avatar.png"
                     }
                     alt={currentUser?.fullName || "User"}
-                    className='object-cover w-full h-full'
+                    className="object-cover w-full h-full"
                   />
-                  <AvatarFallback className='bg-gray-100 text-gray-600'>
-                    <User className='h-5 w-5' />
+                  <AvatarFallback className="bg-gray-100 text-gray-600">
+                    <User className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
-                <div className='flex flex-col'>
-                  <div className='flex items-center space-x-2'>
-                    <p className='text-sm font-semibold text-gray-800 truncate max-w-[150px]'>
+                <div className="flex flex-col">
+                  <div className="flex items-center space-x-2">
+                    <p className="text-sm font-semibold text-gray-800 truncate max-w-[150px]">
                       {currentUser?.fullName || "User"}
                     </p>
                     {currentUser?.isVerified && (
                       <MdVerified
-                        className='h-5 w-5 text-green-500'
-                        aria-label='Verified User'
-                        title='Verified User'
+                        className="h-5 w-5 text-green-500"
+                        aria-label="Verified User"
+                        title="Verified User"
                       />
                     )}
                   </div>
-                  <p className='text-xs text-gray-500 truncate max-w-[180px]'>
+                  <p className="text-xs text-gray-500 truncate max-w-[180px]">
                     {currentUser?.email}
                   </p>
                 </div>
               </div>
 
-              <DropdownMenuSeparator className='bg-gray-200' />
+              <DropdownMenuSeparator className="bg-gray-200" />
 
               {menuItems.map((item, index) => {
                 if (item.requiresVerification && currentUser?.isVerified)
                   return null;
 
                 const Icon = item.icon;
+                const isMessages = item.label === "Messages";
 
                 return (
                   <DropdownMenuItem asChild key={index}>
                     <Link
                       href={item.href}
-                      className='flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium'
+                      className={`flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium relative${
+                        isMessages && hasUnreadMessages ? " " : ""
+                      }`}
                     >
-                      <Icon className='mr-2 h-4 w-4' />
+                      <Icon className="mr-2 h-4 w-4" />
+                      {isMessages && hasUnreadMessages && (
+                        <span className="-ml-6 mb-2 inline-block h-2 w-2 rounded-full bg-blue-500 align-middle" />
+                      )}
                       {item.label}
                     </Link>
                   </DropdownMenuItem>
                 );
               })}
 
-              <DropdownMenuSeparator className='bg-gray-200' />
+              <DropdownMenuSeparator className="bg-gray-200" />
 
               <DropdownMenuItem
                 onClick={() => setIsModalOpen(true)}
-                className='flex items-center px-3 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors duration-150 text-sm font-medium cursor-pointer'
+                className="flex items-center px-3 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors duration-150 text-sm font-medium cursor-pointer"
               >
-                <LogOut className='mr-2 h-4 w-4' />
+                <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
