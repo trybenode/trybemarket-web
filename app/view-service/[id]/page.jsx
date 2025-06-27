@@ -210,7 +210,7 @@ export default function ServicePage({ params }) {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
-      {/* <div className='mb-6 flex items-center'>
+      <div className='mb-6 flex items-center'>
         <Button
           variant="ghost"
           className="p-0 mr-2"
@@ -224,10 +224,10 @@ export default function ServicePage({ params }) {
             className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}
           />
         </Button>
-   
-      <ProductDetailsHeader id={id} currentUser />
+        </div>
+  
 
-      {/* Two Equal Columns */}
+      {/* {/* Two Equal Columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left Column - Images */}
         <div className="space-y-4">
