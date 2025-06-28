@@ -155,7 +155,8 @@ export const useServiceForm = (currentUser) => {
 
       await addDoc(collection(db, "services"), data);
       toast.success("Service Listed Successfully");
-      setTimeout(() => router.push("/explore"), 1000);
+      router.push("/explore-services");
+      // setTimeout(() => , 1000);
     } catch (err) {
       toast.error(err.message);
     } finally {

@@ -70,19 +70,24 @@ export default function ServicePage({ params }) {
       if (availability.type === "on_contact") {
         return "Available on Contact";
       } else if (
-        availability.type === "timeframe" &&
+        availability.type === "specific_time" &&
         availability.start &&
         availability.end
       ) {
-        const start = new Date(availability.start).toLocaleString("en-US", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-        const end = new Date(availability.end).toLocaleString("en-US", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-        return `From ${start} to ${end}`;
+        const formatTime = (timeStr) => {
+          const [hours, minutes] = timeStr.split(":").map(Number);
+          const date = new Date();
+          date.setHours(hours, minutes);
+          return date.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          });
+        };
+
+        const startFormatted = formatTime(availability.start);
+        const endFormatted = formatTime(availability.end);
+
+        return `From ${startFormatted} to ${endFormatted}`;
       }
     }
     return "Not Available";
@@ -190,32 +195,32 @@ export default function ServicePage({ params }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      <div className='flex items-center justify-center min-h-screen'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600' />
       </div>
     );
   }
 
   if (!service) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-xl text-gray-600 mb-4">Service not found</p>
+      <div className='flex flex-col items-center justify-center min-h-screen'>
+        <p className='text-xl text-gray-600 mb-4'>Service not found</p>
         <Button onClick={() => router.push("/")}>Back to Home</Button>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4  py-4 max-w-6xl">
+    <div className='container mx-auto px-4  py-4 max-w-6xl'>
       <ProductDetailsHeader id={id} currentUserId={currentUser} />
 
       {/* Header */}
 
       {/* {/* Two Equal Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
         {/* Left Column - Images */}
-        <div className="space-y-4">
-          <div className="relative rounded-lg overflow-hidden bg-gray-100 aspect-square">
+        <div className='space-y-4'>
+          <div className='relative rounded-lg overflow-hidden bg-gray-100 aspect-square'>
             {service.images[currentImageIndex] ? (
               <div key={currentImageIndex}>
                 <Image
@@ -224,35 +229,35 @@ export default function ServicePage({ params }) {
                   width={600}
                   height={600}
                   priority={currentImageIndex === 0}
-                  className="object-contain w-full h-full"
-                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className='object-contain w-full h-full'
+                  sizes='(max-width: 768px) 100vw, 50vw'
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">No image available</p>
+              <div className='flex items-center justify-center h-full'>
+                <p className='text-gray-500'>No image available</p>
               </div>
             )}
             <Button
-              variant="ghost"
-              size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full"
+              variant='ghost'
+              size='icon'
+              className='absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
               onClick={handlePrevImage}
-              aria-label="Previous image"
+              aria-label='Previous image'
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className='h-5 w-5' />
             </Button>
             <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full"
+              variant='ghost'
+              size='icon'
+              className='absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
               onClick={handleNextImage}
-              aria-label="Next image"
+              aria-label='Next image'
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className='h-5 w-5' />
             </Button>
           </div>
-          <div className="flex space-x-2 overflow-x-auto pb-2">
+          <div className='flex space-x-2 overflow-x-auto pb-2'>
             {service.images.map((image, index) => (
               <div
                 key={index}
@@ -267,8 +272,8 @@ export default function ServicePage({ params }) {
                   src={image}
                   alt={`Thumbnail ${index + 1}`}
                   fill
-                  className="object-cover"
-                  sizes="80px"
+                  className='object-cover'
+                  sizes='80px'
                 />
               </div>
             ))}
@@ -276,57 +281,57 @@ export default function ServicePage({ params }) {
         </div>
 
         {/* Right Column - Details & Actions */}
-        <div className="space-y-6">
+        <div className='space-y-6'>
           {/* Price Card */}
-          <Card className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <Card className='bg-gray-50 p-6 rounded-lg border border-gray-200'>
+            <h2 className='text-2xl font-bold text-gray-900 mb-2'>
               {service.name}
             </h2>
-            <span className="inline-block text-gray-500 text-base py-1 rounded-full mt-2">
+            <span className='inline-block text-gray-500 text-base py-1 rounded-full mt-2'>
               Base Price
             </span>
-            <p className="text-2xl font-extrabold text-green-600">
+            <p className='text-2xl font-extrabold text-green-600'>
               ₦{formatNumber(service.price)}
             </p>
           </Card>
 
           {/* Tabs for Details & Description */}
-          <Tabs defaultValue="details">
-            <TabsList className="grid w-full grid-cols-3 bg-gray-100 rounded-lg p-1">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="description">Description</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews</TabsTrigger>
+          <Tabs defaultValue='details'>
+            <TabsList className='grid w-full grid-cols-3 bg-gray-100 rounded-lg p-1'>
+              <TabsTrigger value='details'>Details</TabsTrigger>
+              <TabsTrigger value='description'>Description</TabsTrigger>
+              <TabsTrigger value='reviews'>Reviews</TabsTrigger>
             </TabsList>
-            <TabsContent value="details" className="mt-4">
-              <Card className="p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="font-bold text-gray-800">Name</p>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-gray-200 text-gray-600 text-sm">
+            <TabsContent value='details' className='mt-4'>
+              <Card className='p-4'>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-1'>
+                    <p className='font-bold text-gray-800'>Name</p>
+                    <div className='flex items-center gap-2'>
+                      {/* <Avatar className='h-8 w-8'>
+                        <AvatarFallback className='bg-gray-200 text-gray-600 text-sm'>
                           AD
                         </AvatarFallback>
-                      </Avatar>
-                      <p className="text-gray-600">{service.name}</p>
+                      </Avatar> */}
+                      <p className='text-gray-600'>{service.name}</p>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-bold text-gray-800">Category</p>
-                    <p className="text-gray-600">{service.categoryId}</p>
+                  <div className='space-y-1'>
+                    <p className='font-bold text-gray-800'>Category</p>
+                    <p className='text-gray-600'>{service.categoryId}</p>
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-bold text-gray-800">University</p>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <p className="text-gray-600">{service.university}</p>
+                  <div className='space-y-1'>
+                    <p className='font-bold text-gray-800'>University</p>
+                    <div className='flex items-center gap-2'>
+                      <MapPin className='h-4 w-4 text-gray-500' />
+                      <p className='text-gray-600'>{service.university}</p>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-bold text-gray-800">Availability</p>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <p className="text-gray-600">
+                  <div className='space-y-1'>
+                    <p className='font-bold text-gray-800'>Availability</p>
+                    <div className='flex items-center gap-2'>
+                      <Calendar className='h-4 w-4 text-gray-500' />
+                      <p className='text-gray-600'>
                         {formatAvailability(service.availability)}
                       </p>
                     </div>
@@ -334,16 +339,16 @@ export default function ServicePage({ params }) {
                 </div>
               </Card>
             </TabsContent>
-            <TabsContent value="description" className="mt-4">
-              <Card className="p-4">
-                <p className="text-gray-700 whitespace-pre-line">
+            <TabsContent value='description' className='mt-4'>
+              <Card className='p-4'>
+                <p className='text-gray-700 whitespace-pre-line'>
                   {service.description}
                 </p>
               </Card>
             </TabsContent>
-            <TabsContent value="reviews" className="mt-4">
-              <Card className="p-4">
-                <p className="text-gray-700 italic">
+            <TabsContent value='reviews' className='mt-4'>
+              <Card className='p-4'>
+                <p className='text-gray-700 italic'>
                   No reviews yet. Be the first to leave a review!
                 </p>
               </Card>
@@ -351,22 +356,22 @@ export default function ServicePage({ params }) {
           </Tabs>
 
           {/* Message Box */}
-          <Card className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h2 className="text-lg font-semibold mb-2">Make an Offer:</h2>
-            <div className="flex">
+          <Card className='bg-gray-50 p-4 rounded-lg border border-gray-200'>
+            <h2 className='text-lg font-semibold mb-2'>Contact Provider:</h2>
+            <div className='flex'>
               <input
-                type="text"
-                placeholder="Type your message..."
-                className="flex-1 rounded-l-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                type='text'
+                placeholder='Type your message...'
+                className='flex-1 rounded-l-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
               />
               <Button
                 onClick={handleSendMessage}
-                className="rounded-l-none bg-blue-600 hover:bg-blue-700"
+                className='rounded-l-none bg-blue-600 hover:bg-blue-700'
                 disabled={sendingMessage}
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
+                <MessageCircle className='h-4 w-4 mr-2' />
                 Send
               </Button>
             </div>

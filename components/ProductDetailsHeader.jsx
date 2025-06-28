@@ -35,7 +35,7 @@ const handleLiked = () => {
     });
   };
   return (
-    <div className="mb-6 flex justify-between items-center">
+    <div className="mb-8 flex justify-between items-center">
       <BackButton />
 
       <h1 className="text-2xl font-bold text-gray-900">Listing Details </h1>
