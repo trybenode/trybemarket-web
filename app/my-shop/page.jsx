@@ -107,6 +107,7 @@ export default function MyShopPage() {
       >
         <TabsList className="mb-6">
           <TabsTrigger value="products">My Products</TabsTrigger>
+          <TabsTrigger value="services">My Services</TabsTrigger>
           <TabsTrigger value="sales">Sales</TabsTrigger>
           <TabsTrigger value="purchases">Purchases</TabsTrigger>
         </TabsList>
@@ -146,8 +147,16 @@ export default function MyShopPage() {
           )}
         </TabsContent>
 
+{/* service implementation. can move to a separate component file  */}
+        <TabsContent value="services">
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <p className="text-lg text-gray-500">Coming Soon.</p>
+          </div>
+        </TabsContent>
+
         <TabsContent value="sales">
           <div className="flex flex-col items-center justify-center py-12 px-4">
+            {/* <p className="text-lg text-gray-500">No purchase history yet.</p> */}
             <p className="text-lg text-gray-500">Coming Soon.</p>
           </div>
         </TabsContent>
