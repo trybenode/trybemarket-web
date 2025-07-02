@@ -18,7 +18,8 @@ import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ReviewCard from "@/components/ReviewCard"
 import Header from "@/components/Header";
-
+import { getServices } from "@/hooks/servicesHooks";
+import ServiceCard from "@/components/ServiceCard";
 export default function SellerShopPage() {
   const params = useParams();
   // const sellerId = params?.sellerId;
@@ -27,6 +28,7 @@ export default function SellerShopPage() {
     : params?.sellerId;
 
   const [products, setProducts] = useState([]);
+  const [services, setServices] = useState([]);
   const [sellerInfo, setSellerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("products");
@@ -64,6 +66,9 @@ export default function SellerShopPage() {
         }));
 
         setProducts(fetchedProducts);
+
+       const fetchedServices = await getServices(sellerId);
+      setServices(fetchedServices);
       } catch (error) {
         console.error("Error fetching shop data:", error);
       } finally {
@@ -106,7 +111,7 @@ export default function SellerShopPage() {
         >
           <TabsList className="mb-2">
             <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="purchases">Service</TabsTrigger>
+            <TabsTrigger value="services">Service</TabsTrigger>
             <TabsTrigger value="review">Reviews</TabsTrigger>
           </TabsList>
 
@@ -121,6 +126,23 @@ export default function SellerShopPage() {
                   <Link key={product.id} href={`/listing/${product.id}`}>
                     <div className="cursor-pointer">
                       <ListingCard product={product} btnName="View" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="services">
+           {services.length === 0 ? (
+              <div role="alert" className="text-center text-gray-500 mt-6">
+                No Gigs found for this Provider.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-4">
+                {services.map((service) => (
+                  <Link key={service.id} href={`/view-service/${service.id}`}>
+                    <div className="cursor-pointer">
+                        <ServiceCard key={service.id} service={service} />
                     </div>
                   </Link>
                 ))}

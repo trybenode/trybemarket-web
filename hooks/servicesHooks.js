@@ -25,7 +25,7 @@ const getServices = async (userId) => {
 }
 
 
-
+//used on explore page
 const getServiceById = async (serviceId) => {
   try {
     if (!serviceId) {
