@@ -15,14 +15,24 @@ export default function ReviewForm({ sellerId }) {
   const { submitSellerReview, submitting } = useAddSellerReview();
 
   const handleSubmit = async (e) => {
+    console.log("💡 Submitting review with:", {
+  buyerId: currentUser?.id,
+  buyerName: currentUser?.fullName,
+  sellerId,
+  rating,
+  review,
+});
+
     e.preventDefault();
-    if (!currentUser?.uid) {
+    if (!currentUser?.id) {
     toast.error("You must be logged in to submit a review");
     return;
   }
 
     await submitSellerReview({
-      buyerId: currentUser?.uid,
+      
+      buyerId: currentUser?.id,
+      buyerName: currentUser.fullName || "Anonymous",
       sellerId,
       rating,
       review,
