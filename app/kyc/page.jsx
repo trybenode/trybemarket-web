@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, CheckCircle, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import convertToBase64 from "@/hooks/useConvertToBase64";
+import Header from "@/components/Header";
 
 
 export default function KycPage() {
