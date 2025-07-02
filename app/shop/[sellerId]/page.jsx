@@ -128,7 +128,6 @@ export default function SellerShopPage() {
             )}
           </TabsContent>
           <TabsContent value="review">
-            <p>Sellers Rating</p>
             <ReviewCard  sellerId={sellerId}/>
           </TabsContent>
         </Tabs>

@@ -49,6 +49,7 @@ export default function ReviewCard({ sellerId }) {
             </span>
           </div>
           <p className="text-sm text-gray-700">{review.review}</p>
+          <p className="text-xs text-yellow-700 text-center">     {review.buyerName}</p>
         </div>
       ))}
     </div>
