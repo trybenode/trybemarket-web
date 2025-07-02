@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { Star } from 'lucide-react';
 
 export default function ReviewCard({ sellerId }) {
- const [reviews, setReviews] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,8 +29,12 @@ export default function ReviewCard({ sellerId }) {
     fetchReviews();
   }, [sellerId]);
 
-  if (loading) return <p className="text-sm text-gray-500">Loading reviews...</p>;
-  if (!reviews.length) return <p className="text-sm text-gray-400">No reviews yet.</p>;
+  if (loading) return <div className="flex justify-center items-center py-6">
+    <p className="text-sm text-gray-500">Loading reviews...</p>;
+  </div>
+  if (!reviews.length) return <div className="flex justify-center items-center py-6">
+    <p className="text-sm text-gray-400">No reviews yet.</p>
+  </div>
 
   return (
     <div className="space-y-4">
