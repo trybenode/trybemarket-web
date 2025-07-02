@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "react-hot-toast";
 import BackBtn from "@/components/BackButton";
 import { formatNumber } from "@/lib/utils";
-import { getServiceById } from "@/utils/servicesHooks";
+import { getServiceById } from "@/hooks/servicesHooks";
 import useUserStore from "@/lib/userStore";
 import { initiateConversation } from "@/utils/messaginghooks";
 import useFavoritesStore from "@/lib/FavouriteStore";
