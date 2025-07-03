@@ -2,15 +2,27 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { writeFileSync, existsSync } from "fs";
 import vision from "@google-cloud/vision";
 import path from "path";
 import { adminDB } from "../../../lib/firebaseAdmin";
 import nodemailer from "nodemailer";
 import hbs from "nodemailer-express-handlebars";
 
-const keyPath = path.join(process.cwd(), "markettrybe-cfed7-aeb679b5c606.json");
-const client = new vision.ImageAnnotatorClient({ keyFilename: keyPath });
+// const keyPath = path.join(process.cwd(), "markettrybe-cfed7-aeb679b5c606.json");
+// const client = new vision.ImageAnnotatorClient({ keyFilename: keyPath });
 
+const keyPath = path.join("/tmp", "markettrybe-key.json");
+
+if (!existsSync(keyPath)) {
+  const keyBase64 = process.env.GOOGLE_CLOUD_KEY_BASE64;
+  if (!keyBase64) throw new Error("Missing GOOGLE_CLOUD_KEY_BASE64 env var");
+
+  const keyJson = Buffer.from(keyBase64, "base64").toString("utf-8");
+  writeFileSync(keyPath, keyJson);
+}
+
+const client = new vision.ImageAnnotatorClient({ keyFilename: keyPath });
 // Helper to send KYC email
 async function sendKycEmail({ email, fullName, status }) {
   const transporter = nodemailer.createTransport({
