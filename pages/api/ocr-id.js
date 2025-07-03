@@ -1,22 +1,9 @@
 export const runtime = "nodejs";
+
 import vision from "@google-cloud/vision";
 import path from "path";
 import { writeFileSync, existsSync } from "fs";
 
-
-const keyPath = path.join("/tmp", "markettrybe-key.json");
-
-if (!existsSync(keyPath)) {
-  const keyBase64 = process.env.GOOGLE_CLOUD_KEY_BASE64;
-  if (!keyBase64) throw new Error("Missing GOOGLE_CLOUD_KEY_BASE64 env var");
-
-  const keyJson = Buffer.from(keyBase64, "base64").toString("utf-8");
-  writeFileSync(keyPath, keyJson);
-}
-
-const client = new vision.ImageAnnotatorClient({
-  keyFilename: keyPath,
-});
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -28,6 +15,21 @@ export default async function handler(req, res) {
     if (!imageBase64) {
       return res.status(400).json({ error: "Missing image data" });
     }
+
+    // Runtime-safe key setup
+    const keyPath = path.join("/tmp", "markettrybe-key.json");
+
+    if (!existsSync(keyPath)) {
+      const keyBase64 = process.env.GOOGLE_CLOUD_KEY_BASE64;
+      if (!keyBase64) throw new Error("Missing GOOGLE_CLOUD_KEY_BASE64 env var");
+
+      const keyJson = Buffer.from(keyBase64, "base64").toString("utf-8");
+      writeFileSync(keyPath, keyJson);
+    }
+
+    const client = new vision.ImageAnnotatorClient({
+      keyFilename: keyPath,
+    });
 
     const [result] = await client.textDetection({
       image: { content: imageBase64 },
