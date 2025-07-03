@@ -3,11 +3,6 @@ import vision from "@google-cloud/vision";
 import path from "path";
 import { writeFileSync, existsSync } from "fs";
 
-// const keyPath = path.join(process.cwd(), "markettrybe-cfed7-aeb679b5c606.json");
-
-// const client = new vision.ImageAnnotatorClient({
-//   keyFilename: keyPath,
-// });
 
 const keyPath = path.join("/tmp", "markettrybe-key.json");
 

@@ -9,9 +9,6 @@ import { adminDB } from "../../../lib/firebaseAdmin";
 import nodemailer from "nodemailer";
 import hbs from "nodemailer-express-handlebars";
 
-// const keyPath = path.join(process.cwd(), "markettrybe-cfed7-aeb679b5c606.json");
-// const client = new vision.ImageAnnotatorClient({ keyFilename: keyPath });
-
 const keyPath = path.join("/tmp", "markettrybe-key.json");
 
 if (!existsSync(keyPath)) {
