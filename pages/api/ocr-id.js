@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 import vision from "@google-cloud/vision";
 import path from "path";
 

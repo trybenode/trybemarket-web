@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
+import { getServices} from "@/hooks/servicesHooks";
 import dynamic from "next/dynamic";
 import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 import SellerProfileSkeleton from "@/components/ui/SellerProfileSkeleton";
