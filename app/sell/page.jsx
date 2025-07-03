@@ -47,7 +47,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {canUserUpload,  incrementUploadCount } from '../../hooks/UploadLimiter'
+
 import {compressImage} from '@/utils/imageCompress'
+
+import Header from "@/components/Header";
 export default function SellPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -247,23 +250,6 @@ export default function SellPage() {
     if (!files.length) return;
     const arr = Array.from(files)
     try {
-      // const urls = await Promise.all(
-      //   arr.map(async (file) => {
-      //     const data = new FormData();
-      //     data.append("file", file);
-      //     data.append("upload_preset", "ProductImage");
-      //     data.append("cloud_name", "dj21x4jnt");
-      //     data.append("folder", "market_trybe_products");
-      //     const res = await fetch(
-      //       "https://api.cloudinary.com/v1_1/dj21x4jnt/image/upload",
-      //       { method: "POST", body: data }
-      //     );
-      //     const json = await res.json();
-      //     if (!json.secure_url) throw new Error("Upload failed");
-      //     return json.secure_url;
-      //   })
-      // );
-      // setImages((prev) => [...prev, ...urls]);
       const urls = await Promise.all(
         arr.map(async (file) => {
           const compressed = await compressImage(file);
@@ -388,20 +374,10 @@ export default function SellPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="flex items-center mb-6 justify-between">
-        <Button
-          variant="ghost"
-          className="p-0 mr-2"
-          onClick={() => router.back()}
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
-        <h1 className="text-2xl font-bold">
-          {isEditMode ? "Edit Product" : "Add New Product"}
-        </h1>
-        <UserProfile />
-      </div>
+    <div className="container mx-auto px-4 py-4 max-w-3xl">
+    
+      
+      <Header title={isEditMode ? "Edit Product" : "Add New Product"}/>
 
       <AlertDialog
         open={openVerificationDialog}
@@ -455,7 +431,7 @@ export default function SellPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {category.map((cat) => (
-                      <SelectItem key={cat.label} value={cat.label}>
+                      <SelectItem key={cat.value} value={cat.value}>
                         {cat.label}
                       </SelectItem>
                     ))}
@@ -696,8 +672,6 @@ export default function SellPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    your product from our servers.
                     This action cannot be undone. This will permanently delete
                     your product from our servers.
                   </AlertDialogDescription>

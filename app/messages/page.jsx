@@ -6,18 +6,16 @@ import Image from "next/image";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { RefreshCw } from "lucide-react";
-import { getAllConversations } from "@/utils/messaginghooks";
-import UserProfile from "@/components/UserProfile";
-import useUserStore from "@/lib/userStore";
 
+import { getAllConversations } from "@/utils/messaginghooks";
+
+import Header from "@/components/Header";
 
 export default function MessagesPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const getUserID = useUserStore((state) => state.getUserId); 
-  const [refreshing, setRefreshing] = useState(false);
+
   const [currentUserId, setCurrentUserId] = useState(null);
   // Check if user is authenticated
   useEffect(() => {
@@ -95,10 +93,7 @@ export default function MessagesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Messages</h1>
-        <UserProfile />
-      </div>
+      <Header title={"Messages"} />
 
       {conversations.length > 0 ? (
         <div className="space-y-4">
@@ -164,7 +159,10 @@ export default function MessagesPage() {
                           )}
                         </p>
                         <p className="text-xs text-blue-500 mt-1">
-                          { conversation.instigatorInfo?.id === currentUserId ? " " : conversation.instigatorInfo?.name || "Unknown Buyer" }
+                          {conversation.instigatorInfo?.id === currentUserId
+                            ? " "
+                            : conversation.instigatorInfo?.name ||
+                              "Unknown Buyer"}
                         </p>
                       </div>
                     </div>

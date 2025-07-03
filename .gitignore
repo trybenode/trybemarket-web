@@ -25,3 +25,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+serviceAccountKey.json
+seed.js 
+ 
+
+markettrybe-cfed7-aeb679b5c606.json

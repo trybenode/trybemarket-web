@@ -33,6 +33,7 @@ export const useFavorites = () => {
   const [loading, setLoading] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [products, setProducts] = useState([]);
+  const [services, setServices] = useState([]);
   const { favoriteIds, toggleFavorite, loadFavorites } = useFavoritesStore();
 
   // Load favorites from localStorage on mount
@@ -43,29 +44,29 @@ export const useFavorites = () => {
   const fetchFavorites = useCallback(async () => {
     if (!favoriteIds || favoriteIds.length === 0) {
       setProducts([]);
+      setServices([]);
       return;
     }
 
     setLoading(true);
-    console.log('Fetching favorites with IDs:', favoriteIds);
-
     try {
-      const favoriteProducts = await fetchDocumentsByIdsBatch('products', favoriteIds);
-      console.log('Fetched products:', favoriteProducts);
-      
-      // Set the products directly since they already have the correct structure
+      // Fetch both products and services
+      const [favoriteProducts, favoriteServices] = await Promise.all([
+        fetchDocumentsByIdsBatch('products', favoriteIds),
+        fetchDocumentsByIdsBatch('services', favoriteIds),
+      ]);
       setProducts(favoriteProducts);
+      setServices(favoriteServices);
     } catch (error) {
-      console.error('Error fetching favorites:', error);
       setProducts([]);
+      setServices([]);
     } finally {
       setLoading(false);
     }
   }, [favoriteIds]);
 
-  // Fetch products whenever favoriteIds changes
+  // Fetch products and services whenever favoriteIds changes
   useEffect(() => {
-    console.log('FavoriteIds changed:', favoriteIds);
     fetchFavorites();
   }, [favoriteIds, fetchFavorites]);
 
@@ -75,6 +76,7 @@ export const useFavorites = () => {
 
   return {
     products,
+    services,
     loading,
     isFetchingMore,
     fetchFavorites,

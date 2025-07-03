@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
@@ -13,13 +12,14 @@ import {
 import { db } from "@/lib/firebase";
 import SellerProfileCard from "@/components/SellerProfileCard";
 import ListingCard from "@/components/ListingCard";
-import { Loader } from "lucide-react";
 import Link from "next/link";
-import UserProfile from "@/components/UserProfile";
-import BackButton from "@/components/BackButton";
 import SellerProfileSkeleton from "@/components/ui/SellerProfileSkeleton";
 import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
-
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ReviewCard from "@/components/ReviewCard"
+import Header from "@/components/Header";
+import { getServices } from "@/hooks/servicesHooks";
+import ServiceCard from "@/components/ServiceCard";
 export default function SellerShopPage() {
   const params = useParams();
   // const sellerId = params?.sellerId;
@@ -28,9 +28,11 @@ export default function SellerShopPage() {
     : params?.sellerId;
 
   const [products, setProducts] = useState([]);
+  const [services, setServices] = useState([]);
   const [sellerInfo, setSellerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState("products");
+
 
   // Fetch seller info and products
   useEffect(() => {
@@ -64,6 +66,9 @@ export default function SellerShopPage() {
         }));
 
         setProducts(fetchedProducts);
+
+       const fetchedServices = await getServices(sellerId);
+      setServices(fetchedServices);
       } catch (error) {
         console.error("Error fetching shop data:", error);
       } finally {
@@ -76,7 +81,7 @@ export default function SellerShopPage() {
 
   if (loading) {
     return (
-      <div className="p-4">
+      <div className="p-4 min-h-screen mx-auto max-w-6xl">
         <div className="mb-4">
           <SellerProfileSkeleton />
         </div>
@@ -89,37 +94,65 @@ export default function SellerShopPage() {
     );
   }
   return (
-    <div className="min-h-screen bg-white">
-      <div className="flex flex-row justify-between items-center mt-5 px-5">
-        <BackButton />
-        <UserProfile />
-      </div>
-      <div className="p-4">
+    <div className="min-h-screen mx-auto py-4 max-w-6xl bg-white">
+      <Header title={"Seller's Shop"}/>
+      <div className="p-2">
         {sellerInfo ? (
           <SellerProfileCard sellerInfo={sellerInfo} />
         ) : (
           <p className="text-red-500 text-center">Seller not found</p>
         )}
 
-        <div className="flex justify-center items-center mt-6 mb-2">
-          <h2 className="text-lg font-semibold">Products</h2>
-        </div>
+        
+        <Tabs
+          defaultValue="products"
+          value={activeTab}
+          onValueChange={setActiveTab}
+        >
+          <TabsList className="mb-2">
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="services">Service</TabsTrigger>
+            <TabsTrigger value="review">Reviews</TabsTrigger>
+          </TabsList>
 
-        {products.length === 0 ? (
-          <div role="alert" className="text-center text-gray-500 mt-6">
-            No products found for this seller.
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-4">
-            {products.map((product) => (
-              <Link key={product.id} href={`/listing/${product.id}`}>
-                <div className="cursor-pointer">
-                  <ListingCard product={product} btnName="View" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+          <TabsContent value="products">
+            {products.length === 0 ? (
+              <div role="alert" className="text-center text-gray-500 mt-6">
+                No products found for this seller.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-4">
+                {products.map((product) => (
+                  <Link key={product.id} href={`/listing/${product.id}`}>
+                    <div className="cursor-pointer">
+                      <ListingCard product={product} btnName="View" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="services">
+           {services.length === 0 ? (
+              <div role="alert" className="text-center text-gray-500 mt-6">
+                No Gigs found for this Provider.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-4">
+                {services.map((service) => (
+                  <Link key={service.id} href={`/view-service/${service.id}`}>
+                    <div className="cursor-pointer">
+                        <ServiceCard key={service.id} service={service} />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="review">
+            <ReviewCard  sellerId={sellerId}/>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

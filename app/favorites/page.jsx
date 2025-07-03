@@ -1,8 +1,13 @@
 "use client";
 import UserProfile from "@/components/UserProfile";
+import { Card } from "@/components/ui/card";
 import { useFavorites } from "@/hooks/FavouriteHook";
 import ListingCard from "@/components/ListingCard";
 import { Heart, ShoppingBag } from "lucide-react";
+import Header from "@/components/Header";
+import ProductCard from "@/components/ProductCard";
+import FavoriteLoader from '@/components/ui/FavouriteLoader'
+import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -13,65 +18,29 @@ export default function FavouritePage() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
-        // Redirect to login if not authenticated
         router.push("/login");
       }
     });
     return () => unsubscribe();
   }, [auth.currentUser]);
 
-  const { products, loading } = useFavorites();
+  const { products, services, loading } = useFavorites();
   const router = useRouter();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
-          {/* Header Skeleton */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
-              <div className="w-32 h-8 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-            <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-          </div>
-
-          {/* Grid Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
-              >
-                <div className="w-full h-48 bg-gray-200 animate-pulse"></div>
-                <div className="p-4 space-y-3">
-                  <div className="w-3/4 h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="w-1/2 h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="w-1/3 h-6 bg-gray-200 rounded animate-pulse"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <FavoriteLoader />
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-4 max-w-7xl">
         {/* Enhanced Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Favourites</h1>
-            </div>
-          </div>
-          <UserProfile />
-        </div>
+        <Header title={"Favorites"}/>
 
         {/* Content */}
-        {!products || products.length === 0 ? (
+        {(!products || products.length === 0) && (!services || services.length === 0) ? (
           <div className="flex flex-col items-center justify-center py-20 px-4">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 max-w-md w-full text-center">
               <div className="mb-6">
@@ -83,7 +52,7 @@ export default function FavouritePage() {
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
                   Start exploring and save items you love. Your favourite
-                  products will appear here.
+                  products and services will appear here.
                 </p>
               </div>
               <Button
@@ -96,47 +65,92 @@ export default function FavouritePage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Stats Bar */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {products.length}
+          <div className="space-y-10">
+            {/* Products Section */}
+            {products && products.length > 0 && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-gray-900">
+                          {products.length}
+                        </div>
+                        <div className="text-sm text-gray-600">Saved Products</div>
+                      </div>
+                      <div className="h-8 w-px bg-gray-200"></div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          ₦
+                          {products
+                            .reduce((sum, product) => sum + (product.price || 0), 0)
+                            .toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Product Value</div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">Saved Items</div>
                   </div>
-                  <div className="h-8 w-px bg-gray-200"></div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      ₦
-                      {products
-                        .reduce((sum, product) => sum + (product.price || 0), 0)
-                        .toLocaleString()}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {products.map((product, index) => (
+                    <div
+                      key={product.id}
+                      className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                      style={{
+                        animationDelay: `${index * 100}ms`,
+                        animation: "fadeInUp 0.6s ease-out forwards",
+                      }}
+                      onClick={() => router.push(`/listing/${product.id}`)}
+                    >
+                      {/* <ListingCard product={product} /> */}
+                      <ProductCard product={product} />
                     </div>
-                    <div className="text-sm text-gray-600">Total Value</div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </div>
-
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {products.map((product, index) => (
-                <div
-                  key={product.id}
-                  className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
-                  style={{
-                    animationDelay: `${index * 100}ms`,
-                    animation: "fadeInUp 0.6s ease-out forwards",
-                  }}
-                  onClick={() => router.push(`/listing/${product.id}`)}
-                >
-                  <ListingCard product={product} />
+            )}
+            {/* Services Section */}
+            {services && services.length > 0 && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-gray-900">
+                          {services.length}
+                        </div>
+                        <div className="text-sm text-gray-600">Saved Services</div>
+                      </div>
+                      <div className="h-8 w-px bg-gray-200"></div>
+                      {/* <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          ₦
+                          {services
+                            .reduce((sum, service) => sum + (service.price || 0), 0)
+                            .toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Service Value</div>
+                      </div> */}
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {services.map((service, index) => (
+                    <div
+                      key={service.id}
+                      className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                      style={{
+                        animationDelay: `${index * 100}ms`,
+                        animation: "fadeInUp 0.6s ease-out forwards",
+                      }}
+                      onClick={() => router.push(`/view-service/${service.id}`)}
+                    >
+                      <ServiceCard service={service} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

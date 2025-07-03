@@ -87,7 +87,7 @@ export default function CategoryProductList() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between mb-4">
            <BackBtn />
           <h1 className="text-xl font-semibold">{categoryName || 'Category'}</h1>
