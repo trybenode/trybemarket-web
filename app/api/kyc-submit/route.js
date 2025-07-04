@@ -8,8 +8,8 @@ import { adminDB } from "../../../lib/firebaseAdmin";
 import nodemailer from "nodemailer";
 import hbs from "nodemailer-express-handlebars";
 
-const keyPath = path.join(process.cwd(), "markettrybe-cfed7-aeb679b5c606.json");
-const client = new vision.ImageAnnotatorClient({ keyFilename: keyPath });
+const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+const client = new vision.ImageAnnotatorClient({ credentials: serviceAccount });
 
 // Helper to send KYC email
 async function sendKycEmail({ email, fullName, status }) {
