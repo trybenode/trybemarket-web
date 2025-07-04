@@ -8,10 +8,7 @@ import { adminDB } from "../../../lib/firebaseAdmin";
 import nodemailer from "nodemailer";
 import hbs from "nodemailer-express-handlebars";
 
-const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
-const client = new vision.ImageAnnotatorClient({ credentials: serviceAccount });
-
-// Helper to send KYC email
+// Send email with handlebars template
 async function sendKycEmail({ email, fullName, status }) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -20,6 +17,7 @@ async function sendKycEmail({ email, fullName, status }) {
       pass: process.env.EMAIL_PASS,
     },
   });
+
   transporter.use(
     "compile",
     hbs({
@@ -31,7 +29,9 @@ async function sendKycEmail({ email, fullName, status }) {
       extName: ".hbs",
     })
   );
+
   const templateName = status === "verified" ? "kycSuccess" : "kycRejected";
+
   await transporter.sendMail({
     from: `Trybe Market <${process.env.EMAIL_USER}>`,
     to: email,
@@ -44,10 +44,12 @@ async function sendKycEmail({ email, fullName, status }) {
   });
 }
 
+// Text normalization helper
 function normalize(str) {
-  return str.toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
+  return str.toLowerCase().replace(/[^a-z0-9]/gi, ""); // more compact
 }
 
+// ✅ API Handler
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -59,7 +61,15 @@ export async function POST(req) {
       backID,
       email: emailFromBody,
     } = body;
-    if (!userId || !fullName || !matricNumber || !frontID || !backID) {
+
+    if (
+      !userId ||
+      !fullName ||
+      !matricNumber ||
+      !frontID ||
+      !backID ||
+      !emailFromBody
+    ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -67,48 +77,41 @@ export async function POST(req) {
     }
 
     const email = emailFromBody;
-    if (!email) {
-      return NextResponse.json(
-        { error: "User email not found" },
-        { status: 400 }
-      );
-    }
 
-    // OCR only the front image
+    // ✅ Secure key parsing and Vision client creation
+    const serviceAccount = JSON.parse(
+      process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+    );
+    const client = new vision.ImageAnnotatorClient({
+      credentials: serviceAccount,
+    });
+
+    // OCR
     const [frontResult] = await client.textDetection({
       image: { content: frontID },
     });
     const frontText = frontResult.textAnnotations?.[0]?.description || "";
-    const combinedText = frontText.toLowerCase();
-    const normalizedText = normalize(combinedText);
+    const normalizedText = normalize(frontText);
 
-    const nameParts = fullName.toLowerCase().split(" ").filter(Boolean); // split name into words
-
-    // Count how many name words are in the normalized text
+    // Name matching
+    const nameParts = fullName.toLowerCase().split(" ").filter(Boolean);
     let nameMatchCount = 0;
     nameParts.forEach((word) => {
-      if (normalizedText.includes(word.toLowerCase())) {
-        nameMatchCount++;
-      }
+      if (normalizedText.includes(normalize(word))) nameMatchCount++;
     });
 
     const nameMatch = nameMatchCount >= 2;
-
-    // console.log("Front OCR Result:", frontResult);
-    console.log("Normalized OCR Text:", normalizedText);
-
     const matricMatch = normalizedText.includes(normalize(matricNumber));
-    // const nameMatch = normalizedText.includes(normalize(fullName));
+
     const status = nameMatch && matricMatch ? "verified" : "rejected";
 
-    // Update Firestore KYC status
+    // ✅ Firestore Admin update
     await adminDB.collection("kycRequests").doc(userId).update({
       status,
       reviewedAt: new Date(),
       notificationSent: true,
     });
 
-    // Send email
     await sendKycEmail({ email, fullName, status });
 
     return NextResponse.json({ success: true });
