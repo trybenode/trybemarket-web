@@ -61,79 +61,11 @@ export default function HomePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [hasSearch, setHasSearch] = useState(false);
-  // const [lastDoc, setLastDoc] = useState(null);
   const lastDocRef = useRef(null);
 
   const selectedUniversity = useUserStore((s) => s.selectedUniversity);
   const storeReady = useUserStore((s) => s.isInitialized);
 
-  // const fetchProducts = useCallback(
-  //   async (loadMore = false, refresh = false) => {
-  //     if (!storeReady) return;
-
-  //     try {
-  //       if (loadMore) setIsFetchingMore(true);
-  //       else if (refresh) setRefreshing(true);
-  //       else setLoading(true);
-
-  //       /* Firestore query */
-  //       const base = collection(db, "products");
-  //       const constraints = [
-  //         orderBy("createdAt", "desc"),
-  //         limit(PAGE_SIZE),
-  //       ];
-  //       if (selectedUniversity)
-  //         constraints.unshift(where("university", "==", selectedUniversity));
-  //       if (loadMore && lastDoc) constraints.push(startAfter(lastDoc));
-
-  //       const snap = await getDocs(query(base, ...constraints));
-  //       const batch = snap.docs.map((d) => ({
-  //         id: d.id,
-  //         product: {
-  //           ...d.data(),
-  //           createdAt: d.data().createdAt?.toDate(),
-  //           updatedAt: d.data().updatedAt?.toDate(),
-  //         },
-  //       }));
-
-  //       setLastDoc(snap.docs.at(-1) ?? null);
-  //       setHasMore(batch.length === PAGE_SIZE);
-
-  //       setProducts((prev) => {
-  //         if (!loadMore) return batch;
-  //         const ids = new Set(prev.map((p) => p.id));
-  //         return [...prev, ...batch.filter((p) => !ids.has(p.id))];
-  //       });
-
-  //       setShuffled((prev) => {
-  //         if (!loadMore) return shuffleWithSeed(batch, sessionSeed);
-
-  //         const prevIds = new Set(prev.map((p) => p.id));
-  //         const fresh = batch.filter((p) => !prevIds.has(p.id));
-  //         return fresh.length
-  //           ? [...prev, ...shuffleWithSeed(fresh, sessionSeed)]
-  //           : prev;
-  //       });
-  //     } catch (err) {
-  //       console.error("fetchProducts failed:", err);
-  //     } finally {
-  //       setInitialLoading(false);
-  //       setLoading(false);
-  //       setIsFetchingMore(false);
-  //       setRefreshing(false);
-  //     }
-  //   },
-  //   [storeReady, selectedUniversity]
-  // );
-
-  // const prevUniversity = useRef(null);
-  // useEffect(() => {
-  //   if (!storeReady || selectedUniversity === prevUniversity.current) return;
-  //   prevUniversity.current = selectedUniversity;
-  //   setLastDoc(null);
-  //   setHasMore(true);
-  //   fetchProducts(false, true);
-  // }, [selectedUniversity, storeReady, fetchProducts]);
 
   const fetchProducts = useCallback(
     async (loadMore = false, refresh = false) => {
