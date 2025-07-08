@@ -1,7 +1,6 @@
 // app/api/kyc-submit/route.js
 export const runtime = "nodejs";
 
-
 import { NextResponse } from "next/server";
 import vision from "@google-cloud/vision";
 import path from "path";
@@ -83,6 +82,13 @@ export async function POST(req) {
     const serviceAccount = JSON.parse(
       process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
     );
+
+    // Fix private_key newlines
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key
+        .replace(/\\\\n/g, "\n")
+        .replace(/\\n/g, "\n");
+    }
     const client = new vision.ImageAnnotatorClient({
       credentials: serviceAccount,
     });
