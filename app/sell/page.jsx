@@ -300,9 +300,7 @@ export default function SellPage() {
       if (!auth.currentUser) throw new Error("Not authenticated");
       const userId = auth.currentUser.uid;
       // Check user upload limit
-      // console.log('Checking if user can upload for UID:', auth.currentUser.uid);
       const canUpload = await canUserUpload();
-      // console.log('Can upload:', canUpload);
       if (!canUpload) {
         toast.error(
             'You have reached your monthly upload limit. Upgrade to premium to upload more products.',

@@ -6,7 +6,6 @@ import { collection, query, where, getDocs, doc, getDoc, orderBy, limit } from '
 import { db } from '@/lib/firebase'
 import ListingCards from '@/components/ListingCards'
 import UserProfile from '@/components/UserProfile'
-import Skeleton from '@/components/ui/skeleton'
 import { Loader } from 'lucide-react'
 import  BackBtn from '@/components/BackButton'
 export default function CategoryProductList() {
