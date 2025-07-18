@@ -6,8 +6,7 @@ import path from "path";
 import { adminDB } from "../../../lib/firebaseAdmin";
 import nodemailer from "nodemailer";
 import hbs from "nodemailer-express-handlebars";
-import axios from "axios"; // ✅ Add this
-
+import axios from "axios"; 
 // Send email with handlebars template
 async function sendKycEmail({ email, fullName, status }) {
   const transporter = nodemailer.createTransport({
