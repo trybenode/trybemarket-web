@@ -1,4 +1,3 @@
-// app/api/kyc-submit/route.js
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
@@ -7,6 +6,7 @@ import path from "path";
 import { adminDB } from "../../../lib/firebaseAdmin";
 import nodemailer from "nodemailer";
 import hbs from "nodemailer-express-handlebars";
+import axios from "axios"; // ✅ Add this
 
 // Send email with handlebars template
 async function sendKycEmail({ email, fullName, status }) {
@@ -44,12 +44,10 @@ async function sendKycEmail({ email, fullName, status }) {
   });
 }
 
-// Text normalization helper
 function normalize(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]/gi, ""); // more compact
+  return str.toLowerCase().replace(/[^a-z0-9]/gi, "");
 }
 
-// ✅ API Handler
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -57,8 +55,8 @@ export async function POST(req) {
       userId,
       fullName,
       matricNumber,
-      frontID,
-      backID,
+      frontIDUrl, // ✅ receiving URL instead of base64
+      backIDUrl, // (optional for now)
       email: emailFromBody,
     } = body;
 
@@ -66,8 +64,7 @@ export async function POST(req) {
       !userId ||
       !fullName ||
       !matricNumber ||
-      !frontID ||
-      !backID ||
+      !frontIDUrl ||
       !emailFromBody
     ) {
       return NextResponse.json(
@@ -78,29 +75,31 @@ export async function POST(req) {
 
     const email = emailFromBody;
 
-    // ✅ Secure key parsing and Vision client creation
+    // ✅ Auth key from Vercel env
     const serviceAccount = JSON.parse(
       process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
     );
-
-    // Fix private_key newlines
     if (serviceAccount.private_key) {
       serviceAccount.private_key = serviceAccount.private_key
         .replace(/\\\\n/g, "\n")
         .replace(/\\n/g, "\n");
     }
-    const client = new vision.ImageAnnotatorClient({
-      credentials: serviceAccount,
+    const client = new vision.ImageAnnotatorClient({ credentials: serviceAccount });
+
+    // ✅ Download image from Cloudinary
+    const response = await axios.get(frontIDUrl, {
+      responseType: "arraybuffer",
+    });
+    const imageBuffer = Buffer.from(response.data, "binary");
+
+    // ✅ OCR from image buffer
+    const [frontResult] = await client.textDetection({
+      image: { content: imageBuffer },
     });
 
-    // OCR
-    const [frontResult] = await client.textDetection({
-      image: { content: frontID },
-    });
     const frontText = frontResult.textAnnotations?.[0]?.description || "";
     const normalizedText = normalize(frontText);
 
-    // Name matching
     const nameParts = fullName.toLowerCase().split(" ").filter(Boolean);
     let nameMatchCount = 0;
     nameParts.forEach((word) => {
@@ -109,10 +108,9 @@ export async function POST(req) {
 
     const nameMatch = nameMatchCount >= 2;
     const matricMatch = normalizedText.includes(normalize(matricNumber));
-
     const status = nameMatch && matricMatch ? "verified" : "rejected";
 
-    // ✅ Firestore Admin update
+    // ✅ Update Firestore
     await adminDB.collection("kycRequests").doc(userId).update({
       status,
       reviewedAt: new Date(),

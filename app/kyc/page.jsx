@@ -180,8 +180,8 @@ export default function KycPage() {
           userId: user.uid,
           fullName,
           matricNumber,
-          frontID: frontBase64,
-          backID: backBase64,
+          frontIDUrl,
+          backIDUrl,
           email,
         }),
       });
