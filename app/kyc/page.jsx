@@ -186,6 +186,7 @@ export default function KycPage() {
         }),
       });
 
+      
       setModalMessage(
         "Your KYC request has been submitted. Please wait for verification."
       );
