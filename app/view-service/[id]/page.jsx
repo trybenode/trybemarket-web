@@ -130,14 +130,14 @@ export default function ServicePage({ params }) {
         id: service.id,
         sellerID: service.userId,
       };
-      console.log("Product Details:", productDetails);
+      // console.log("Product Details:", productDetails);
       const instigatorName =
         getUserFullName() || currentUser?.fullName || "Anonymous User";
       const instigatorInfo = {
         id: currentUser.id,
         name: instigatorName,
       };
-      console.log("Instigator Info:", instigatorInfo);
+      // console.log("Instigator Info:", instigatorInfo);
       const conversationId = await initiateConversation(
         message,
         currentUser.id,
