@@ -1,9 +1,4 @@
-// export const useAddSellerReview = () => ({
-//   submitSellerReview: async () => {
-//     console.log("Dummy review submitted");
-//   },
-//   submitting: false,
-// }); 
+// ratings and review functionality 
 import { useState } from "react";
 import {
   doc,
