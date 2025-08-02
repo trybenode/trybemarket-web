@@ -12,7 +12,7 @@ const ToolBar = dynamic(() => import("@/components/ToolBar"), {
 });
 
 const options = [
-  { id: 1, name: 'Product', icon: <Package size={40} color="blue" />, route: '/sell' },
+  { id: 1, name: 'Product', icon: <Package size={40} color="blue" />, route: '/product-upload' },
   { id: 2, name: 'Skill/Services [Beta]', icon: <Briefcase size={40} color="blue" />, route: '/service-upload' },
 ];
 
