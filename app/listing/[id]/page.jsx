@@ -186,9 +186,6 @@ export default function ListingDetailsPage({ params }) {
     }
   };
 
-
- 
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -233,9 +230,7 @@ export default function ListingDetailsPage({ params }) {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      
-      <ProductDetailsHeader id={id} currentUserId={currentUserId}/>
-
+      <ProductDetailsHeader id={id} currentUserId={currentUserId} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Images */}
@@ -342,7 +337,7 @@ export default function ListingDetailsPage({ params }) {
 
           {/* Offer Box */}
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h2 className="text-lg font-semibold mb-2">Make an Offer:</h2>
+            <h2 className="text-lg font-semibold mb-2">Contact Sellerr:</h2>
             <div className="flex">
               <input
                 type="text"
