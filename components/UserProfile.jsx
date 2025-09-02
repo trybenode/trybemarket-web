@@ -23,6 +23,8 @@ import {
   CheckCircle2,
   Heart,
   Compass,
+  DeleteIcon,
+  Trash2Icon
 } from "lucide-react";
 import { MdPeopleOutline, MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
@@ -57,6 +59,7 @@ const menuItems = [
   },
   { label: "Edit Profile", href: "/edit-profile", icon: Pencil },
   { label: "Subscription", href: "/subscription", icon: CreditCard },
+  { label: "Delete Data", href: "/data-deletion", icon: Trash2Icon},
 ];
 
 export default React.memo(function UserProfile() {
