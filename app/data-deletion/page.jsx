@@ -11,7 +11,7 @@ export default function page() {
     setStatus("Submitting .....")
 
     try {
-      const res = await fetch("/api/data-deletion", {
+      const res = await fetch("/api/data-delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -20,7 +20,6 @@ export default function page() {
       if (res.ok) {
         setStatus("Request submitted. Your data will be deleted within 30 days.");
         setEmail("");
-        setPhone("");
       } else {
         setStatus(" Error submitting request. Try again.");
       }
@@ -31,10 +30,7 @@ export default function page() {
   return (
     <div className="min-h-screen  items-center justify-center bg-gray-100 p-6">
       <Header title={"Delete Data"} />
-      <div className="max-w-lg w-full justify-center items-center flex flex-col  bg-white rounded-2xl shadow-md p-8">
-        {/* <h1 className="text-2xl font-bold text-indigo-600 mb-4">
-          Data Deletion Request
-        </h1> */}
+      <div className="w-full justify-center items-center flex flex-col  bg-white rounded-2xl shadow-md p-8">
         <p className="text-gray-600 mb-6">
           You have the right to permanently delete your TrybeMarket account and all associated data.  
           Fill in your details below to request deletion.
