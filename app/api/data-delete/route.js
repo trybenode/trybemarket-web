@@ -48,8 +48,8 @@ export async function POST(request) {
 
     return new Response(JSON.stringify({ message: "Request submitted" }), { status: 200 });
   } catch (error) {
-    console.error("Error writing to Firestore:", error);
-    return new Response(JSON.stringify({ error: "Failed to submit request" }), { status: 500 });
+    // console.error("Error writing to Firestore:", error);
+    return new Response(JSON.stringify({ success: false, error: "Failed to submit request" }), { status: 500 ,headers: { "Content-Type": "application/json" } });
   }
 }
 

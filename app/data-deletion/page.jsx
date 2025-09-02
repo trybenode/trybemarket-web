@@ -1,14 +1,16 @@
-"use client"
+"use client";
 import React, { useState } from "react";
 import Header from "@/components/Header";
 
 export default function page() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async(e) =>{
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus("Submitting .....")
+    setStatus("Submitting .....");
+    setSuccess(false);
 
     try {
       const res = await fetch("/api/data-delete", {
@@ -17,25 +19,31 @@ export default function page() {
         body: JSON.stringify({ email }),
       });
 
+        const data = await res.json();
+
       if (res.ok) {
-        setStatus("Request submitted. Your data will be deleted within 30 days.");
+        setSuccess(true);
+        setStatus(data.message);
         setEmail("");
       } else {
-        setStatus(" Error submitting request. Try again.");
+        setStatus(data.error || " Error submitting request. Try again.");
       }
     } catch (err) {
       setStatus(" Network error. Try again.");
     }
-  }
+  };
   return (
     <div className="min-h-screen  items-center justify-center bg-gray-100 p-6">
       <Header title={"Delete Data"} />
       <div className="w-full justify-center items-center flex flex-col  bg-white rounded-2xl shadow-md p-8">
         <p className="text-gray-600 mb-6">
-          You have the right to permanently delete your TrybeMarket account and all associated data.  
-          Fill in your details below to request deletion.
+          You have the right to permanently delete your TrybeMarket account and
+          all associated data. Fill in your details below to request deletion.
         </p>
-        <form onSubmit={handleSubmit} className="space-y-4 flex flex-col justify-center items-center">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 flex flex-col justify-center items-center"
+        >
           <input
             type="email"
             placeholder="Your registered email"
@@ -58,9 +66,18 @@ export default function page() {
             Submit Request
           </button>
         </form>
-        {status && <p className="mt-4 text-sm text-gray-700">{status}</p>}
+        {status && (
+          <p
+            className={`mt-4 text-sm text-center ${
+              success ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {status}
+          </p>
+        )}
         <p className="text-xs text-center text-gray-500 mt-6">
-          ⚠️ Once verified, all your account data, listings, and transactions will be deleted within 30 days.
+          ⚠️ Once verified, all your account data, listings, and transactions
+          will be deleted within 30 days.
         </p>
       </div>
     </div>
