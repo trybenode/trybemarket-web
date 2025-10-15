@@ -40,7 +40,6 @@ import {
 import { ChevronLeft, Trash2, Upload, X } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";;
-import UserProfile from "@/components/UserProfile";
 import {
   Popover,
   PopoverContent,
@@ -84,10 +83,10 @@ export default function SellPage() {
   useEffect(() => {
     if (!authLoading) {
       if (!currentUser) {
-        console.log("No authenticated user, redirecting to login");
+        // console.log("No authenticated user, redirecting to login");
         router.push("/login");
       } else if (!currentUser.isVerified) {
-        console.log("User is not verified, showing KYC dialog");
+        // console.log("User is not verified, showing KYC dialog");
         setOpenVerificationDialog(true);
       }
       setLoading(false);
@@ -176,7 +175,7 @@ export default function SellPage() {
   const handleCategoryChange = (value) => {
     setSelectedCategory(value);
     const matched = category.find((cat) => cat.label === value);
-    console.log("Matched category:", matched);
+    // console.log("Matched category:", matched);
     setAvailableSubcategories(matched?.subCategories || []);
     setSelectedSubcategories([]);
   };
