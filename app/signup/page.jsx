@@ -97,7 +97,7 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
 
-      await sendEmailVerification(user);
+      // await sendEmailVerification(user);
 
       const userRef = doc(db, "users", user.uid);
       await setDoc(userRef, {
@@ -105,7 +105,7 @@ export default function SignupPage() {
         email: user.email,
         fullName,
         isVerified: false,
-        emailVerified: false,
+        emailVerified: true,
         createdAt: new Date().toISOString(),
       });
 
@@ -137,7 +137,7 @@ export default function SignupPage() {
       }
 
       toast.success(
-        "Account Created 🎉: A verification email has been sent. Please verify your email and log in.",
+        "Account Created 🎉: You'll be redirected to the Login page!, Please login.",
         {
           position: "top-center",
           duration: 3000,
