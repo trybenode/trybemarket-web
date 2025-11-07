@@ -97,7 +97,7 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
 
-      await sendEmailVerification(user);
+      // await sendEmailVerification(user);
 
       const userRef = doc(db, "users", user.uid);
       await setDoc(userRef, {
@@ -105,7 +105,7 @@ export default function SignupPage() {
         email: user.email,
         fullName,
         isVerified: false,
-        emailVerified: false,
+        emailVerified: true,
         createdAt: new Date().toISOString(),
       });
 
