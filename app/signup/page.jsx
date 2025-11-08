@@ -136,17 +136,12 @@ export default function SignupPage() {
         console.log("Selected University after signup:", selectedUniversity);
       }
 
-      toast.success(
-        "Account Created 🎉: You'll be redirected to the Login page!, Please login.",
-        {
-          position: "top-center",
-          duration: 3000,
-        }
-      );
+      toast.success("Account Created 🎉: Welcome to Trybe Market!", {
+        position: "top-center",
+        duration: 3000,
+      });
 
-      await auth.signOut();
-      // Redirect to login page
-      router.push("/login");
+      router.push(selectedUniversity ? "/" : "/select-university");
     } catch (err) {
       console.error("Sign up error:", err.message);
       let errorMessage = "Something went wrong. Please try again.";

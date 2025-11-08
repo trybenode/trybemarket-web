@@ -79,13 +79,13 @@ export default function LoginPage() {
       );
       const user = userCredential.user;
 
-      if (!user.emailVerified) {
-        toast.error(
-          "Email Not Verified: Please verify your email before logging in."
-        );
-        await auth.signOut();
-        return;
-      }
+      // if (!user.emailVerified) {
+      //   toast.error(
+      //     "Email Not Verified: Please verify your email before logging in."
+      //   );
+      //   await auth.signOut();
+      //   return;
+      // }
 
       await useUserStore.getState().setUser({
         id: user.uid,
