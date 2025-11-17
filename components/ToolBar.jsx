@@ -33,7 +33,7 @@ export default React.memo(function ToolBar() {
 
           {/* Download Button */}
           <a
-            href="https://play.google.com/store/apps/details?id=your.app.id"
+            href="https://play.google.com/store/apps/details?id=com.markettrybe.myexpoapp"
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-800 transition"
