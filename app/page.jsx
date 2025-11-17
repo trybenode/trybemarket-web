@@ -200,9 +200,3 @@ export default function HomePage() {
   );
 }
 
-// query(
-//   collection(db, "products"),
-//   where("approved", "==", true),
-//   orderBy("averageRating", "desc"),
-//   orderBy("totalRatings", "desc")
-// );
