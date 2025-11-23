@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import { Check, Sparkles, Crown, Shield, Zap, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
-import { SUBSCRIPTION_PLANS, getPlansByCategory } from "@/lib/subscriptionStore";
+import { SUBSCRIPTION_PLANS, getPlansByCategory, checkPlanEligibility } from "@/lib/subscriptionStore";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,7 @@ export default function SubscriptionPage() {
   const [activeTab, setActiveTab] = useState("product");
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [checkingKyc, setCheckingKyc] = useState(true);
+  const [planEligibility, setPlanEligibility] = useState({});
 
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_TEST_KEY;
 
@@ -72,6 +73,36 @@ export default function SubscriptionPage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  // Check plan eligibility when user changes
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const checkAllPlansEligibility = async () => {
+      const eligibilityChecks = {};
+      
+      // Check all plans
+      const allPlans = [
+        ...getPlansByCategory("product"),
+        ...getPlansByCategory("service"),
+        ...getPlansByCategory("bundle"),
+        ...getPlansByCategory("boost"),
+      ];
+
+      for (const plan of allPlans) {
+        if (plan.eligibility?.requiresPaidMonths > 0) {
+          const result = await checkPlanEligibility(user.uid, plan.id);
+          eligibilityChecks[plan.id] = result;
+        } else {
+          eligibilityChecks[plan.id] = { eligible: true };
+        }
+      }
+
+      setPlanEligibility(eligibilityChecks);
+    };
+
+    checkAllPlansEligibility();
+  }, [user]);
 
   const handlePlanSelect = (plan) => {
     // Check if user is KYC verified before allowing subscription
@@ -160,13 +191,17 @@ export default function SubscriptionPage() {
   const renderPlanCard = (plan) => {
     const isActive = isPlanActive(plan.id, plan.category);
     const isFree = plan.price === 0;
+    const eligibility = planEligibility[plan.id] || { eligible: true };
+    const isEligible = eligibility.eligible;
 
     return (
       <Card
         key={plan.id}
         className={`relative overflow-hidden transition-all ${
           isActive ? "border-blue-500 border-2 shadow-lg" : ""
-        } ${plan.type === "vip" ? "border-yellow-400" : ""}`}
+        } ${plan.type === "vip" ? "border-yellow-400" : ""} ${
+          !isEligible && !isFree ? "opacity-60" : ""
+        }`}
       >
         {plan.type === "vip" && (
           <div className="absolute top-0 right-0 bg-gradient-to-l from-yellow-400 to-yellow-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
@@ -207,6 +242,12 @@ export default function SubscriptionPage() {
               Requires {plan.eligibility.requiresPaidMonths} paid months
             </Badge>
           )}
+
+          {!isEligible && plan.eligibility?.requiresPaidMonths > 0 && (
+            <Badge variant="destructive" className="mt-2 w-fit">
+              🔒 Locked
+            </Badge>
+          )}
         </CardHeader>
 
         <CardContent>
@@ -242,6 +283,15 @@ export default function SubscriptionPage() {
             <Button className="w-full" variant="outline" disabled>
                Subscribed
             </Button>
+          ) : !isEligible ? (
+            <div className="w-full">
+              <Button className="w-full" variant="outline" disabled>
+                Not Eligible
+              </Button>
+              <p className="text-xs text-red-600 mt-2 text-center">
+                {eligibility.reason}
+              </p>
+            </div>
           ) : (
             <>
               {selectedPlan?.id === plan.id ? (
