@@ -197,28 +197,31 @@ export default function SubscriptionPage() {
     return (
       <Card
         key={plan.id}
-        className={`relative overflow-hidden transition-all ${
-          isActive ? "border-blue-500 border-2 shadow-lg" : ""
+        className={`relative overflow-hidden transition-all border ${
+          isActive 
+            ? "border-2 shadow-lg" 
+            : "border-gray-200 hover:border-gray-300 hover:shadow-md"
         } ${plan.type === "vip" ? "border-yellow-400" : ""} ${
           !isEligible && !isFree ? "opacity-60" : ""
-        }`}
+        } bg-white rounded-lg`}
+        style={isActive ? { borderColor: 'rgb(37,99,235)' } : {}}
       >
         {plan.type === "vip" && (
-          <div className="absolute top-0 right-0 bg-gradient-to-l from-yellow-400 to-yellow-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+          <div className="absolute top-0 right-0 bg-gradient-to-l from-yellow-400 to-yellow-500 text-white px-4 py-1 text-xs font-bold rounded-bl-lg">
             POPULAR
           </div>
         )}
 
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
-            <CardTitle className="text-xl">
+            <CardTitle className="text-lg font-semibold text-gray-900">
               {plan.name}
               {plan.type === "vip" && <Crown className="inline ml-2 h-5 w-5 text-yellow-500" />}
-              {plan.type === "premium" && <Sparkles className="inline ml-2 h-5 w-5 text-blue-500" />}
+              {plan.type === "premium" && <Sparkles className="inline ml-2 h-5 w-5" style={{ color: 'rgb(37,99,235)' }} />}
               {plan.type === "maintenance" && <Shield className="inline ml-2 h-5 w-5 text-gray-500" />}
             </CardTitle>
             {isActive && (
-              <Badge variant="success" className="bg-green-500 text-white">
+              <Badge className="text-white text-xs" style={{ backgroundColor: 'rgb(37,99,235)' }}>
                 Active
               </Badge>
             )}
@@ -238,54 +241,54 @@ export default function SubscriptionPage() {
           </CardDescription>
 
           {plan.eligibility?.requiresPaidMonths > 0 && (
-            <Badge variant="outline" className="mt-2 w-fit">
+            <Badge variant="outline" className="mt-2 w-fit text-xs border-gray-300">
               Requires {plan.eligibility.requiresPaidMonths} paid months
             </Badge>
           )}
 
           {!isEligible && plan.eligibility?.requiresPaidMonths > 0 && (
-            <Badge variant="destructive" className="mt-2 w-fit">
+            <Badge variant="destructive" className="mt-2 w-fit text-xs">
               🔒 Locked
             </Badge>
           )}
         </CardHeader>
 
         <CardContent>
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {plan.features.map((feature, idx) => (
-              <li key={idx} className="flex items-start gap-2 text-sm">
-                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                <Check className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgb(37,99,235)' }} />
                 <span>{feature}</span>
               </li>
             ))}
           </ul>
 
           {plan.limits && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-              <strong>Limits:</strong>
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600 border border-gray-100">
+              <strong className="text-gray-900">Limits:</strong>
               {plan.limits.maxProducts && (
-                <div> Products: {plan.limits.maxProducts === 9999 ? "Unlimited" : plan.limits.maxProducts}</div>
+                <div className="mt-1"> Products: {plan.limits.maxProducts === 9999 ? "Unlimited" : plan.limits.maxProducts}</div>
               )}
               {plan.limits.maxServices && (
-                <div> Services: {plan.limits.maxServices}</div>
+                <div className="mt-1"> Services: {plan.limits.maxServices === 9999 ? "Unlimited" : plan.limits.maxServices}</div>
               )}
-              {plan.limits.vipTags > 0 && <div> VIP Tags: {plan.limits.vipTags}</div>}
+              {plan.limits.vipTags > 0 && <div className="mt-1"> VIP Tags: {plan.limits.vipTags}</div>}
             </div>
           )}
         </CardContent>
 
         <CardFooter>
           {isFree ? (
-            <Button className="w-full" variant="outline" disabled>
+            <Button className="w-full bg-gray-100 text-gray-600" variant="outline" disabled>
               {isActive ? "Current Plan" : "Default Plan"}
             </Button>
           ) : isActive ? (
-            <Button className="w-full" variant="outline" disabled>
+            <Button className="w-full" variant="outline" disabled style={{ borderColor: 'rgb(37,99,235)', color: 'rgb(37,99,235)' }}>
                Subscribed
             </Button>
           ) : !isEligible ? (
             <div className="w-full">
-              <Button className="w-full" variant="outline" disabled>
+              <Button className="w-full bg-gray-100 text-gray-500" variant="outline" disabled>
                 Not Eligible
               </Button>
               <p className="text-xs text-red-600 mt-2 text-center">
@@ -307,9 +310,12 @@ export default function SubscriptionPage() {
                 )
               ) : (
                 <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full text-white"
+                  style={{ backgroundColor: 'rgb(37,99,235)' }}
                   onClick={() => handlePlanSelect(plan)}
                   disabled={!isKycVerified}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
                 >
                   {!isKycVerified ? "KYC Required" : "Subscribe Now"}
                 </Button>
@@ -322,73 +328,104 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen px-4 py-8">
-      <Header title="Subscription Plans" />
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <Header title="Subscription Plans" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        {/* Hero Section */}
+        <div className="mt-8 mb-8 text-center">
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">
             Choose Your Plan
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm">
             Unlock exclusive features to grow your store faster
           </p>
         </div>
 
         {/* KYC Verification Alert */}
         {!checkingKyc && !isKycVerified && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>KYC Verification Required</AlertTitle>
-            <AlertDescription>
-              You must complete KYC verification before subscribing to any plan.{" "}
-              <button
-                onClick={() => router.push("/kyc")}
-                className="underline font-semibold hover:text-red-700"
-              >
-                Complete KYC now
-              </button>
-            </AlertDescription>
-          </Alert>
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-900 mb-1">
+                  KYC Verification Required
+                </h3>
+                <p className="text-sm text-red-700 mb-3">
+                  You must complete KYC verification before subscribing to any plan.
+                </p>
+                <button
+                  onClick={() => router.push("/kyc")}
+                  className="text-sm font-medium text-red-900 underline hover:text-red-700"
+                >
+                  Complete KYC now →
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {!subLoading && limits && (
-          <div className="bg-white rounded-lg shadow p-4 mb-6">
-            <h3 className="font-semibold mb-2 flex items-center gap-2">
-              <Zap className="h-5 w-5 text-blue-500" />
+          <div className="bg-gradient-to-br from-blue-50 to-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Zap className="h-5 w-5" style={{ color: 'rgb(37,99,235)' }} />
               Your Current Limits
             </h3>
-            <div className="grid grid-cols-4 gap-4 text-sm">
-              <div>
-                <p className="text-gray-500">Products</p>
-                <p className="font-bold text-lg">
-                  {limits.maxProducts === 9999 ? "Unlimited" : limits.maxProducts}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg p-4 border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Products</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {limits.maxProducts === 9999 ? "∞" : limits.maxProducts}
                 </p>
               </div>
-              <div>
-                <p className="text-gray-500">Services</p>
-                <p className="font-bold text-lg">
-                  {limits.maxServices === 9999 ? "Unlimited" : limits.maxServices}
+              <div className="bg-white rounded-lg p-4 border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Services</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {limits.maxServices === 9999 ? "∞" : limits.maxServices}
                 </p>
               </div>
-              <div>
-                <p className="text-gray-500">Product VIP</p>
-                <p className="font-bold text-lg">{limits.vipTagsProduct || 0}</p>
+              <div className="bg-white rounded-lg p-4 border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Product VIP</p>
+                <p className="text-2xl font-bold" style={{ color: 'rgb(37,99,235)' }}>
+                  {limits.vipTagsProduct || 0}
+                </p>
               </div>
-              <div>
-                <p className="text-gray-500">Service VIP</p>
-                <p className="font-bold text-lg">{limits.vipTagsService || 0}</p>
+              <div className="bg-white rounded-lg p-4 border border-gray-100">
+                <p className="text-xs text-gray-500 mb-1">Service VIP</p>
+                <p className="text-2xl font-bold" style={{ color: 'rgb(37,99,235)' }}>
+                  {limits.vipTagsService || 0}
+                </p>
               </div>
             </div>
           </div>
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="product">Products</TabsTrigger>
-            <TabsTrigger value="service">Services</TabsTrigger>
-            <TabsTrigger value="bundle">Bundles</TabsTrigger>
-            <TabsTrigger value="boost">Boosts</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 mb-8 bg-gray-100 p-1 rounded-lg">
+            <TabsTrigger 
+              value="product"
+              className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all"
+            >
+              Products
+            </TabsTrigger>
+            <TabsTrigger 
+              value="service"
+              className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all"
+            >
+              Services
+            </TabsTrigger>
+            <TabsTrigger 
+              value="bundle"
+              className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all"
+            >
+              Bundles
+            </TabsTrigger>
+            <TabsTrigger 
+              value="boost"
+              className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all"
+            >
+              Boosts
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="product">
@@ -408,11 +445,12 @@ export default function SubscriptionPage() {
               <div className="grid md:grid-cols-3 gap-6">
                 {getPlansByCategory("bundle").map((plan) => renderPlanCard(plan))}
               </div>
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-blue-900 mb-2">
-                  💡 Save More with Longer Plans
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" style={{ color: 'rgb(37,99,235)' }} />
+                  Save More with Longer Plans
                 </h4>
-                <p className="text-sm text-blue-700">
+                <p className="text-sm text-gray-600">
                   Monthly Bundle: ₦2,500/month • Quarterly: ₦3,000 (save ₦4,500) • Yearly: ₦10,000 (save ₦20,000)
                 </p>
               </div>
@@ -421,11 +459,12 @@ export default function SubscriptionPage() {
 
           <TabsContent value="boost">
             <div className="max-w-5xl mx-auto">
-              <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <h4 className="font-semibold text-yellow-900 mb-2">
-                  🚀 Boost Your Visibility
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-yellow-600" />
+                  Boost Your Visibility
                 </h4>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-gray-600">
                   One-time boosts give your products/services maximum exposure for 7 days. Perfect for special promotions or new launches!
                 </p>
               </div>
@@ -436,20 +475,20 @@ export default function SubscriptionPage() {
           </TabsContent>
         </Tabs>
 
-        <div className="mt-12 bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">Frequently Asked Questions</h3>
+        <div className="mt-12 bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Frequently Asked Questions</h3>
           <div className="space-y-4 text-sm">
             <div>
-              <strong>Q: Can I upgrade my plan anytime?</strong>
-              <p className="text-gray-600">Yes! You can upgrade at any time. Your new benefits will be active immediately.</p>
+              <strong className="text-gray-900">Q: Can I upgrade my plan anytime?</strong>
+              <p className="text-gray-600 mt-1">Yes! You can upgrade at any time. Your new benefits will be active immediately.</p>
             </div>
             <div>
-              <strong>Q: What happens when my subscription expires?</strong>
-              <p className="text-gray-600">You'll automatically return to the free plan. Your listings will remain but with limited features.</p>
+              <strong className="text-gray-900">Q: What happens when my subscription expires?</strong>
+              <p className="text-gray-600 mt-1">You'll automatically return to the free plan. Your listings will remain but with limited features.</p>
             </div>
             <div>
-              <strong>Q: What is a Maintenance plan?</strong>
-              <p className="text-gray-600">After 3 paid months, you can switch to a maintenance plan at 700/month to keep your content active without premium features.</p>
+              <strong className="text-gray-900">Q: What is a Maintenance plan?</strong>
+              <p className="text-gray-600 mt-1">After 3 paid months, you can switch to a maintenance plan at ₦700/month to keep your content active without premium features.</p>
             </div>
           </div>
         </div>
