@@ -312,12 +312,14 @@ export default function SubscriptionPage() {
               <div>
                 <p className="text-gray-500">Products</p>
                 <p className="font-bold text-lg">
-                  {limits.maxProducts === 9999 ? "" : limits.maxProducts}
+                  {limits.maxProducts === 9999 ? "Unlimited" : limits.maxProducts}
                 </p>
               </div>
               <div>
                 <p className="text-gray-500">Services</p>
-                <p className="font-bold text-lg">{limits.maxServices}</p>
+                <p className="font-bold text-lg">
+                  {limits.maxServices === 9999 ? "Unlimited" : limits.maxServices}
+                </p>
               </div>
               <div>
                 <p className="text-gray-500">VIP Tags</p>
