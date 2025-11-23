@@ -1,90 +1,135 @@
-import {doc,getDoc, setDoc, updateDoc, serverTimestamp, increment} from 'firebase/firestore'
-import {auth,db} from '../lib/firebase'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
+import { getUserLimits, isSubscriptionActive } from '@/lib/subscriptionStore';
 
-
-export const canUserUpload = async () => {
+/**
+ * Check if user can upload a product based on their subscription limits
+ * @returns {Promise<{canUpload: boolean, currentCount: number, limit: number, message?: string}>}
+ */
+export const canUserUploadProduct = async () => {
   const userId = auth.currentUser?.uid;
   if (!userId) {
     throw new Error('User not authenticated');
   }
 
-  const subscriptionRef = doc(db, 'subscriptions', userId);
-  const subscriptionSnap = await getDoc(subscriptionRef);
+  try {
+    // Get user's current limits based on subscription
+    const limits = await getUserLimits(userId);
+    
+    // Count existing products
+    const productsRef = collection(db, 'products');
+    const q = query(productsRef, where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    const currentCount = snapshot.size;
 
-  let subscription;
-  if (!subscriptionSnap.exists()) {
-    // Create a default subscription for free-tier users
-    subscription = {
-      isActive: false,
-      planId: 'Freemium',
-      uploadStats: {
-        uploadCount: 0,
-        lastReset: serverTimestamp(),
-      },
-      createdAt: serverTimestamp(),
-      userId,
+    const canUpload = currentCount < limits.maxProducts;
+
+    return {
+      canUpload,
+      currentCount,
+      limit: limits.maxProducts,
+      message: canUpload 
+        ? null 
+        : `You've reached your limit of ${limits.maxProducts} products. Upgrade to add more!`
     };
-    await setDoc(subscriptionRef, subscription);
-  } else {
-    subscription = subscriptionSnap.data();
+  } catch (error) {
+    console.error('Error checking upload limit:', error);
+    throw error;
   }
-
-  const now = new Date();
-  const expiryDate = subscription.expiryDate?.toDate ? subscription.expiryDate.toDate() : null;
-
-  const isPremium =
-    subscription.isActive && subscription.planId === 'Premium' && expiryDate && expiryDate > now;
-
-  if (isPremium) {
-    return true; // No upload limit for premium users
-  }
-
-  // Freemium: Check or reset upload count
-  let stats = subscription.uploadStats || {
-    uploadCount: 0,
-    lastReset: new Date(0),
-  };
-
-  const lastReset = stats.lastReset?.toDate ? stats.lastReset.toDate() : new Date(0);
-  const isNewMonth =
-    now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear();
-
-  if (isNewMonth) {
-    stats.uploadCount = 0;
-    await updateDoc(subscriptionRef, {
-      'uploadStats.uploadCount': 0,
-      'uploadStats.lastReset': serverTimestamp(),
-    });
-  }
-
-  return stats.uploadCount < 5;
 };
-export const incrementUploadCount = async () =>{
-    const userId = auth.currentUser?.uid;
-    if(!userId) throw new Error('User not authenticated');
 
-    const subscriptionRef = doc(db, 'subscriptions', userId);
-    const subscriptionSnap = await getDoc(subscriptionRef);
+/**
+ * Check if user can upload a service based on their subscription limits
+ * @returns {Promise<{canUpload: boolean, currentCount: number, limit: number, message?: string}>}
+ */
+export const canUserUploadService = async () => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
 
-    try {
-        if(!subscriptionSnap.exists()){
-            await setDoc(subscriptionRef, {
-                isActive: false,
-                planId:'Freemium',
-                uploadStats :{
-                    uploadCount: 1,
-                    lastReset: serverTimestamp(),
-                },
-                createdAt: serverTimestamp(),
-                userId,
-            });
-        }else{
-            await updateDoc(subscriptionRef,{
-                'uploadStats.uploadCount': increment(1), 
-            });
-        }
-    }catch (error) {
-        console.error("Error Incrementing upload count: ", error);
-        throw error;
+  try {
+    // Get user's current limits based on subscription
+    const limits = await getUserLimits(userId);
+    
+    // Count existing services
+    const servicesRef = collection(db, 'services');
+    const q = query(servicesRef, where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    const currentCount = snapshot.size;
+
+    const canUpload = currentCount < limits.maxServices;
+
+    return {
+      canUpload,
+      currentCount,
+      limit: limits.maxServices,
+      message: canUpload 
+        ? null 
+        : `You've reached your limit of ${limits.maxServices} services. Upgrade to add more!`
+    };
+  } catch (error) {
+    console.error('Error checking upload limit:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if user can mark item as VIP based on their subscription
+ * @returns {Promise<{canMarkVip: boolean, currentVipCount: number, limit: number, message?: string}>}
+ */
+export const canUserMarkAsVip = async () => {
+  const userId = auth.currentUser?.uid;
+  if (!userId) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    const limits = await getUserLimits(userId);
+    
+    if (limits.vipTags === 0) {
+      return {
+        canMarkVip: false,
+        currentVipCount: 0,
+        limit: 0,
+        message: 'Upgrade to Premium or VIP to mark items as VIP!'
+      };
     }
-}
+
+    // Count current VIP items (products + services)
+    const productsRef = collection(db, 'products');
+    const servicesRef = collection(db, 'services');
+    
+    const productsQ = query(productsRef, where('userId', '==', userId), where('isVip', '==', true));
+    const servicesQ = query(servicesRef, where('userId', '==', userId), where('isVip', '==', true));
+    
+    const [productsSnap, servicesSnap] = await Promise.all([
+      getDocs(productsQ),
+      getDocs(servicesQ)
+    ]);
+    
+    const currentVipCount = productsSnap.size + servicesSnap.size;
+    const canMarkVip = currentVipCount < limits.vipTags;
+
+    return {
+      canMarkVip,
+      currentVipCount,
+      limit: limits.vipTags,
+      message: canMarkVip 
+        ? null 
+        : `You've used all ${limits.vipTags} VIP tags. Upgrade for more!`
+    };
+  } catch (error) {
+    console.error('Error checking VIP limit:', error);
+    throw error;
+  }
+};
+
+// Legacy support - keeping old function name for backward compatibility
+export const canUserUpload = canUserUploadProduct;
+
+// No longer needed with new subscription system - limits are enforced on check, not incremented
+export const incrementUploadCount = async () => {
+  console.warn('incrementUploadCount is deprecated with new subscription system');
+  return true;
+};

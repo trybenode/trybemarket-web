@@ -45,7 +45,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {canUserUpload,  incrementUploadCount } from '../../hooks/UploadLimiter'
+import {canUserUploadProduct} from '../../hooks/UploadLimiter'
 
 import {compressImage} from '@/utils/imageCompress'
 
@@ -298,14 +298,20 @@ export default function SellPage() {
       setSaving(true);
       if (!auth.currentUser) throw new Error("Not authenticated");
       const userId = auth.currentUser.uid;
-      // Check user upload limit
-      const canUpload = await canUserUpload();
-      if (!canUpload) {
+      
+      // Check user upload limit with new subscription system
+      const uploadCheck = await canUserUploadProduct();
+      if (!uploadCheck.canUpload && !isEditMode) {
         toast.error(
-            'You have reached your monthly upload limit. Upgrade to premium to upload more products.',
+          uploadCheck.message || 
+          `You have ${uploadCheck.currentCount} of ${uploadCheck.limit} products. Upgrade to add more!`,
+          { duration: 5000 }
         );
+        // Redirect to subscription page after 2 seconds
+        setTimeout(() => router.push('/subscription'), 2000);
         return;
       }
+      
       //add university from user collection to product collection
        const userRef = doc(db, "users", userId);
       const userSnap = await getDoc(userRef);
@@ -334,7 +340,7 @@ export default function SellPage() {
       if (isEditMode) await updateDoc(doc(db, "products", productId), data);
       else {
         await addDoc(collection(db, "products"), data);
-        await incrementUploadCount();
+        // No need to increment count - we check actual count in Firestore
       }    
       toast.success(isEditMode ? "Updated" : "Uploaded");
       router.push("/my-shop");

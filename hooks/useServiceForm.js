@@ -5,6 +5,7 @@ import { auth, db } from "@/lib/firebase";
 import toast from "react-hot-toast";
 import { compressImage } from "@/utils/compressImage";
 import serviceCategories from "@/public/serviceCategories.json";
+import { canUserUploadService } from "@/hooks/UploadLimiter";
 
 export const useServiceForm = (currentUser) => {
   const router = useRouter();
@@ -129,6 +130,19 @@ export const useServiceForm = (currentUser) => {
     try {
       setSaving(true);
       const userId = auth.currentUser?.uid;
+
+      // Check if user can upload more services
+      const uploadCheck = await canUserUploadService(userId);
+      if (!uploadCheck.canUpload) {
+        toast.error(uploadCheck.message);
+        setSaving(false);
+        // Redirect to subscription page after 2 seconds
+        setTimeout(() => {
+          router.push("/subscription");
+        }, 2000);
+        return;
+      }
+
       const userSnap = await getDoc(doc(db, "users", userId));
       const university = userSnap.data()?.selectedUniversity || "Unknown";
 
