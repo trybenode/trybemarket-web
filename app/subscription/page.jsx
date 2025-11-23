@@ -259,8 +259,9 @@ export default function SubscriptionPage() {
                 <Button
                   className="w-full bg-blue-600 hover:bg-blue-700"
                   onClick={() => handlePlanSelect(plan)}
+                  disabled={!isKycVerified}
                 >
-                  Subscribe Now
+                  {!isKycVerified ? "KYC Required" : "Subscribe Now"}
                 </Button>
               )}
             </>
@@ -283,6 +284,23 @@ export default function SubscriptionPage() {
             Unlock exclusive features to grow your store faster
           </p>
         </div>
+
+        {/* KYC Verification Alert */}
+        {!checkingKyc && !isKycVerified && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>KYC Verification Required</AlertTitle>
+            <AlertDescription>
+              You must complete KYC verification before subscribing to any plan.{" "}
+              <button
+                onClick={() => router.push("/kyc")}
+                className="underline font-semibold hover:text-red-700"
+              >
+                Complete KYC now
+              </button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {!subLoading && limits && (
           <div className="bg-white rounded-lg shadow p-4 mb-6">
