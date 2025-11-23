@@ -36,24 +36,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger
-} from "@/components/ui/alert-dialog";;
-import { ChevronLeft, Trash2, Upload, X } from "lucide-react";
+} from "@/components/ui/alert-dialog";
+import { ChevronLeft, Trash2, Upload, X, Crown, Info } from "lucide-react";
 import Image from "next/image";
-import toast from "react-hot-toast";;
+import toast from "react-hot-toast";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {canUserUploadProduct} from '../../hooks/UploadLimiter'
-
-import {compressImage} from '@/utils/imageCompress'
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { canUserUploadProduct } from '../../hooks/UploadLimiter';
+import { useSubscription } from "@/hooks/useSubscription";
+import { compressImage } from '@/utils/imageCompress';
 
 import Header from "@/components/Header";
 export default function SellPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading } = useUser();
+  const { limits, loading: subLoading } = useSubscription(currentUser?.uid);
   const productId = searchParams.get("id");
   const isEditMode = Boolean(productId);
 
@@ -77,6 +79,11 @@ export default function SellPage() {
   const [year, setYear] = useState("");
   const [availableSubcategories, setAvailableSubcategories] = useState([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState([]);
+  const [isVip, setIsVip] = useState(false);
+
+  // Check if user can use VIP tags
+  const canUseVipTag = limits?.vipTagsProduct > 0;
+  const vipTagsAvailable = limits?.vipTagsProduct || 0;
 
 
   // Handle authentication and KYC
@@ -138,6 +145,7 @@ export default function SellPage() {
         setOriginalPrice(data.originalPrice?.toString() || "");
         setYear(data.year || "");
         setImages(Array.isArray(data.images) ? data.images : []);
+        setIsVip(data.isVip || false);
       } catch (err) {
         console.error("Error fetching product:", err);
         toast.error("Failed to load product");
@@ -334,6 +342,7 @@ export default function SellPage() {
         images,
         userId,
         university,
+        isVip: isVip,
         ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
       };
   
@@ -370,26 +379,49 @@ export default function SellPage() {
 
   if (loading || authLoading) {
     return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600' />
+      <div className='flex items-center justify-center min-h-screen bg-white'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2' style={{ borderColor: 'rgb(37,99,235)' }} />
       </div>
-    );;
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 max-w-3xl">
-    
-      
-      <Header title={isEditMode ? "Edit Product" : "Add New Product"}/>
+    <div className="flex flex-col min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-6 max-w-4xl w-full">
+        <Header title={isEditMode ? "Edit Product" : "Add New Product"} />
+
+        {/* Hero Section */}
+        <div className='mt-8 mb-8'>
+          <h1 className='text-2xl md:text-3xl font-semibold text-gray-900 mb-2'>
+            {isEditMode ? "Edit your product" : "List a product"}
+          </h1>
+          <p className='text-gray-600 text-sm'>
+            Fill in the details below to {isEditMode ? "update" : "showcase"} your product
+          </p>
+        </div>
+
+        {/* VIP Alert */}
+        {canUseVipTag && (
+          <Alert className="mb-6 bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200">
+            <Crown className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-sm text-gray-700">
+              <strong className="text-gray-900">VIP Feature Available!</strong> You have{" "}
+              <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>
+                {vipTagsAvailable} VIP tag{vipTagsAvailable !== 1 ? "s" : ""}
+              </span>{" "}
+              remaining for products. VIP products get featured placement and priority visibility.
+            </AlertDescription>
+          </Alert>
+        )}
 
       <AlertDialog
         open={openVerificationDialog}
         onOpenChange={setOpenVerificationDialog}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>KYC Verification Required</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-gray-900">KYC Verification Required</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600">
               You are not verified. Please complete KYC to continue.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -397,42 +429,85 @@ export default function SellPage() {
             <AlertDialogCancel onClick={() => router.back()}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => router.push("/kyc")}>
+            <AlertDialogAction 
+              onClick={() => router.push("/kyc")}
+              className="text-white"
+              style={{ backgroundColor: 'rgb(37,99,235)' }}
+            >
               Complete KYC
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <form onSubmit={handleSubmit} className='space-y-8'>
-        <Card>
-          <CardHeader>
-            <CardTitle>Product Information</CardTitle>
+      <form onSubmit={handleSubmit} className='space-y-6'>
+        {/* VIP Toggle Section */}
+        {canUseVipTag && (
+          <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 border border-yellow-200 rounded-lg p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Crown className="h-5 w-5 text-yellow-600" />
+                  <h3 className="font-semibold text-gray-900">Mark as VIP Product</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">
+                  VIP products receive featured placement, priority in search results, and a special badge.
+                  You have <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>{vipTagsAvailable}</span> VIP tag{vipTagsAvailable !== 1 ? "s" : ""} available.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVip(!isVip)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  isVip ? 'bg-yellow-500' : 'bg-gray-300'
+                }`}
+                style={isVip ? {} : {}}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isVip ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            {isVip && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-yellow-800 bg-yellow-100 rounded-md p-2">
+                <Info className="h-4 w-4 flex-shrink-0" />
+                <span>This product will be marked as VIP and get premium visibility!</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <Card className="border-gray-200 shadow-sm">
+          <CardHeader className="border-b border-gray-100">
+            <CardTitle className="text-lg font-semibold text-gray-900">Product Information</CardTitle>
           </CardHeader>
-          <CardContent className='space-y-4'>
+          <CardContent className='space-y-4 pt-6'>
             <div className='space-y-2'>
-              <Label htmlFor='productName'>Product Name</Label>
+              <Label htmlFor='productName' className="text-sm font-medium text-gray-900">Product Name</Label>
               <Input
                 id='productName'
                 placeholder='Enter product name'
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
                 disabled={saving}
+                className="border-gray-300 focus:border-blue-500"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Category Select */}
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category" className="text-sm font-medium text-gray-900">Category</Label>
                 <Select
                   value={selectedCategory}
                   onValueChange={handleCategoryChange}
                 >
-                  <SelectTrigger id="category">
+                  <SelectTrigger id="category" className="border-gray-300">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
                     {category.map((cat) => (
                       <SelectItem key={cat.value} value={cat.value}>
                         {cat.label}
@@ -445,24 +520,24 @@ export default function SellPage() {
               {/* Sub-Category Popover */}
               {availableSubcategories.length > 0 && (
                 <div className="space-y-2">
-                  <Label htmlFor="subCategory">Sub-Category</Label>
+                  <Label htmlFor="subCategory" className="text-sm font-medium text-gray-900">Sub-Category</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className="w-full justify-start"
+                        className="w-full justify-start border-gray-300"
                       >
                         {selectedSubcategories.length > 0
                           ? selectedSubcategories.join(", ")
                           : "Select sub-categories"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full">
+                    <PopoverContent className="w-full bg-white">
                       <div className="flex flex-col space-y-2 max-h-48 overflow-y-auto">
                         {availableSubcategories.map((sub) => (
                           <label
                             key={sub}
-                            className="flex items-center space-x-2 cursor-pointer"
+                            className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
                           >
                             <Checkbox
                               checked={selectedSubcategories.includes(sub)}
@@ -474,7 +549,7 @@ export default function SellPage() {
                                 );
                               }}
                             />
-                            <span className="text-sm">{sub}</span>
+                            <span className="text-sm text-gray-700">{sub}</span>
                           </label>
                         ))}
                       </div>
@@ -485,12 +560,12 @@ export default function SellPage() {
             </div>
 
             <div className='space-y-2'>
-              <Label>Product Images</Label>
+              <Label className="text-sm font-medium text-gray-900">Product Images</Label>
               <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
                 {images.map((image, index) => (
                   <div
                     key={index}
-                    className="relative aspect-square rounded-md overflow-hidden border border-gray-200"
+                    className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-gray-300 transition-colors"
                   >
                     <Image
                       src={image || "/placeholder.svg"}
@@ -501,19 +576,19 @@ export default function SellPage() {
                     />
                     <button
                       type='button'
-                      className='absolute top-1 right-1 bg-red-500 text-white rounded-full p-1'
+                      className='absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-md transition-colors'
                       onClick={() => removeImage(index)}
                     >
-                      <X className='h-4 w-4' />
+                      <X className='h-3.5 w-3.5' />
                     </button>
                   </div>
                 ))}
 
                 {images.length < 5 && (
-                  <div className='aspect-square flex items-center justify-center border border-dashed border-gray-300 rounded-md'>
+                  <div className='aspect-square flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors bg-gray-50'>
                     <label className='cursor-pointer flex flex-col items-center justify-center w-full h-full'>
                       <Upload className='h-8 w-8 text-gray-400' />
-                      <span className='mt-2 text-sm text-gray-500'>
+                      <span className='mt-2 text-xs text-gray-500 font-medium'>
                         Add Image
                       </span>
                       <input
@@ -528,12 +603,13 @@ export default function SellPage() {
                   </div>
                 )}
               </div>
-              <p className='text-xs text-gray-500'>
+              <p className='text-xs text-gray-500 flex items-center gap-1'>
+                <Info className="h-3 w-3" />
                 Upload up to 5 images. First image will be the cover.
               </p>
             </div>
 
-            <div className='flex items-center space-x-2'>
+            <div className='flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200'>
               <Checkbox
                 id='negotiable'
                 checked={isNegotiable}
@@ -542,18 +618,18 @@ export default function SellPage() {
               />
               <label
                 htmlFor='negotiable'
-                className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+                className='text-sm font-medium text-gray-700 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer'
               >
                 Price is negotiable
               </label>
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='description'>Product Description</Label>
+              <Label htmlFor='description' className="text-sm font-medium text-gray-900">Product Description</Label>
               <Textarea
                 id='description'
                 placeholder='Describe your product in details'
-                className='min-h-[120px]'
+                className='min-h-[120px] border-gray-300 focus:border-blue-500'
                 value={productDescription}
                 onChange={(e) => setProductDescription(e.target.value)}
                 disabled={saving}
@@ -562,30 +638,31 @@ export default function SellPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Details</CardTitle>
+        <Card className="border-gray-200 shadow-sm">
+          <CardHeader className="border-b border-gray-100">
+            <CardTitle className="text-lg font-semibold text-gray-900">Additional Details</CardTitle>
           </CardHeader>
-          <CardContent className='space-y-4'>
+          <CardContent className='space-y-4 pt-6'>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div className='space-y-2'>
-                <Label htmlFor='brand'>Brand</Label>
+                <Label htmlFor='brand' className="text-sm font-medium text-gray-900">Brand</Label>
                 <Input
                   id='brand'
                   placeholder='Enter brand'
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
                   disabled={saving}
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='condition'>Condition</Label>
+                <Label htmlFor='condition' className="text-sm font-medium text-gray-900">Condition</Label>
                 <Select value={condition} onValueChange={setCondition}>
-                  <SelectTrigger id='condition'>
+                  <SelectTrigger id='condition' className="border-gray-300">
                     <SelectValue placeholder='Select condition' />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
                     <SelectItem value='new'>New</SelectItem>
                     <SelectItem value='like-new'>Like New</SelectItem>
                     <SelectItem value='used'>Used</SelectItem>
@@ -597,29 +674,31 @@ export default function SellPage() {
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='color'>Color</Label>
+                <Label htmlFor='color' className="text-sm font-medium text-gray-900">Color</Label>
                 <Input
                   id='color'
                   placeholder='Enter color'
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   disabled={saving}
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='year'>Year</Label>
+                <Label htmlFor='year' className="text-sm font-medium text-gray-900">Year</Label>
                 <Input
                   id='year'
                   placeholder='Enter year'
                   value={year}
                   onChange={(e) => setYear(e.target.value)}
                   disabled={saving}
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='price'>Price (₦)</Label>
+                <Label htmlFor='price' className="text-sm font-medium text-gray-900">Price (₦)</Label>
                 <Input
                   id='price'
                   type='number'
@@ -627,12 +706,13 @@ export default function SellPage() {
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   disabled={saving}
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="originalPrice">
-                  Original Price (₦) (Optional)
+                <Label htmlFor="originalPrice" className="text-sm font-medium text-gray-900">
+                  Original Price (₦) <span className="text-gray-500 font-normal">(Optional)</span>
                 </Label>
                 <Input
                   id='originalPrice'
@@ -641,6 +721,7 @@ export default function SellPage() {
                   value={originalPrice}
                   onChange={(e) => setOriginalPrice(e.target.value)}
                   disabled={saving}
+                  className="border-gray-300 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -648,33 +729,33 @@ export default function SellPage() {
         </Card>
 
         {!isEditMode && (
-          <div className='flex items-center space-x-2'>
+          <div className='flex items-center space-x-2 p-4 bg-gray-50 rounded-lg border border-gray-200'>
             <Checkbox
               id='terms'
               checked={isAgreed}
               onCheckedChange={(checked) => setIsAgreed(checked === true)}
               disabled={saving}
             />
-            <label htmlFor="terms" className="text-sm text-gray-600">
+            <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
               I agree to the Terms & Conditions and confirm this product
               complies with marketplace policies
             </label>
           </div>
         )}
 
-        <div className='flex justify-between'>
+        <div className='flex justify-between items-center pt-4'>
           {isEditMode ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant='destructive' type='button' disabled={saving}>
+                <Button variant='outline' type='button' disabled={saving} className="border-red-300 text-red-600 hover:bg-red-50">
                   <Trash2 className='h-4 w-4 mr-2' />
                   Delete Product
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="bg-white">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
+                  <AlertDialogTitle className="text-gray-900">Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-gray-600">
                     This action cannot be undone. This will permanently delete
                     your product from our servers.
                   </AlertDialogDescription>
@@ -683,7 +764,7 @@ export default function SellPage() {
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-red-600 hover:bg-red-700 text-white"
                   >
                     Delete
                   </AlertDialogAction>
@@ -696,12 +777,20 @@ export default function SellPage() {
               type="button"
               onClick={() => router.back()}
               disabled={saving}
+              className="border-gray-300"
             >
               Cancel
             </Button>
           )}
 
-          <Button type='submit' disabled={saving || (!isEditMode && !isAgreed)}>
+          <Button 
+            type='submit' 
+            disabled={saving || (!isEditMode && !isAgreed)}
+            className="text-white min-w-[140px]"
+            style={{ backgroundColor: 'rgb(37,99,235)' }}
+            onMouseEnter={(e) => !saving && (e.currentTarget.style.backgroundColor = 'rgb(29,78,216)')}
+            onMouseLeave={(e) => !saving && (e.currentTarget.style.backgroundColor = 'rgb(37,99,235)')}
+          >
             {saving ? (
               <>
                 <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
@@ -713,6 +802,7 @@ export default function SellPage() {
           </Button>
         </div>
       </form>
+      </div>
     </div>
   );
 }
