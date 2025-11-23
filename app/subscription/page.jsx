@@ -160,8 +160,10 @@ export default function SubscriptionPage() {
               "Free"
             ) : (
               <>
-                {plan.price.toLocaleString()}
-                <span className="text-sm font-normal text-gray-500">/month</span>
+                ₦{plan.price.toLocaleString()}
+                <span className="text-sm font-normal text-gray-500">
+                  /{plan.cycle === "one-time" ? "7 days" : plan.cycle === "quarterly" ? "3 months" : plan.cycle === "yearly" ? "year" : "month"}
+                </span>
               </>
             )}
           </CardDescription>
@@ -235,7 +237,7 @@ export default function SubscriptionPage() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-8">
+    <div className="bg-gray-50 min-h-screen px-4 py-8">
       <Header title="Subscription Plans" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
@@ -274,10 +276,11 @@ export default function SubscriptionPage() {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="product">Products</TabsTrigger>
             <TabsTrigger value="service">Services</TabsTrigger>
-            <TabsTrigger value="bundle">Bundle</TabsTrigger>
+            <TabsTrigger value="bundle">Bundles</TabsTrigger>
+            <TabsTrigger value="boost">Boosts</TabsTrigger>
           </TabsList>
 
           <TabsContent value="product">
@@ -293,15 +296,33 @@ export default function SubscriptionPage() {
           </TabsContent>
 
           <TabsContent value="bundle">
-            <div className="max-w-2xl mx-auto">
-              {renderPlanCard(SUBSCRIPTION_PLANS.bundle_premium)}
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="space-y-6">
+              <div className="grid md:grid-cols-3 gap-6">
+                {getPlansByCategory("bundle").map((plan) => renderPlanCard(plan))}
+              </div>
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <h4 className="font-semibold text-blue-900 mb-2">
-                   Bundle Savings
+                  💡 Save More with Longer Plans
                 </h4>
                 <p className="text-sm text-blue-700">
-                  Get both Premium Products and Premium Services for 2,500 instead of 2,600. Save 100 every month!
+                  Monthly Bundle: ₦2,500/month • Quarterly: ₦3,000 (save ₦4,500) • Yearly: ₦10,000 (save ₦20,000)
                 </p>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="boost">
+            <div className="max-w-5xl mx-auto">
+              <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                <h4 className="font-semibold text-yellow-900 mb-2">
+                  🚀 Boost Your Visibility
+                </h4>
+                <p className="text-sm text-yellow-700">
+                  One-time boosts give your products/services maximum exposure for 7 days. Perfect for special promotions or new launches!
+                </p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-6">
+                {getPlansByCategory("boost").map((plan) => renderPlanCard(plan))}
               </div>
             </div>
           </TabsContent>
