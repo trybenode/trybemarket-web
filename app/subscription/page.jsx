@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
-import { Check, Sparkles, Crown, Shield, Zap } from "lucide-react";
+import { Check, Sparkles, Crown, Shield, Zap, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
 import { SUBSCRIPTION_PLANS, getPlansByCategory } from "@/lib/subscriptionStore";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const PaystackWrapper = dynamic(() => import("@/components/PaystackWrapper"), {
   ssr: false,
@@ -26,8 +28,10 @@ export default function SubscriptionPage() {
   const [reference, setReference] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("product");
+  const [isKycVerified, setIsKycVerified] = useState(false);
+  const [checkingKyc, setCheckingKyc] = useState(true);
 
-  const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
+  const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_TEST_KEY;
 
   const {
     subscriptions,
@@ -37,10 +41,29 @@ export default function SubscriptionPage() {
   } = useSubscription(user?.uid);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         setReference(`${currentUser.uid}-${Date.now()}`);
+        
+        // Check KYC verification status
+        try {
+          setCheckingKyc(true);
+          const userRef = doc(db, "users", currentUser.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            setIsKycVerified(userData.isVerified || false);
+          } else {
+            setIsKycVerified(false);
+          }
+        } catch (error) {
+          console.error("Error checking KYC status:", error);
+          setIsKycVerified(false);
+        } finally {
+          setCheckingKyc(false);
+        }
       } else {
         router.push("/login");
       }
@@ -51,6 +74,17 @@ export default function SubscriptionPage() {
   }, [router]);
 
   const handlePlanSelect = (plan) => {
+    // Check if user is KYC verified before allowing subscription
+    if (!isKycVerified) {
+      toast.error("Please complete KYC verification before subscribing", {
+        duration: 4000,
+      });
+      setTimeout(() => {
+        router.push("/kyc");
+      }, 2000);
+      return;
+    }
+    
     setSelectedPlan(plan);
   };
 
