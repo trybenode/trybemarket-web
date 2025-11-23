@@ -26,8 +26,8 @@ export default function ServiceUpload() {
   const [isVip, setIsVip] = useState(false);
 
   // Check if user can use VIP tags
-  const canUseVipTag = limits?.vipTags > 0;
-  const vipTagsAvailable = limits?.vipTags || 0;
+  const canUseVipTag = limits?.vipTagsService > 0;
+  const vipTagsAvailable = limits?.vipTagsService || 0;
 
   if (authLoading || form.isLoading) {
     return (

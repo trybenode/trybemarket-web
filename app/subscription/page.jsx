@@ -358,7 +358,7 @@ export default function SubscriptionPage() {
               <Zap className="h-5 w-5 text-blue-500" />
               Your Current Limits
             </h3>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">Products</p>
                 <p className="font-bold text-lg">
@@ -372,8 +372,12 @@ export default function SubscriptionPage() {
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">VIP Tags</p>
-                <p className="font-bold text-lg">{limits.vipTags || 0}</p>
+                <p className="text-gray-500">Product VIP</p>
+                <p className="font-bold text-lg">{limits.vipTagsProduct || 0}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Service VIP</p>
+                <p className="font-bold text-lg">{limits.vipTagsService || 0}</p>
               </div>
             </div>
           </div>
