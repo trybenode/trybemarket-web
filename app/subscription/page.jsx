@@ -1,203 +1,330 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
-
-// import { PaystackButton } from "react-paystack";
+import { auth } from "@/lib/firebase";
 import dynamic from "next/dynamic";
-
 import toast from "react-hot-toast";
+import { Check, Sparkles, Crown, Shield, Zap } from "lucide-react";
 import Header from "@/components/Header";
+import { SUBSCRIPTION_PLANS, getPlansByCategory } from "@/lib/subscriptionStore";
+import { useSubscription } from "@/hooks/useSubscription";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const PaystackWrapper = dynamic(() => import("@/components/PaystackWrapper"), {
   ssr: false,
 });
+
 export default function SubscriptionPage() {
   const router = useRouter();
-  const [currentPlan, setCurrentPlan] = useState(null);
-  const [isVerified, setIsVerified] = useState(true); // placeholder for KYC status
-  const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const [reference, setReference] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("product");
 
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
 
+  const {
+    subscriptions,
+    limits,
+    loading: subLoading,
+    getCurrentPlan,
+  } = useSubscription(user?.uid);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         setReference(`${currentUser.uid}-${Date.now()}`);
+      } else {
+        router.push("/login");
       }
-      setLoadingUser(false); // <- Set to false regardless
+      setLoadingUser(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
-  const getFutureDate = (daysToAdd) => {
-    const date = new Date();
-    date.setDate(date.getDate() + daysToAdd);
-    return date;
-  };
-  const plan = {
-    id: "Premium",
-    name: "Premium Trybe",
-    features: [
-      "Featured badge",
-      "Sharable Shop link",
-      "Unlimited posts",
-      "Priority search",
-      "3 boosted product",
-    ],
-    amountInKobo: 150000,
+  const handlePlanSelect = (plan) => {
+    setSelectedPlan(plan);
   };
 
+  const handlePaymentSuccess = async (response) => {
+    try {
+      setLoading(true);
+      toast.loading("Verifying payment...", { id: "verify" });
 
-  useEffect(() => {
-    const fetchSubscription = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
+      const verifyRes = await fetch("/api/subscription/verify-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference: response.reference,
+          userId: user.uid,
+          planId: selectedPlan.id,
+        }),
+      });
 
-      try {
-        const subRef = doc(db, "subscriptions", user.uid);
-        const subSnap = await getDoc(subRef);
+      const verifyData = await verifyRes.json();
 
-        if (subSnap.exists()) {
-          const subData = subSnap.data();
-          if (subData.isActive) {
-            setCurrentPlan(subData.planId);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch subscription:", error);
+      if (!verifyData.success) {
+        throw new Error(verifyData.error || "Payment verification failed");
       }
-    };
 
-    fetchSubscription();
-  }, []);
+      toast.success("Subscription activated! ", { id: "verify" });
+      
+      setSelectedPlan(null);
+      setReference(`${user.uid}-${Date.now()}`);
+      
+      router.push("/thank-you");
+    } catch (error) {
+      console.error("Payment verification error:", error);
+      toast.error(error.message || "Failed to activate subscription", {
+        id: "verify",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const componentProps = {
+  const handlePaymentClose = () => {
+    toast.error("Payment cancelled");
+    setSelectedPlan(null);
+  };
+
+  const createPaystackProps = (plan) => ({
     email: user?.email,
-    amount: plan.amountInKobo,
-    reference,
+    amount: plan.price * 100,
+    reference: reference,
     metadata: {
       userId: user?.uid,
       planId: plan.id,
       planName: plan.name,
+      category: plan.category,
     },
     publicKey,
-    text: "Pay Now",
-    onSuccess: async (response) => {
-      alert("Thanks for doing business with us! Come back soon!!");
-      toast.success(
-        "Your Subscription is active! You've unlocked the premium Trybe experience"
-      );
-      const user = auth.currentUser;
-      if (!user) return;
-      setLoading(true);
-      const subRef = doc(db, "subscriptions", user.uid);
+    text: `Pay ${plan.price.toLocaleString()}`,
+    onSuccess: handlePaymentSuccess,
+    onClose: handlePaymentClose,
+  });
 
-      await setDoc(
-        subRef,
-        {
-          planId: plan.id,
-
-          amount: plan.amountInKobo,
-          orderNo: response.reference,
-          subscribedAt: serverTimestamp(),
-          expiryDate: getFutureDate(plan.id === "Premium" ? 30 : 7),
-          isActive: true,
-          features: plan.features,
-          uploadStats: { uploadCount: 0, lastReset: serverTimestamp() },
-        },
-        { merge: true }
-      );
-      // await updateSubscription(planId, ref)
-      setCurrentPlan(plan.id);
-      setLoading(false);
-      // setCurrentPlan(planId);
-      router.push("/thank-you");
-    },
-    // onClose: () => alert("Wait! Don't leave :("),
-    onClose: () => toast.error("Payment was cancelled"),
+  const isPlanActive = (planId, category) => {
+    if (!subscriptions) return false;
+    if (subscriptions.bundle?.isActive && subscriptions.bundle?.planId === planId) {
+      return true;
+    }
+    if (subscriptions[category]?.isActive && subscriptions[category]?.planId === planId) {
+      return true;
+    }
+    return false;
   };
-  return (
-    <div className=" bg-white min-h-screen my-4 justify-center flex ">
-      <div className="">
-       <Header title={"Subscription"}/>
 
-        <p className="text-center text-gray-500 mb-6">
-          Unlock exclusive features to grow your store faster.
-        </p>
+  const renderPlanCard = (plan) => {
+    const isActive = isPlanActive(plan.id, plan.category);
+    const isFree = plan.price === 0;
 
-        <div className="bg-yello-50 p-4 rounded-lg border border-yellow-100 mb-4">
-          <h2 className="text-lg text-center font-semibold text-blue-700">
-            {plan.name}
-          </h2>
-          <p className="text-gray-700 mt-1">₦1,500 / 30 days</p>
-          <ul className="mt-3 list-disc list-inside text-sm text-gray-600 space-y-1">
-            {plan.features.map((feature, i) => (
-              <li key={i}>{feature}</li>
-            ))}
-          </ul>
-        </div>
-
-        {currentPlan === plan.id ? (
-          <div className="mt-4 text-center">
-            <p className="text-green-600 font-semibold">
-              ✅ You’re already subscribed to Premium
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              Your benefits are active. Thank you!
-            </p>
-          </div>
-        ) : (
-          <div className="mt-4">
-            {/* <PaystackButton
-              {...componentProps}
-              className={`w-full py-2 rounded-lg text-white text-center font-medium ${
-                loading
-                  ? "bg-blue-400 cursor-not-allowed animate-pulse"
-                  : "bg-blue-600 hover:bg-blue-700"
-              }`}
-              disabled={loading}
-            /> */}
-            {loadingUser ? (
-              <div className="text-center text-sm text-gray-500">
-                Checking user status...
-              </div>
-            ) : user?.email && reference && publicKey ? (
-              <PaystackWrapper props={componentProps} loading={loading} />
-            ) : (
-              <div className="text-center text-sm text-red-500">
-                Missing payment info. Please reload or contact support.
-              </div>
-            )}
+    return (
+      <Card
+        key={plan.id}
+        className={`relative overflow-hidden transition-all ${
+          isActive ? "border-blue-500 border-2 shadow-lg" : ""
+        } ${plan.type === "vip" ? "border-yellow-400" : ""}`}
+      >
+        {plan.type === "vip" && (
+          <div className="absolute top-0 right-0 bg-gradient-to-l from-yellow-400 to-yellow-500 text-white px-3 py-1 text-xs font-bold rounded-bl-lg">
+            POPULAR
           </div>
         )}
+
+        <CardHeader>
+          <div className="flex items-center justify-between mb-2">
+            <CardTitle className="text-xl">
+              {plan.name}
+              {plan.type === "vip" && <Crown className="inline ml-2 h-5 w-5 text-yellow-500" />}
+              {plan.type === "premium" && <Sparkles className="inline ml-2 h-5 w-5 text-blue-500" />}
+              {plan.type === "maintenance" && <Shield className="inline ml-2 h-5 w-5 text-gray-500" />}
+            </CardTitle>
+            {isActive && (
+              <Badge variant="success" className="bg-green-500 text-white">
+                Active
+              </Badge>
+            )}
+          </div>
+
+          <CardDescription className="text-2xl font-bold text-gray-900">
+            {isFree ? (
+              "Free"
+            ) : (
+              <>
+                {plan.price.toLocaleString()}
+                <span className="text-sm font-normal text-gray-500">/month</span>
+              </>
+            )}
+          </CardDescription>
+
+          {plan.eligibility?.requiresPaidMonths > 0 && (
+            <Badge variant="outline" className="mt-2 w-fit">
+              Requires {plan.eligibility.requiresPaidMonths} paid months
+            </Badge>
+          )}
+        </CardHeader>
+
+        <CardContent>
+          <ul className="space-y-2">
+            {plan.features.map((feature, idx) => (
+              <li key={idx} className="flex items-start gap-2 text-sm">
+                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+
+          {plan.limits && (
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+              <strong>Limits:</strong>
+              {plan.limits.maxProducts && (
+                <div> Products: {plan.limits.maxProducts === 9999 ? "Unlimited" : plan.limits.maxProducts}</div>
+              )}
+              {plan.limits.maxServices && (
+                <div> Services: {plan.limits.maxServices}</div>
+              )}
+              {plan.limits.vipTags > 0 && <div> VIP Tags: {plan.limits.vipTags}</div>}
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter>
+          {isFree ? (
+            <Button className="w-full" variant="outline" disabled>
+              {isActive ? "Current Plan" : "Default Plan"}
+            </Button>
+          ) : isActive ? (
+            <Button className="w-full" variant="outline" disabled>
+               Subscribed
+            </Button>
+          ) : (
+            <>
+              {selectedPlan?.id === plan.id ? (
+                loadingUser || !user?.email || !reference || !publicKey ? (
+                  <Button className="w-full" disabled>
+                    Loading...
+                  </Button>
+                ) : (
+                  <PaystackWrapper
+                    props={createPaystackProps(plan)}
+                    loading={loading}
+                  />
+                )
+              ) : (
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  onClick={() => handlePlanSelect(plan)}
+                >
+                  Subscribe Now
+                </Button>
+              )}
+            </>
+          )}
+        </CardFooter>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="bg-gray-50 min-h-screen pb-8">
+      <Header title="Subscription Plans" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Choose Your Plan
+          </h1>
+          <p className="text-gray-600">
+            Unlock exclusive features to grow your store faster
+          </p>
+        </div>
+
+        {!subLoading && limits && (
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <h3 className="font-semibold mb-2 flex items-center gap-2">
+              <Zap className="h-5 w-5 text-blue-500" />
+              Your Current Limits
+            </h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Products</p>
+                <p className="font-bold text-lg">
+                  {limits.maxProducts === 9999 ? "" : limits.maxProducts}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Services</p>
+                <p className="font-bold text-lg">{limits.maxServices}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">VIP Tags</p>
+                <p className="font-bold text-lg">{limits.vipTags || 0}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="product">Products</TabsTrigger>
+            <TabsTrigger value="service">Services</TabsTrigger>
+            <TabsTrigger value="bundle">Bundle</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="product">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {getPlansByCategory("product").map((plan) => renderPlanCard(plan))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="service">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {getPlansByCategory("service").map((plan) => renderPlanCard(plan))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="bundle">
+            <div className="max-w-2xl mx-auto">
+              {renderPlanCard(SUBSCRIPTION_PLANS.bundle_premium)}
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-blue-900 mb-2">
+                   Bundle Savings
+                </h4>
+                <p className="text-sm text-blue-700">
+                  Get both Premium Products and Premium Services for 2,500 instead of 2,600. Save 100 every month!
+                </p>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <div className="mt-12 bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-bold mb-4">Frequently Asked Questions</h3>
+          <div className="space-y-4 text-sm">
+            <div>
+              <strong>Q: Can I upgrade my plan anytime?</strong>
+              <p className="text-gray-600">Yes! You can upgrade at any time. Your new benefits will be active immediately.</p>
+            </div>
+            <div>
+              <strong>Q: What happens when my subscription expires?</strong>
+              <p className="text-gray-600">You'll automatically return to the free plan. Your listings will remain but with limited features.</p>
+            </div>
+            <div>
+              <strong>Q: What is a Maintenance plan?</strong>
+              <p className="text-gray-600">After 3 paid months, you can switch to a maintenance plan at 700/month to keep your content active without premium features.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
-}
-
-{
-  /* {user && publicKey ? (
-  <PaystackButton
-    {...componentProps}
-    className={`w-full py-2 rounded-lg text-white text-center font-medium ${
-      loading
-        ? "bg-blue-400 cursor-not-allowed animate-pulse"
-        : "bg-blue-600 hover:bg-blue-700"
-    }`}
-    disabled={loading}
-  />
-) : (
-  <div className="text-center text-sm text-red-500">
-    You've already subscribed
-  </div>
-)} */
 }
