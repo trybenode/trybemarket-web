@@ -8,7 +8,12 @@ import { getUserLimits, isSubscriptionActive, getPlanById } from "@/lib/subscrip
  */
 export function useSubscription(userId) {
   const [subscriptions, setSubscriptions] = useState(null);
-  const [limits, setLimits] = useState({ maxProducts: 3, vipTags: 0, maxServices: 1 });
+  const [limits, setLimits] = useState({ 
+    maxProducts: 3, 
+    vipTagsProduct: 0, 
+    maxServices: 1,
+    vipTagsService: 0 
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
