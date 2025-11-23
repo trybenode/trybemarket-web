@@ -92,7 +92,7 @@ export const useServiceForm = (currentUser) => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, isVip = false) => {
     e.preventDefault();
 
     // Validate form fields
@@ -164,6 +164,7 @@ export const useServiceForm = (currentUser) => {
         images,
         userId,
         university,
+        isVip: isVip || false,
         createdAt: new Date(),
       };
 
