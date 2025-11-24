@@ -67,7 +67,7 @@ useEffect(() => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-4 transition-opacity duration-300 ease-in-out opacity-100">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-6 transition-opacity duration-300 ease-in-out opacity-100">
         {Array.from({ length: 8 }).map((_, i) => (
           <ListingCardSkeleton key={i} />
         ))}
@@ -77,8 +77,8 @@ useEffect(() => {
 
   if (!products.length) {
     return (
-      <div className="flex items-center justify-center py-10">
-        <p className="text-gray-500 text-lg">No products found</p>
+      <div className="flex items-center justify-center py-16">
+        <p className="text-gray-500 text-base">No products found</p>
       </div>
     );
   }
@@ -100,23 +100,21 @@ const productCards = useMemo(() => {
   return (
     <div className="flex flex-col">
      
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-4">
-        
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-6">
         {productCards}
       </div>
 
       {(isFetchingMore || refreshing) && (
-  <div className="flex justify-center my-4">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-  </div>
-)}
-
+        <div className="flex justify-center my-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'rgb(37,99,235)' }}></div>
+        </div>
+      )}
 
       {!isFetchingMore && products.length > 0 && (
         <button
           onClick={refreshControl}
-          className="mx-auto my-4 text-blue-600 hover:underline"
+          className="mx-auto my-6 text-sm font-medium hover:underline"
+          style={{ color: 'rgb(37,99,235)' }}
         >
           Refresh
         </button>

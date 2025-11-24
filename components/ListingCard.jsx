@@ -2,7 +2,9 @@ import React, { useMemo } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { formatNumber } from "@/lib/utils";
+import { Crown } from "lucide-react";
 
 function ListingCard({ product = {}, btnName = "View Details" }) {
   // Memoize imageUri to avoid recalculations
@@ -19,48 +21,61 @@ function ListingCard({ product = {}, btnName = "View Details" }) {
     product.price != null ? formatNumber(product.price) : "N/A";
 
   return (
-    <Card className="bg-gray-300 overflow-hidden rounded-xl shadow-md h-full flex flex-col">
-      {imageUri ? (
-        <div className="relative h-40 w-50">
+    <Card className="bg-white border border-gray-200 overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-shadow h-full flex flex-col group">
+      <div className="relative h-40 w-full bg-gray-100">
+        {imageUri ? (
           <Image
             src={imageUri}
             alt={product.name ? `${product.name} image` : "Product image"}
             fill
-            className="object-cover"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading="lazy"
             placeholder="blur"
             blurDataURL="/placeholder.svg"
           />
-        </div>
-      ) : (
-        <div className="h-40 w-full flex items-center justify-center bg-gray-200">
-          <p className="text-lg text-gray-500">No Image</p>
-        </div>
-      )}
+        ) : (
+          <div className="h-full w-full flex items-center justify-center">
+            <p className="text-sm text-gray-400">No Image</p>
+          </div>
+        )}
+        
+        {/* VIP Badge */}
+        {product.isVip && (
+          <div className="absolute top-2 right-2">
+            <Badge className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white border-0 shadow-md flex items-center gap-1 px-2 py-1">
+              <Crown className="h-3 w-3" />
+              <span className="text-xs font-bold">VIP</span>
+            </Badge>
+          </div>
+        )}
+      </div>
 
-      <CardContent className="p-4 flex-grow">
+      <CardContent className="p-3 flex-grow">
         <h3
-          className="text-base font-semibold truncate"
+          className="text-sm font-semibold text-gray-900 truncate mb-1"
           title={product.name || "Unnamed Product"}
         >
           {product.name || "Unnamed Product"}
         </h3>
 
         {displayOriginalPrice && product.originalPrice && (
-          <p className="mt-1 text-sm font-bold line-through text-blue-600">
+          <p className="text-xs line-through text-gray-400">
             ₦{formatNumber(product.originalPrice)}
           </p>
         )}
 
-        <p className="text-base text-blue-900">₦{displayPrice}</p>
+        <p className="text-base font-bold text-gray-900">₦{displayPrice}</p>
       </CardContent>
 
-      <CardFooter className="p-2 pt-0">
+      <CardFooter className="p-3 pt-0">
         <Button
-          className="w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white"
+          className="w-full rounded-md text-white text-sm h-9"
+          style={{ backgroundColor: 'rgb(37,99,235)' }}
           variant="default"
           aria-label={`${btnName} for ${product.name || "product"}`}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
         >
           {btnName}
         </Button>
