@@ -18,7 +18,8 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
-import { Facebook, Instagram, MessageCircleCode, Share } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Facebook, Instagram, MessageCircleCode, Share, Crown, Sparkles, Shield } from "lucide-react";
 import SellerProfileSkeleton from "./ui/SellerProfileSkeleton";
 
 const icons = [
@@ -28,7 +29,7 @@ const icons = [
   { name: "Share", component: Share, isLink: true },
 ];
 
-export default function SellerProfileCard({ sellerInfo }) {
+export default function SellerProfileCard({ sellerInfo, subscriptionBadge }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -112,22 +113,64 @@ export default function SellerProfileCard({ sellerInfo }) {
 
   return (
     <Card className="mb-2">
-      <CardContent className="p-2">
-        <div className="flex flex-col md:flex-row items-center gap-6">
-          <div className="relative w-24 h-24 rounded-full overflow-hidden">
-            <Image
-              src={profilePicture || "/placeholder.svg?height=96&width=96"}
-              alt="Profile"
-              fill
-              className="object-cover bg-gray-50"
-              sizes="96px"
-            />
+      <CardContent className="p-4">
+        <div className="flex flex-col items-center gap-4">
+          {/* Profile Image with Badge Ring */}
+          <div className="relative">
+            <div 
+              className={`w-24 h-24 rounded-full p-1 ${
+                subscriptionBadge 
+                  ? subscriptionBadge.label === 'VIP' 
+                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500'
+                    : subscriptionBadge.label === 'Premium'
+                    ? 'bg-blue-500'
+                    : subscriptionBadge.label === 'Bundle'
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                    : 'bg-gray-200'
+                  : 'bg-gray-200'
+              }`}
+            >
+              <div className="relative w-full h-full rounded-full overflow-hidden bg-white">
+                <Image
+                  src={profilePicture || "/placeholder.svg?height=96&width=96"}
+                  alt="Profile"
+                  fill
+                  className="object-cover"
+                  sizes="88px"
+                />
+              </div>
+            </div>
+            
+            {/* Badge Icon Overlay */}
+            {subscriptionBadge && subscriptionBadge.icon && (
+              <div 
+                className={`absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${subscriptionBadge.className}`}
+                style={subscriptionBadge.style}
+              >
+                <subscriptionBadge.icon className="h-4 w-4" />
+              </div>
+            )}
           </div>
-          <div className="flex-1 text-center md:text-left">
-            <h2 className="text-xl font-bold">{fullName || "Seller"}</h2>
-            <p className="text-gray-500">Member since {yearCreated}</p>
-            <p className="text-gray-500">{address || "No address provided"}</p>
+
+          {/* User Info - Always Centered */}
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-gray-900">{fullName || "Seller"}</h2>
+            <p className="text-sm text-gray-500 mt-1">Member since {yearCreated}</p>
+            <p className="text-sm text-gray-500">{address || "No address provided"}</p>
+            
+            {/* Subscription Badge Label */}
+            {subscriptionBadge && (
+              <Badge 
+                className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold ${subscriptionBadge.className}`}
+                style={subscriptionBadge.style}
+              >
+                {subscriptionBadge.icon && <subscriptionBadge.icon className="h-3 w-3" />}
+                {subscriptionBadge.label}
+              </Badge>
+            )}
           </div>
+
+          {/* Social Icons */}
           <div className="flex gap-4">
             {icons.map(({ name, component: Icon, isLink }) => {
               if (sellerInfo && isLink) return null;
@@ -157,6 +200,7 @@ export default function SellerProfileCard({ sellerInfo }) {
             <Button
               variant="outline"
               onClick={() => router.push("/edit-profile")}
+              className="w-full sm:w-auto"
             >
               Edit Profile
             </Button>

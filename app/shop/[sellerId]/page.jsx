@@ -20,6 +20,8 @@ import ReviewCard from "@/components/ReviewCard"
 import Header from "@/components/Header";
 import { getServices } from "@/hooks/servicesHooks";
 import ServiceCard from "@/components/ServiceCard";
+import { Crown, Sparkles, Shield } from "lucide-react";
+
 export default function SellerShopPage() {
   const params = useParams();
   // const sellerId = params?.sellerId;
@@ -30,8 +32,49 @@ export default function SellerShopPage() {
   const [products, setProducts] = useState([]);
   const [services, setServices] = useState([]);
   const [sellerInfo, setSellerInfo] = useState(null);
+  const [subscriptionBadge, setSubscriptionBadge] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("products");
+
+  // Get subscription badge helper
+  const getSubscriptionBadge = (subscriptions) => {
+    if (!subscriptions) return null;
+
+    // Check for VIP (highest tier)
+    if (subscriptions.product?.planId === "product_vip" || subscriptions.service?.planId === "service_vip") {
+      return {
+        label: "VIP",
+        icon: Crown,
+        className: "bg-gradient-to-r from-yellow-400 to-amber-500 text-white",
+      };
+    }
+
+    // Check for Premium
+    if (subscriptions.product?.planId === "product_premium" || subscriptions.service?.planId === "service_premium") {
+      return {
+        label: "Premium",
+        icon: Sparkles,
+        className: "text-white",
+        style: { backgroundColor: 'rgb(37,99,235)' }
+      };
+    }
+
+    // Check for Bundle
+    if (subscriptions.bundle?.planId?.includes("bundle")) {
+      return {
+        label: "Bundle",
+        icon: Shield,
+        className: "bg-gradient-to-r from-purple-500 to-indigo-500 text-white",
+      };
+    }
+
+    // Default to Freemium
+    return {
+      label: "Freemium",
+      icon: null,
+      className: "bg-gray-100 text-gray-600 border border-gray-300",
+    };
+  };
 
 
   // Fetch seller info and products
@@ -56,6 +99,29 @@ export default function SellerShopPage() {
         };
         setSellerInfo(sellerData);
 
+        // Fetch seller subscriptions
+        const subscriptionsQuery = query(
+          collection(db, "subscriptions"),
+          where("userId", "==", sellerId),
+          where("status", "==", "active")
+        );
+        const subsSnapshot = await getDocs(subscriptionsQuery);
+        
+        const subscriptions = { product: null, service: null, bundle: null };
+        subsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.planId?.startsWith("product_")) {
+            subscriptions.product = data;
+          } else if (data.planId?.startsWith("service_")) {
+            subscriptions.service = data;
+          } else if (data.planId?.startsWith("bundle_")) {
+            subscriptions.bundle = data;
+          }
+        });
+
+        const badge = getSubscriptionBadge(subscriptions);
+        setSubscriptionBadge(badge);
+
         // Fetch seller products
         const productsRef = collection(db, "products");
         const q = query(productsRef, where("userId", "==", sellerId));
@@ -67,8 +133,8 @@ export default function SellerShopPage() {
 
         setProducts(fetchedProducts);
 
-       const fetchedServices = await getServices(sellerId);
-      setServices(fetchedServices);
+        const fetchedServices = await getServices(sellerId);
+        setServices(fetchedServices);
       } catch (error) {
         console.error("Error fetching shop data:", error);
       } finally {
@@ -98,7 +164,7 @@ export default function SellerShopPage() {
       <Header title={"Seller's Shop"}/>
       <div className="p-2">
         {sellerInfo ? (
-          <SellerProfileCard sellerInfo={sellerInfo} />
+          <SellerProfileCard sellerInfo={sellerInfo} subscriptionBadge={subscriptionBadge} />
         ) : (
           <p className="text-red-500 text-center">Seller not found</p>
         )}
