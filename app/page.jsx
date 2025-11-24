@@ -36,31 +36,16 @@ const ToolBar = dynamic(() => import("@/components/ToolBar"), {
 
 const PAGE_SIZE = 6;
 
-//algorithm to randomize product 
-const sessionSeed = Math.random();
-function shuffleWithSeed(arr, seed) {
-  const out = [...arr];
-  for (let i = out.length - 1; i > 0; i--) {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    const r = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    const j = Math.floor(r * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
 export default function HomePage() {
   const [products, setProducts] = useState([]);
-  const [shuffled, setShuffled] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [loading, setLoading] = useState(false); // refresh dimmer
+  const [loading, setLoading] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [hasSearch, setHasSearch] = useState(false);
+  const [randomOffset, setRandomOffset] = useState(0);
   const lastDocRef = useRef(null);
 
   const selectedUniversity = useUserStore((s) => s.selectedUniversity);
@@ -77,17 +62,31 @@ export default function HomePage() {
         else setLoading(true);
 
         const base = collection(db, "products");
-        const constraints = [orderBy("createdAt", "desc"), limit(PAGE_SIZE)];
+        const constraints = [];
 
-        if (selectedUniversity)
-          constraints.unshift(where("university", "==", selectedUniversity));
+        // Add university filter if selected
+        if (selectedUniversity) {
+          constraints.push(where("university", "==", selectedUniversity));
+        }
 
+        // Random ordering approach:
+        // 1. Randomly choose between ascending and descending
+        // 2. Apply offset by skipping random number of documents
+        const useAscending = Math.random() > 0.5;
+        constraints.push(orderBy("createdAt", useAscending ? "asc" : "desc"));
+
+        // For pagination, continue from last document
         const currentLastDoc = loadMore ? lastDocRef.current : null;
-        if (loadMore && currentLastDoc)
+        if (loadMore && currentLastDoc) {
           constraints.push(startAfter(currentLastDoc));
+        }
+
+        // Fetch more than needed, then slice randomly
+        const fetchSize = loadMore ? PAGE_SIZE : PAGE_SIZE * 3;
+        constraints.push(limit(fetchSize));
 
         const snap = await getDocs(query(base, ...constraints));
-        const batch = snap.docs.map((d) => ({
+        let batch = snap.docs.map((d) => ({
           id: d.id,
           product: {
             ...d.data(),
@@ -96,23 +95,19 @@ export default function HomePage() {
           },
         }));
 
-        //  Update ref instead of state
+        // For initial load, shuffle and take PAGE_SIZE
+        if (!loadMore && batch.length > PAGE_SIZE) {
+          batch = batch.sort(() => Math.random() - 0.5).slice(0, PAGE_SIZE);
+        }
+
+        // Update last document reference for pagination
         lastDocRef.current = snap.docs.at(-1) ?? null;
-        setHasMore(batch.length === PAGE_SIZE);
+        setHasMore(snap.docs.length === fetchSize);
 
         setProducts((prev) => {
           if (!loadMore) return batch;
           const ids = new Set(prev.map((p) => p.id));
           return [...prev, ...batch.filter((p) => !ids.has(p.id))];
-        });
-
-        setShuffled((prev) => {
-          if (!loadMore) return shuffleWithSeed(batch, sessionSeed);
-          const prevIds = new Set(prev.map((p) => p.id));
-          const fresh = batch.filter((p) => !prevIds.has(p.id));
-          return fresh.length
-            ? [...prev, ...shuffleWithSeed(fresh, sessionSeed)]
-            : prev;
         });
       } catch (err) {
         console.error("fetchProducts failed:", err);
@@ -123,7 +118,7 @@ export default function HomePage() {
         setRefreshing(false);
       }
     },
-    [storeReady, selectedUniversity]
+    [storeReady, selectedUniversity, randomOffset]
   );
 
   useEffect(() => {
@@ -139,13 +134,14 @@ export default function HomePage() {
     setFiltered([]);
     lastDocRef.current = null;
     setHasMore(true);
+    // Change random offset to get different results
+    setRandomOffset(Math.random());
     fetchProducts(false, true);
   };
 
-  // const listToShow = hasSearch ? filtered : shuffled;
   const listToShow = useMemo(
-    () => (hasSearch ? filtered : shuffled),
-    [hasSearch, filtered, shuffled]
+    () => (hasSearch ? filtered : products),
+    [hasSearch, filtered, products]
   );
 
   return (
@@ -180,12 +176,6 @@ export default function HomePage() {
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-[50vh]">
-            <button
-              onClick={onRefresh}
-              className="mb-4 text-blue-500 underline"
-            >
-              Refresh
-            </button>
             <p className="mx-4 text-center text-lg text-red-500">
               {hasSearch
                 ? "No products found for this search."
