@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     }
 
     // Verify payment with Paystack
-    const paystackSecretKey = process.env.PAYSTACK_TEST_SECRET_KEY;
+    const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
     if (!paystackSecretKey) {
       return res.status(500).json({ error: "Payment gateway not configured" });
     }

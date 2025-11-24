@@ -32,7 +32,7 @@ export default function SubscriptionPage() {
   const [checkingKyc, setCheckingKyc] = useState(true);
   const [planEligibility, setPlanEligibility] = useState({});
 
-  const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_TEST_KEY;
+  const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
 
   const {
     subscriptions,
