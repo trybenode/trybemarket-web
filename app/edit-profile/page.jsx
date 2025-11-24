@@ -127,7 +127,7 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className='container mx-auto px-4 py-4 mb-4 max-w-lg'>
+    <div className='container mx-auto px-4 py-4 mb-4 max-w-6xl'>
      <Header title={"Edit Profile"}/>
 
       <Card className='border border-gray-200'>
