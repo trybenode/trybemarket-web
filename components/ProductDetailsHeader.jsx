@@ -38,7 +38,7 @@ const handleLiked = () => {
     <div className="mb-8 flex justify-between items-center">
       <BackButton />
 
-      <h1 className="text-2xl font-bold text-gray-900">Product Details </h1>
+      <h1 className="text-2xl font-bold text-gray-900">More Details </h1>
       <Button variant="ghost"  onClick={handleLiked}>
         <Heart
           className={`h-6 w-6 ${liked ? "fill-red-500 text-red-500" : ""}`}

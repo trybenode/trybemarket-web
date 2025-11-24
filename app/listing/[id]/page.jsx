@@ -229,7 +229,7 @@ export default function ListingDetailsPage({ params }) {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-6 max-w-6xl">
       <ProductDetailsHeader id={id} currentUserId={currentUserId} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
