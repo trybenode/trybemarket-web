@@ -337,7 +337,7 @@ export default function ListingDetailsPage({ params }) {
 
           {/* Offer Box */}
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h2 className="text-lg font-semibold mb-2">Contact Sellerr:</h2>
+            <h2 className="text-lg font-semibold mb-2">Contact Seller:</h2>
             <div className="flex">
               <input
                 type="text"
