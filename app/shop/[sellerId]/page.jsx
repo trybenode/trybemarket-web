@@ -99,25 +99,18 @@ export default function SellerShopPage() {
         };
         setSellerInfo(sellerData);
 
-        // Fetch seller subscriptions
-        const subscriptionsQuery = query(
-          collection(db, "subscriptions"),
-          where("userId", "==", sellerId),
-          where("status", "==", "active")
-        );
-        const subsSnapshot = await getDocs(subscriptionsQuery);
+        // Fetch seller subscriptions (using the document ID as userId)
+        const subscriptionRef = doc(db, "subscriptions", sellerId);
+        const subsSnap = await getDoc(subscriptionRef);
         
         const subscriptions = { product: null, service: null, bundle: null };
-        subsSnapshot.forEach((doc) => {
-          const data = doc.data();
-          if (data.planId?.startsWith("product_")) {
-            subscriptions.product = data;
-          } else if (data.planId?.startsWith("service_")) {
-            subscriptions.service = data;
-          } else if (data.planId?.startsWith("bundle_")) {
-            subscriptions.bundle = data;
-          }
-        });
+        
+        if (subsSnap.exists()) {
+          const data = subsSnap.data();
+          subscriptions.product = data.product || null;
+          subscriptions.service = data.service || null;
+          subscriptions.bundle = data.bundle || null;
+        }
 
         const badge = getSubscriptionBadge(subscriptions);
         setSubscriptionBadge(badge);
@@ -160,34 +153,62 @@ export default function SellerShopPage() {
     );
   }
   return (
-    <div className="min-h-screen mx-auto py-4 max-w-6xl bg-white">
-      <Header title={"Seller's Shop"}/>
-      <div className="p-2">
-        {sellerInfo ? (
-          <SellerProfileCard sellerInfo={sellerInfo} subscriptionBadge={subscriptionBadge} />
-        ) : (
-          <p className="text-red-500 text-center">Seller not found</p>
-        )}
-
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <Header title={"Seller's Shop"}/>
         
+        {/* Profile Section */}
+        <div className="mt-8 mb-8">
+          {sellerInfo ? (
+            <SellerProfileCard sellerInfo={sellerInfo} subscriptionBadge={subscriptionBadge} />
+          ) : (
+            <p className="text-red-500 text-center">Seller not found</p>
+          )}
+        </div>
+
+        {/* Tabs Section */}
         <Tabs
           defaultValue="products"
           value={activeTab}
           onValueChange={setActiveTab}
+          className="w-full"
         >
-          <TabsList className="mb-2">
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="services">Service</TabsTrigger>
-            <TabsTrigger value="review">Reviews</TabsTrigger>
+          <TabsList className="w-full md:w-auto mb-8 bg-gray-100 p-1 rounded-lg grid grid-cols-3 md:inline-flex">
+            <TabsTrigger 
+              value="products"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
+            >
+              Products
+            </TabsTrigger>
+            <TabsTrigger 
+              value="services"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
+            >
+              Services
+            </TabsTrigger>
+            <TabsTrigger 
+              value="review"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
+            >
+              Reviews
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="products">
+          <TabsContent value="products" className="mt-0">
             {products.length === 0 ? (
-              <div role="alert" className="text-center text-gray-500 mt-6">
-                No products found for this seller.
+              <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                <div className="w-16 h-16 mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No products yet</h3>
+                <p className="text-sm text-gray-500 text-center max-w-sm">
+                  This seller hasn't listed any products yet.
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                 {products.map((product) => (
                   <Link key={product.id} href={`/listing/${product.id}`}>
                     <div className="cursor-pointer">
@@ -198,25 +219,33 @@ export default function SellerShopPage() {
               </div>
             )}
           </TabsContent>
-          <TabsContent value="services">
-           {services.length === 0 ? (
-              <div role="alert" className="text-center text-gray-500 mt-6">
-                No Gigs found for this Provider.
+          
+          <TabsContent value="services" className="mt-0">
+            {services.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+                  <Sparkles className="h-8 w-8" style={{ color: 'rgb(37,99,235)' }} />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No services yet</h3>
+                <p className="text-sm text-gray-500 text-center max-w-sm">
+                  This seller hasn't listed any services yet.
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                 {services.map((service) => (
                   <Link key={service.id} href={`/view-service/${service.id}`}>
                     <div className="cursor-pointer">
-                        <ServiceCard key={service.id} service={service} />
+                      <ServiceCard key={service.id} service={service} />
                     </div>
                   </Link>
                 ))}
               </div>
             )}
           </TabsContent>
-          <TabsContent value="review">
-            <ReviewCard  sellerId={sellerId}/>
+          
+          <TabsContent value="review" className="mt-0">
+            <ReviewCard sellerId={sellerId} />
           </TabsContent>
         </Tabs>
       </div>
