@@ -33,6 +33,10 @@ const ToolBar = dynamic(() => import("@/components/ToolBar"), {
   ssr: false,
   loading: () => <ToolBarSkeleton />,
 });
+const BoostedProductsCarousel = dynamic(() => import("@/components/BoostedProductsCarousel"), {
+  ssr: false,
+  loading: () => null,
+});
 
 const PAGE_SIZE = 6;
 
@@ -156,6 +160,9 @@ export default function HomePage() {
         />
 
         <Categories />
+
+        {/* Boosted Products Carousel */}
+        <BoostedProductsCarousel />
 
         {initialLoading ? (
           <div className="grid grid-cols-2 mt-5 md:grid-cols-3 lg:grid-cols-4 gap-4">
