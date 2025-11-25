@@ -8,8 +8,18 @@ import { adminDB } from "../../../lib/firebaseAdmin";
 import nodemailer from "nodemailer";
 import hbs from "nodemailer-express-handlebars";
 
-const keyPath = path.join(process.cwd(), "markettrybe-cfed7-aeb679b5c606.json");
-const client = new vision.ImageAnnotatorClient({ keyFilename: keyPath });
+// Use environment variable for service account credentials
+let credentials;
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+  // Fix double-escaped newlines in private key
+  creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+  credentials = creds;
+}
+
+const client = credentials 
+  ? new vision.ImageAnnotatorClient({ credentials })
+  : new vision.ImageAnnotatorClient(); // Falls back to default credentials
 
 // Helper to send KYC email
 async function sendKycEmail({ email, fullName, status }) {
