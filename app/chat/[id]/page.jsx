@@ -148,7 +148,7 @@ export default function ChatPage() {
 
   if (!conversation) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
         <div className="flex items-center mb-6">
           <Button variant="ghost" className="p-0 mr-2" onClick={() => router.push("/messages")}>
             <ChevronLeft className="h-6 w-6" />

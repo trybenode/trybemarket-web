@@ -131,11 +131,23 @@ export default function KycPage() {
       const kycDoc = await getDoc(kycDocRef);
 
       if (kycDoc.exists()) {
-        setLoading(false);
-        setModalMessage("You already have a KYC request under review.");
-        setModalIconType("caution");
-        setModalVisible(true);
-        return;
+        const kycData = kycDoc.data();
+        // Allow resubmission only if status is "rejected"
+        if (kycData.status === "pending") {
+          setLoading(false);
+          setModalMessage("You already have a KYC request under review.");
+          setModalIconType("caution");
+          setModalVisible(true);
+          return;
+        }
+        if (kycData.status === "approved") {
+          setLoading(false);
+          setModalMessage("Your KYC has already been approved.");
+          setModalIconType("success");
+          setModalVisible(true);
+          return;
+        }
+        // If status is "rejected", allow resubmission (continue to upload)
       }
 
       // Upload to Cloudinary as before
