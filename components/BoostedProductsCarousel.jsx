@@ -105,7 +105,7 @@ export default function BoostedProductsCarousel() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-yellow-600 fill-yellow-600" />
+          {/* <Zap className="h-4 w-4 text-yellow-600 fill-yellow-600" /> */}
           <h2 className="text-base md:text-lg font-bold text-gray-900">
             🔥 Hot Daily Sales
           </h2>
@@ -150,7 +150,6 @@ export default function BoostedProductsCarousel() {
               const linkPath = item.type === "product" 
                 ? `/listing/${item.id}` 
                 : `/view-service/${item.id}`;
-
               return (
                 <div key={item.id} className="relative" style={{ width: '200px', flexShrink: 0 }}>
                   <Link href={linkPath}>
