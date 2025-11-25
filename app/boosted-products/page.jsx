@@ -84,9 +84,9 @@ export default function BoostedProductsPage() {
         {/* Hero Section */}
         <div className="mt-6 mb-8 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border border-yellow-200">
           <div className="flex items-center gap-3 mb-3">
-            <Zap className="h-8 w-8 text-yellow-600 fill-yellow-600" />
-            <h1 className="text-2xl md:text-xl font-bold text-gray-900">
-              🔥 Hot Daily Sales
+            {/* <Zap className="h-8 w-8 text-yellow-600 fill-yellow-600" /> */}
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+              🔥 Hot Daily Sales 
             </h1>
           </div>
           <p className="text-gray-600 text-sm md:text-base">
