@@ -10,12 +10,11 @@ const ThankYouPage = () => {
   const router = useRouter();
   const [countdown, setCountdown] = useState(10);
 
+  // Countdown timer
   useEffect(() => {
     const countdownInterval = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(countdownInterval);
-          router.push("/");
           return 0;
         }
         return prev - 1;
@@ -23,7 +22,14 @@ const ThankYouPage = () => {
     }, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, [router]);
+  }, []);
+
+  // Navigate when countdown reaches 0
+  useEffect(() => {
+    if (countdown === 0) {
+      router.push("/");
+    }
+  }, [countdown, router]);
 
   return (
     <div className="min-h-screen bg-white">
