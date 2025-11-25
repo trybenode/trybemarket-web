@@ -163,7 +163,8 @@ export default function HomePage() {
 
         {/* Boosted Products Carousel */}
         <BoostedProductsCarousel />
-
+        <div className="my-4 border-t border-gray-200"></div>
+        <p className="text-gray-700 font-medium mb-3">All products</p>
         {initialLoading ? (
           <div className="grid grid-cols-2 mt-5 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
