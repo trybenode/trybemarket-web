@@ -47,7 +47,7 @@ export default React.memo(function SearchBar({ onResults }) {
     return () => clearTimeout(delaySearch);
   }, [searchQuery]);
 
-  // Search logic
+  // Search logic with VIP priority
   useEffect(() => {
     if (!debouncedQuery.trim()) {
       onResults(products, false);
@@ -69,7 +69,18 @@ export default React.memo(function SearchBar({ onResults }) {
       );
     });
 
-    onResults(filtered, true);
+    // Sort results: VIP products first, then regular products
+    const sortedFiltered = filtered.sort((a, b) => {
+      const aIsVip = a.product.isVip === true;
+      const bIsVip = b.product.isVip === true;
+      
+      // VIP products come first
+      if (aIsVip && !bIsVip) return -1;
+      if (!aIsVip && bIsVip) return 1;
+      return 0; // Keep original order for same type
+    });
+
+    onResults(sortedFiltered, true);
   }, [debouncedQuery, products]);
 
   const handleClearSearch = () => {
