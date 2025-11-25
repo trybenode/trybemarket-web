@@ -162,8 +162,8 @@ export default function BoostedProductsCarousel() {
                         </Badge>
                       </div>
 
-                      {/* Type Badge - Top Right */}
-                      <div className="absolute top-1 right-1 z-20">
+                      {/* Type Badge - Bottom Right (moved to avoid VIP badge) */}
+                      <div className="absolute bottom-[72px] right-1 z-20">
                         <Badge variant="outline" className="bg-white/90 backdrop-blur-sm text-[10px] px-1.5 py-0.5 border-gray-300">
                           {item.type === "product" ? "Product" : "Service"}
                         </Badge>
