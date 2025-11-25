@@ -475,20 +475,51 @@ export default function SubscriptionPage() {
           </TabsContent>
         </Tabs>
 
-        <div className="mt-12 bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Frequently Asked Questions</h3>
-          <div className="space-y-4 text-sm">
-            <div>
-              <strong className="text-gray-900">Q: Can I upgrade my plan anytime?</strong>
-              <p className="text-gray-600 mt-1">Yes! You can upgrade at any time. Your new benefits will be active immediately.</p>
+        <div className="mt-12 max-w-3xl mx-auto w-full">
+          <div className="bg-gray-50 rounded-xl p-8 border border-gray-200">
+            <div className="flex items-center gap-2 mb-6">
+              <Sparkles className="w-5 h-5 text-[rgb(37,99,235)]" strokeWidth={2} />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Frequently Asked Questions
+              </h3>
             </div>
-            <div>
-              <strong className="text-gray-900">Q: What happens when my subscription expires?</strong>
-              <p className="text-gray-600 mt-1">You'll automatically return to the free plan. Your listings will remain but with limited features.</p>
-            </div>
-            <div>
-              <strong className="text-gray-900">Q: What is a Maintenance plan?</strong>
-              <p className="text-gray-600 mt-1">After 3 paid months, you can switch to a maintenance plan at ₦700/month to keep your content active without premium features.</p>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm mb-1">
+                    Can I upgrade my plan anytime?
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Yes! You can upgrade at any time. Your new benefits will be active immediately.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm mb-1">
+                    What happens when my subscription expires?
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    You'll automatically return to the free plan. Your listings will remain but with limited features.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm mb-1">
+                    What is a Maintenance plan?
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    After 3 paid months, you can switch to a maintenance plan at ₦700/month to keep your content active without premium features.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
