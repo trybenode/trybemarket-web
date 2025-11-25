@@ -17,6 +17,16 @@ import { useUser } from "@/context/UserContext";
 import { useServiceForm } from "@/hooks/useServiceForm";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function ServiceUpload() {
   const router = useRouter();
@@ -24,15 +34,29 @@ export default function ServiceUpload() {
   const form = useServiceForm(currentUser);
   const { limits, loading: subLoading } = useSubscription(currentUser?.uid);
   const [isVip, setIsVip] = useState(false);
+  const [openVerificationDialog, setOpenVerificationDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Check if user can use VIP tags
   const canUseVipTag = limits?.vipTagsService > 0;
   const vipTagsAvailable = limits?.vipTagsService || 0;
 
-  if (authLoading || form.isLoading) {
+  // Handle authentication and KYC
+  useEffect(() => {
+    if (!authLoading) {
+      if (!currentUser) {
+        router.push("/login");
+      } else if (!currentUser.isVerified) {
+        setOpenVerificationDialog(true);
+      }
+      setLoading(false);
+    }
+  }, [currentUser, authLoading, router]);
+
+  if (loading || authLoading || form.isLoading) {
     return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600' />
+      <div className='flex items-center justify-center min-h-screen bg-white'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2' style={{ borderColor: 'rgb(37,99,235)' }} />
       </div>
     );
   }
@@ -61,6 +85,33 @@ export default function ServiceUpload() {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* KYC Verification Dialog */}
+        <AlertDialog
+          open={openVerificationDialog}
+          onOpenChange={setOpenVerificationDialog}
+        >
+          <AlertDialogContent className="bg-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-gray-900">KYC Verification Required</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-600">
+                You are not verified. Please complete KYC to continue.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => router.back()}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => router.push("/kyc")}
+                className="text-white"
+                style={{ backgroundColor: 'rgb(37,99,235)' }}
+              >
+                Complete KYC
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <form
           className='space-y-6 flex flex-col flex-grow'
