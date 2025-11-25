@@ -85,7 +85,7 @@ export default function BoostedProductsPage() {
         <div className="mt-6 mb-8 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border border-yellow-200">
           <div className="flex items-center gap-3 mb-3">
             <Zap className="h-8 w-8 text-yellow-600 fill-yellow-600" />
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl md:text-xl font-bold text-gray-900">
               🔥 Hot Daily Sales
             </h1>
           </div>
@@ -95,7 +95,7 @@ export default function BoostedProductsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        {/* <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <TrendingUp className="h-5 w-5 text-yellow-600" />
@@ -117,7 +117,7 @@ export default function BoostedProductsPage() {
             </div>
             <p className="text-xs text-gray-600">Services</p>
           </div>
-        </div>
+        </div> */}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
