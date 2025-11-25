@@ -152,15 +152,26 @@ export default function BoostedProductsCarousel() {
                 : `/view-service/${item.id}`;
 
               return (
-                <div key={item.id} className="relative" style={{ width: '180px', flexShrink: 0 }}>
-                  {/* BOOST Badge */}
-                  <Badge className="absolute -top-2 -right-2 z-10 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 shadow-md text-xs">
-                    <Zap className="h-3 w-3 mr-1 fill-white" />
-                    BOOST
-                  </Badge>
-                  
+                <div key={item.id} className="relative" style={{ width: '200px', flexShrink: 0 }}>
                   <Link href={linkPath}>
-                    <ListingCard product={item} btnName="View" />
+                    <div className="relative">
+                      {/* BOOST Badge - Top Left */}
+                      <div className="absolute top-1 left-1 z-20">
+                        <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 shadow-md text-[10px] px-1.5 py-0.5">
+                          <Zap className="h-2.5 w-2.5 mr-0.5 fill-white" />
+                          BOOST
+                        </Badge>
+                      </div>
+
+                      {/* Type Badge - Top Right */}
+                      <div className="absolute top-1 right-1 z-20">
+                        <Badge variant="outline" className="bg-white/90 backdrop-blur-sm text-[10px] px-1.5 py-0.5 border-gray-300">
+                          {item.type === "product" ? "Product" : "Service"}
+                        </Badge>
+                      </div>
+
+                      <ListingCard product={item} btnName="View" />
+                    </div>
                   </Link>
                 </div>
               );
