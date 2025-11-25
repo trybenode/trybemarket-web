@@ -34,6 +34,7 @@ export default function SellerShopPage() {
   const [sellerInfo, setSellerInfo] = useState(null);
   const [subscriptionBadge, setSubscriptionBadge] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("products");
 
   // Get subscription badge helper
@@ -116,20 +117,31 @@ export default function SellerShopPage() {
         setSubscriptionBadge(badge);
 
         // Fetch seller products
-        const productsRef = collection(db, "products");
-        const q = query(productsRef, where("userId", "==", sellerId));
-        const querySnapshot = await getDocs(q);
-        const fetchedProducts = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        try {
+          const productsRef = collection(db, "products");
+          const q = query(productsRef, where("userId", "==", sellerId));
+          const querySnapshot = await getDocs(q);
+          const fetchedProducts = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setProducts(fetchedProducts);
+        } catch (productError) {
+          console.error("Error fetching products:", productError);
+          setError("Unable to load products. This may be due to permission settings.");
+        }
 
-        setProducts(fetchedProducts);
-
-        const fetchedServices = await getServices(sellerId);
-        setServices(fetchedServices);
+        // Fetch seller services
+        try {
+          const fetchedServices = await getServices(sellerId);
+          setServices(fetchedServices);
+        } catch (serviceError) {
+          console.error("Error fetching services:", serviceError);
+          setError("Unable to load services. This may be due to permission settings.");
+        }
       } catch (error) {
         console.error("Error fetching shop data:", error);
+        setError(error.message);
       } finally {
         setLoading(false);
       }
