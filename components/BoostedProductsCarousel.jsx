@@ -113,15 +113,15 @@ export default function BoostedProductsCarousel() {
     : currentItem?.image || null;
 
   return (
-    <div className="w-full bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 md:p-6 mb-6 border border-yellow-200">
+    <div className="w-full bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3 md:p-4 mb-4 border border-yellow-200">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-yellow-600 fill-yellow-600" />
-          <h2 className="text-lg md:text-xl font-bold text-gray-900">
+          <Zap className="h-4 w-4 text-yellow-600 fill-yellow-600" />
+          <h2 className="text-base md:text-lg font-bold text-gray-900">
             🔥 Hot Daily Sales
           </h2>
-          <Badge className="bg-yellow-600 text-white border-0">
+          <Badge className="bg-yellow-600 text-white border-0 text-xs">
             <TrendingUp className="h-3 w-3 mr-1" />
             {boostedItems.length}
           </Badge>
@@ -130,7 +130,7 @@ export default function BoostedProductsCarousel() {
           <Button 
             variant="outline" 
             size="sm" 
-            className="text-yellow-700 border-yellow-300 hover:bg-yellow-100"
+            className="text-yellow-700 border-yellow-300 hover:bg-yellow-100 text-xs h-8"
           >
             Show All
           </Button>
@@ -139,10 +139,10 @@ export default function BoostedProductsCarousel() {
 
       {/* Carousel */}
       <div className="relative">
-        <Card className="overflow-hidden border-2 border-yellow-300 shadow-lg">
-          <div className="grid md:grid-cols-2 gap-4">
+        <Card className="overflow-hidden border-2 border-yellow-300 shadow-md">
+          <div className="grid md:grid-cols-2 gap-0">
             {/* Image Section */}
-            <div className="relative h-64 md:h-80 bg-gray-100">
+            <div className="relative h-40 md:h-48 bg-gray-100">
               {imageUri ? (
                 <Image
                   src={imageUri}
@@ -159,36 +159,36 @@ export default function BoostedProductsCarousel() {
               )}
               
               {/* Badge Overlay */}
-              <div className="absolute top-3 left-3">
-                <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white border-0 shadow-md px-3 py-1">
-                  <Zap className="h-4 w-4 mr-1 fill-white" />
+              <div className="absolute top-2 left-2">
+                <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white border-0 shadow-md px-2 py-0.5 text-xs">
+                  <Zap className="h-3 w-3 mr-1 fill-white" />
                   BOOSTED
                 </Badge>
               </div>
             </div>
 
             {/* Details Section */}
-            <CardContent className="p-4 md:p-6 flex flex-col justify-between">
+            <CardContent className="p-3 md:p-4 flex flex-col justify-between">
               <div>
-                <Badge variant="outline" className="mb-2 text-xs">
+                <Badge variant="outline" className="mb-1.5 text-xs">
                   {currentItem.type === "product" ? "Product" : "Service"}
                 </Badge>
-                <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
+                <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1.5 line-clamp-2">
                   {currentItem.name || "Untitled"}
                 </h3>
-                <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                <p className="text-xs text-gray-600 mb-2 line-clamp-2">
                   {currentItem.description || "No description available"}
                 </p>
                 
                 {/* Price */}
                 {currentItem.price != null && (
-                  <div className="mb-4">
+                  <div className="mb-2">
                     {currentItem.originalPrice && (
-                      <p className="text-sm line-through text-gray-400">
+                      <p className="text-xs line-through text-gray-400">
                         ₦{formatNumber(currentItem.originalPrice)}
                       </p>
                     )}
-                    <p className="text-3xl font-bold text-gray-900">
+                    <p className="text-xl md:text-2xl font-bold text-gray-900">
                       ₦{formatNumber(currentItem.price)}
                     </p>
                   </div>
@@ -202,9 +202,8 @@ export default function BoostedProductsCarousel() {
                   : `/view-service/${currentItem.id}`}
               >
                 <Button 
-                  className="w-full text-white font-semibold"
+                  className="w-full text-white font-semibold text-sm h-9"
                   style={{ backgroundColor: 'rgb(37,99,235)' }}
-                  size="lg"
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
                 >
@@ -221,33 +220,33 @@ export default function BoostedProductsCarousel() {
             <Button
               variant="outline"
               size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border-yellow-300 rounded-full shadow-lg"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border-yellow-300 rounded-full shadow-lg h-8 w-8"
               onClick={prevSlide}
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border-yellow-300 rounded-full shadow-lg"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white border-yellow-300 rounded-full shadow-lg h-8 w-8"
               onClick={nextSlide}
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </>
         )}
 
         {/* Dots Indicator */}
         {boostedItems.length > 1 && (
-          <div className="flex justify-center gap-2 mt-4">
+          <div className="flex justify-center gap-1.5 mt-2">
             {boostedItems.slice(0, 10).map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}
-                className={`h-2 rounded-full transition-all ${
+                className={`h-1.5 rounded-full transition-all ${
                   idx === currentIndex 
-                    ? "w-6 bg-yellow-600" 
-                    : "w-2 bg-yellow-300"
+                    ? "w-4 bg-yellow-600" 
+                    : "w-1.5 bg-yellow-300"
                 }`}
                 aria-label={`Go to slide ${idx + 1}`}
               />

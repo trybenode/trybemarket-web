@@ -50,25 +50,46 @@ export default function SelectBoostItemPage() {
     try {
       const now = new Date();
       
-      // Check if user has any active boosted items
-      const productsQuery = query(
+      // Check if user has any active boosted items (try both userId and sellerId fields)
+      let productsQuery = query(
         collection(db, "products"),
-        where("sellerId", "==", userId),
+        where("userId", "==", userId),
         where("isBoosted", "==", true),
         where("boostEndDate", ">", now)
       );
 
-      const servicesQuery = query(
+      let servicesQuery = query(
         collection(db, "services"),
-        where("sellerId", "==", userId),
+        where("userId", "==", userId),
         where("isBoosted", "==", true),
         where("boostEndDate", ">", now)
       );
 
-      const [productsSnap, servicesSnap] = await Promise.all([
+      let [productsSnap, servicesSnap] = await Promise.all([
         getDocs(productsQuery),
         getDocs(servicesQuery)
       ]);
+
+      // If no results with userId, try sellerId
+      if (productsSnap.size === 0) {
+        productsQuery = query(
+          collection(db, "products"),
+          where("sellerId", "==", userId),
+          where("isBoosted", "==", true),
+          where("boostEndDate", ">", now)
+        );
+        productsSnap = await getDocs(productsQuery);
+      }
+
+      if (servicesSnap.size === 0) {
+        servicesQuery = query(
+          collection(db, "services"),
+          where("sellerId", "==", userId),
+          where("isBoosted", "==", true),
+          where("boostEndDate", ">", now)
+        );
+        servicesSnap = await getDocs(servicesQuery);
+      }
 
       setHasActiveBoost(productsSnap.size > 0 || servicesSnap.size > 0);
     } catch (error) {
@@ -80,22 +101,38 @@ export default function SelectBoostItemPage() {
     try {
       setLoading(true);
 
-      // Fetch user's products
-      const productsQuery = query(
+      // Try fetching with userId field first (common field name)
+      let productsQuery = query(
         collection(db, "products"),
-        where("sellerId", "==", userId)
+        where("userId", "==", userId)
       );
 
-      // Fetch user's services
-      const servicesQuery = query(
+      let servicesQuery = query(
         collection(db, "services"),
-        where("sellerId", "==", userId)
+        where("userId", "==", userId)
       );
 
-      const [productsSnap, servicesSnap] = await Promise.all([
+      let [productsSnap, servicesSnap] = await Promise.all([
         getDocs(productsQuery),
         getDocs(servicesQuery)
       ]);
+
+      // If no results, try with sellerId field
+      if (productsSnap.size === 0) {
+        productsQuery = query(
+          collection(db, "products"),
+          where("sellerId", "==", userId)
+        );
+        productsSnap = await getDocs(productsQuery);
+      }
+
+      if (servicesSnap.size === 0) {
+        servicesQuery = query(
+          collection(db, "services"),
+          where("sellerId", "==", userId)
+        );
+        servicesSnap = await getDocs(servicesQuery);
+      }
 
       const products = productsSnap.docs.map(doc => ({
         id: doc.id,
@@ -110,6 +147,9 @@ export default function SelectBoostItemPage() {
         createdAt: doc.data().createdAt?.toDate(),
         boostEndDate: doc.data().boostEndDate?.toDate(),
       }));
+
+      console.log("Fetched products:", products.length);
+      console.log("Fetched services:", services.length);
 
       setMyProducts(products);
       setMyServices(services);
