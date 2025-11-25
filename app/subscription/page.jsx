@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import { Check, Sparkles, Crown, Shield, Zap, AlertCircle } from "lucide-react";
@@ -31,6 +31,8 @@ export default function SubscriptionPage() {
   const [isKycVerified, setIsKycVerified] = useState(false);
   const [checkingKyc, setCheckingKyc] = useState(true);
   const [planEligibility, setPlanEligibility] = useState({});
+  const [dbPlans, setDbPlans] = useState([]);
+  const [loadingDbPlans, setLoadingDbPlans] = useState(true);
 
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
 
@@ -40,6 +42,43 @@ export default function SubscriptionPage() {
     loading: subLoading,
     getCurrentPlan,
   } = useSubscription(user?.uid);
+
+  // Fetch subscription plans from Firestore database
+  useEffect(() => {
+    const fetchDatabasePlans = async () => {
+      try {
+        setLoadingDbPlans(true);
+        const plansCollection = collection(db, "subscriptionPlans");
+        const plansSnapshot = await getDocs(plansCollection);
+        
+        const plans = [];
+        plansSnapshot.forEach((doc) => {
+          plans.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+
+        console.log("=== SUBSCRIPTION PLANS FROM DATABASE ===");
+        console.log("Total plans found:", plans.length);
+        console.log("Full plans data:", JSON.stringify(plans, null, 2));
+        
+        // Filter boost plans specifically
+        const boostPlans = plans.filter(plan => plan.category === "boost");
+        console.log("=== BOOST PLANS ONLY ===");
+        console.log("Number of boost plans:", boostPlans.length);
+        console.log("Boost plans data:", JSON.stringify(boostPlans, null, 2));
+        
+        setDbPlans(plans);
+      } catch (error) {
+        console.error("Error fetching subscription plans from database:", error);
+      } finally {
+        setLoadingDbPlans(false);
+      }
+    };
+
+    fetchDatabasePlans();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -76,20 +115,13 @@ export default function SubscriptionPage() {
 
   // Check plan eligibility when user changes
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid || dbPlans.length === 0) return;
 
     const checkAllPlansEligibility = async () => {
       const eligibilityChecks = {};
       
-      // Check all plans
-      const allPlans = [
-        ...getPlansByCategory("product"),
-        ...getPlansByCategory("service"),
-        ...getPlansByCategory("bundle"),
-        ...getPlansByCategory("boost"),
-      ];
-
-      for (const plan of allPlans) {
+      // Check all plans from database
+      for (const plan of dbPlans) {
         if (plan.eligibility?.requiresPaidMonths > 0) {
           const result = await checkPlanEligibility(user.uid, plan.id);
           eligibilityChecks[plan.id] = result;
@@ -102,7 +134,7 @@ export default function SubscriptionPage() {
     };
 
     checkAllPlansEligibility();
-  }, [user]);
+  }, [user, dbPlans]);
 
   const handlePlanSelect = (plan) => {
     // Check if user is KYC verified before allowing subscription
@@ -255,7 +287,7 @@ export default function SubscriptionPage() {
 
         <CardContent>
           <ul className="space-y-2.5">
-            {plan.features.map((feature, idx) => (
+            {plan.features?.map((feature, idx) => (
               <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
                 <Check className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgb(37,99,235)' }} />
                 <span>{feature}</span>
@@ -267,12 +299,13 @@ export default function SubscriptionPage() {
             <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600 border border-gray-100">
               <strong className="text-gray-900">Limits:</strong>
               {plan.limits.maxProducts && (
-                <div className="mt-1"> Products: {plan.limits.maxProducts === 9999 ? "Unlimited" : plan.limits.maxProducts}</div>
+                <div className="mt-1">✓ Products: {plan.limits.maxProducts === 9999 ? "Unlimited" : plan.limits.maxProducts}</div>
               )}
               {plan.limits.maxServices && (
-                <div className="mt-1"> Services: {plan.limits.maxServices === 9999 ? "Unlimited" : plan.limits.maxServices}</div>
+                <div className="mt-1">✓ Services: {plan.limits.maxServices === 9999 ? "Unlimited" : plan.limits.maxServices}</div>
               )}
-              {plan.limits.vipTags > 0 && <div className="mt-1"> VIP Tags: {plan.limits.vipTags}</div>}
+              {plan.limits.vipTags > 0 && <div className="mt-1">✓ VIP Tags: {plan.limits.vipTags}</div>}
+              {plan.limits.durationDays && <div className="mt-1">✓ Duration: {plan.limits.durationDays} days</div>}
             </div>
           )}
         </CardContent>
@@ -284,7 +317,7 @@ export default function SubscriptionPage() {
             </Button>
           ) : isActive ? (
             <Button className="w-full" variant="outline" disabled style={{ borderColor: 'rgb(37,99,235)', color: 'rgb(37,99,235)' }}>
-               Subscribed
+              ✓ Subscribed
             </Button>
           ) : !isEligible ? (
             <div className="w-full">
@@ -429,49 +462,97 @@ export default function SubscriptionPage() {
           </TabsList>
 
           <TabsContent value="product">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {getPlansByCategory("product").map((plan) => renderPlanCard(plan))}
-            </div>
+            {loadingDbPlans ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading plans...</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {dbPlans
+                  .filter(plan => plan.category === "product")
+                  .sort((a, b) => {
+                    // Maintenance plans (₦700) go last
+                    if (a.type === "maintenance") return 1;
+                    if (b.type === "maintenance") return -1;
+                    // Free plans go first
+                    if (a.price === 0) return -1;
+                    if (b.price === 0) return 1;
+                    // Sort by price for the rest
+                    return a.price - b.price;
+                  })
+                  .map((plan) => renderPlanCard(plan))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="service">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {getPlansByCategory("service").map((plan) => renderPlanCard(plan))}
-            </div>
+            {loadingDbPlans ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading plans...</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {dbPlans
+                  .filter(plan => plan.category === "service")
+                  .sort((a, b) => {
+                    // Maintenance plans (₦700) go last
+                    if (a.type === "maintenance") return 1;
+                    if (b.type === "maintenance") return -1;
+                    // Free plans go first
+                    if (a.price === 0) return -1;
+                    if (b.price === 0) return 1;
+                    // Sort by price for the rest
+                    return a.price - b.price;
+                  })
+                  .map((plan) => renderPlanCard(plan))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="bundle">
-            <div className="space-y-6">
-              <div className="grid md:grid-cols-3 gap-6">
-                {getPlansByCategory("bundle").map((plan) => renderPlanCard(plan))}
+            {loadingDbPlans ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading plans...</p>
               </div>
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" style={{ color: 'rgb(37,99,235)' }} />
-                  Save More with Longer Plans
-                </h4>
-                <p className="text-sm text-gray-600">
-                  Monthly Bundle: ₦2,500/month • Quarterly: ₦3,000 (save ₦4,500) • Yearly: ₦10,000 (save ₦20,000)
-                </p>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-3 gap-6">
+                  {dbPlans.filter(plan => plan.category === "bundle").map((plan) => renderPlanCard(plan))}
+                </div>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" style={{ color: 'rgb(37,99,235)' }} />
+                    Save More with Longer Plans
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    Monthly Bundle: ₦2,500/month • Quarterly: ₦3,000 (save ₦4,500) • Yearly: ₦10,000 (save ₦20,000)
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="boost">
-            <div className="max-w-5xl mx-auto">
-              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-yellow-600" />
-                  Boost Your Visibility
-                </h4>
-                <p className="text-sm text-gray-600">
-                  One-time boosts give your products/services maximum exposure for 7 days. Perfect for special promotions or new launches!
-                </p>
+            {loadingDbPlans ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading plans...</p>
               </div>
-              <div className="grid md:grid-cols-3 gap-6">
-                {getPlansByCategory("boost").map((plan) => renderPlanCard(plan))}
+            ) : (
+              <div className="max-w-5xl mx-auto">
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-yellow-600" />
+                    Boost Your Visibility
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    One-time boosts give your products/services maximum exposure for 7 days. Perfect for special promotions or new launches!
+                  </p>
+                </div>
+                <div className="grid md:grid-cols-3 gap-6">
+                  {dbPlans.filter(plan => plan.category === "boost").map((plan) => renderPlanCard(plan))}
+                </div>
               </div>
-            </div>
+            )}
           </TabsContent>
         </Tabs>
 
