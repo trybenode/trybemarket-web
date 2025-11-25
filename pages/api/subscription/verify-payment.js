@@ -1,4 +1,5 @@
-import { activateSubscription, getPlanById } from "@/lib/subscriptionStore";
+import { activateSubscription } from "@/lib/subscriptionStore";
+import { adminDB } from "@/lib/firebaseAdmin";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -25,6 +26,7 @@ export default async function handler(req, res) {
         headers: {
           Authorization: `Bearer ${paystackSecretKey}`,
         },
+        timeout: 30000, // 30 second timeout
       }
     );
 
@@ -37,11 +39,14 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check if payment amount matches plan price
-    const plan = getPlanById(planId);
-    if (!plan) {
+    // Get plan from database
+    const planDoc = await adminDB.collection("subscriptionPlans").doc(planId).get();
+    
+    if (!planDoc.exists) {
       return res.status(400).json({ error: "Invalid plan" });
     }
+
+    const plan = { id: planDoc.id, ...planDoc.data() };
 
     const paidAmount = verifyData.data.amount / 100; // Paystack returns amount in kobo
     if (paidAmount !== plan.price) {
@@ -52,8 +57,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Activate subscription
-    const result = await activateSubscription(userId, planId, reference);
+    // Activate subscription with plan object
+    const result = await activateSubscription(userId, plan, reference);
 
     return res.status(200).json({
       success: true,

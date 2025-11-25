@@ -177,7 +177,15 @@ export default function SubscriptionPage() {
       setSelectedPlan(null);
       setReference(`${user.uid}-${Date.now()}`);
       
-      router.push("/thank-you");
+      // If it's a boost plan, redirect to item selection page
+      if (selectedPlan.category === "boost") {
+        toast.success("Now select an item to boost!", { duration: 3000 });
+        setTimeout(() => {
+          router.push("/select-boost-item");
+        }, 1500);
+      } else {
+        router.push("/thank-you");
+      }
     } catch (error) {
       console.error("Payment verification error:", error);
       toast.error(error.message || "Failed to activate subscription", {
