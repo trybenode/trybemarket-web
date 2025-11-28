@@ -5,8 +5,8 @@ import {
   collection,
   query,
   where,
-  limit,
   orderBy,
+  limit,
   startAfter,
   getDocs,
 } from "firebase/firestore";
@@ -18,18 +18,15 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [hasMore, setHasMore] = useState(true);
-  const [randomOffset, setRandomOffset] = useState(0);
+
   const lastDocRef = useRef(null);
 
-  const selectedUniversity = useUserStore((state) =>
-    state.getSelectedUniversity()
-  );
-  const isReady = useUserStore((state) => state.isReady());
+  const selectedUniversity = useUserStore((s) => s.getSelectedUniversity());
+  const isReady = useUserStore((s) => s.isReady());
 
   const fetchServices = useCallback(
     async (loadMore = false, refresh = false) => {
       if (!isReady || !selectedUniversity) {
-        setError("No university selected or user store not ready");
         setInitialLoading(false);
         return;
       }
@@ -41,19 +38,14 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
 
         let q = query(
           collection(db, "services"),
-          where("university", "==", selectedUniversity)
+          where("university", "==", selectedUniversity),
+          orderBy("createdAt", "desc") // 🔥 NEVER random order for Firestore pagination
         );
 
-        // Use categoryId instead of category
         if (selectedCategory !== "All") {
           q = query(q, where("categoryId", "==", selectedCategory));
         }
 
-        // Random ordering approach: randomly choose between ascending and descending
-        const useAscending = Math.random() > 0.5;
-        q = query(q, orderBy("createdAt", useAscending ? "asc" : "desc"));
-
-        // Fetch more than needed for initial load, then shuffle
         const fetchSize = loadMore ? itemsPerPage : itemsPerPage * 3;
         q = query(q, limit(fetchSize));
 
@@ -61,38 +53,36 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
           q = query(q, startAfter(lastDocRef.current));
         }
 
-        const querySnapshot = await getDocs(q);
-        let batch = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate(),
+        const snap = await getDocs(q);
+        let batch = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+          createdAt: d.data().createdAt?.toDate(),
         }));
 
-        // For initial load, shuffle and take itemsPerPage
-        if (!loadMore && batch.length > itemsPerPage) {
+        // 🔥 Shuffle only during FIRST LOAD
+        if (!loadMore) {
           batch = batch.sort(() => Math.random() - 0.5).slice(0, itemsPerPage);
         }
 
-        lastDocRef.current =
-          querySnapshot.docs[querySnapshot.docs.length - 1] ?? null;
-        setHasMore(querySnapshot.docs.length === fetchSize);
+        lastDocRef.current = snap.docs[snap.docs.length - 1] || null;
+        setHasMore(snap.docs.length === fetchSize);
 
         setServices((prev) => {
           if (!loadMore) return batch;
-          const ids = new Set(prev.map((s) => s.id));
-          return [...prev, ...batch.filter((s) => !ids.has(s.id))];
+          const existing = new Set(prev.map((x) => x.id));
+          return [...prev, ...batch.filter((b) => !existing.has(b.id))];
         });
       } catch (err) {
         setError(err.message);
-        console.error("Error fetching services:", err);
+        console.error("Service fetch error:", err);
       } finally {
         setInitialLoading(false);
         setIsFetchingMore(false);
         setRefreshing(false);
       }
     },
-    [isReady, selectedUniversity, selectedCategory, itemsPerPage, randomOffset]
+    [isReady, selectedUniversity, selectedCategory, itemsPerPage]
   );
 
   useEffect(() => {
@@ -103,20 +93,18 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
       setError(null);
       fetchServices(false);
     }
-  }, [isReady, selectedUniversity, selectedCategory, fetchServices]);
+  }, [isReady, selectedUniversity, selectedCategory]);
 
   const loadMore = useCallback(() => {
-    if (hasMore && !isFetchingMore) {
-      fetchServices(true);
-    }
-  }, [hasMore, isFetchingMore, fetchServices]);
+    if (hasMore && !isFetchingMore) fetchServices(true);
+  }, [hasMore, isFetchingMore]);
 
   const refresh = useCallback(() => {
     lastDocRef.current = null;
+    setServices([]);
     setHasMore(true);
-    setRandomOffset(Math.random());
     fetchServices(false, true);
-  }, [fetchServices]);
+  }, []);
 
   return {
     services,
