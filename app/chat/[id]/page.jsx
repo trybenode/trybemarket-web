@@ -10,7 +10,9 @@ import ReviewForm from "@/components/ReviewForm"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ChevronLeft, Send } from "lucide-react"
-import { getConversationWithID, addMessageToConversation } from "@/utils/messaginghooks"
+import { getConversationWithID, addMessageToConversation, getUserInfo } from "@/utils/messaginghooks"
+import { isUserRecentlyActive } from "@/hooks/useLastSeen"
+import useUserStore from "@/lib/userStore"
 
 export default function ChatPage() {
   const router = useRouter()
@@ -25,10 +27,12 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [otherUser, setOtherUser] = useState(null)
+  const [otherUserDetails, setOtherUserDetails] = useState(null)
 
   const [showReviewForm, setShowReviewForm] = useState(false);
 
   const messagesEndRef = useRef(null)
+  const currentUserName = useUserStore((state) => state.getUserFullName())
 
   // Check if user is authenticated
   useEffect(() => {
@@ -57,6 +61,29 @@ export default function ChatPage() {
 
       await addMessageToConversation(messageObj, conversationId)
       setNewMessage("")
+
+      // Check if recipient is offline and send email notification
+      if (otherUserDetails?.email && otherUserDetails?.lastSeen) {
+        const isRecipientActive = isUserRecentlyActive(otherUserDetails.lastSeen)
+        
+        if (!isRecipientActive) {
+          // Recipient is offline (not active in last 5 minutes), send email
+          fetch("/api/send-message-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: otherUserDetails.email,
+              senderName: currentUserName || "Someone",
+              productName: product?.name || "a product",
+              chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
+            }),
+          }).catch((error) => {
+            console.error("Error sending email notification:", error)
+          })
+        } else {
+          console.log("Recipient is online, skipping email notification")
+        }
+      }
     } catch (error) {
       console.error("Error sending message:", error)
       // You can add toast notification here if you have it set up
@@ -82,8 +109,21 @@ export default function ChatPage() {
         // Set other user info
         if (conversationData.participants && currentUserId) {
           const otherUserId = conversationData.participants.find((id) => id !== currentUserId)
-          // You might want to fetch user details here
           setOtherUser({ id: otherUserId, name: "Other User", avatar: "/placeholder.svg" })
+          
+          // Fetch full user details including email and lastSeen
+          getUserInfo(otherUserId).then((userInfo) => {
+            if (userInfo) {
+              setOtherUserDetails(userInfo)
+              setOtherUser({
+                id: otherUserId,
+                name: userInfo.fullName || "Other User",
+                avatar: userInfo.profilePicture || "/placeholder.svg",
+              })
+            }
+          }).catch(error => {
+            console.error("Error fetching other user details:", error)
+          })
         }
       }
 
