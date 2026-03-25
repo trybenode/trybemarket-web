@@ -165,11 +165,35 @@ const getAllConversations = async (userID, setConversations) => {
   }
 }
 
+const getUserInfo = async (userId) => {
+  try {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+    const userRef = doc(firestore, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      return {
+        id: userSnap.id,
+        ...userSnap.data(),
+      };
+    } else {
+      console.log("No user found with ID:", userId);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error in getUserInfo:", error);
+    throw error;
+  }
+};
+
 export {
   initiateConversation,
   getConversationWithID,
   addMessageToConversation,
   getUserIdOfSeller,
   getAllConversations,
-  markConversationAsRead
+  markConversationAsRead,
+  getUserInfo
 };
