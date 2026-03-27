@@ -223,7 +223,7 @@ export default function ChatPage() {
   // console.log("Product loaded:", product);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 py-8 max-w-3xl min-h-screen flex flex-col">
       <div className="flex items-center mb-6">
         <Button variant="ghost" className="p-0 mr-2" onClick={() => router.push("/messages")}>
           <ChevronLeft className="h-6 w-6" />
@@ -269,8 +269,8 @@ export default function ChatPage() {
       )}
 
       {/* Messages Container */}
-      <div className="bg-gray-50 rounded-lg border border-gray-200 mb-4">
-        <div className="h-[400px] overflow-y-auto p-4">
+      <div className="bg-gray-50 rounded-lg border border-gray-200 mb-4 flex-1 flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4 min-h-[400px]">
           {Object.keys(groupedMessages).length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-500">No messages yet. Start the conversation!</p>
