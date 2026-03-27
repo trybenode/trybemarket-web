@@ -9,7 +9,7 @@ export async function POST(req) {
 
   try {
     await resend.emails.send({
-      from: "Trybe Market <onboarding@resend.dev>",
+      from: "Trybe Market <noreply@trybenode.space>",
       to: ["trybenode@gmail.com"],
       subject: "New KYC Request Submitted",
       html: `
