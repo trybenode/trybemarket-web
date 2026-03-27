@@ -11,7 +11,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ChevronLeft, Send } from "lucide-react"
 import { getConversationWithID, addMessageToConversation, getUserInfo } from "@/utils/messaginghooks"
-import { isUserRecentlyActive } from "@/hooks/useLastSeen"
+import { isUserRecentlyActive, useLastSeen } from "@/hooks/useLastSeen"
 import useUserStore from "@/lib/userStore"
 
 export default function ChatPage() {
@@ -33,6 +33,9 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef(null)
   const currentUserName = useUserStore((state) => state.getUserFullName())
+  
+  // Track current user's activity
+  useLastSeen(currentUserId)
 
   // Check if user is authenticated
   useEffect(() => {
@@ -63,26 +66,41 @@ export default function ChatPage() {
       setNewMessage("")
 
       // Check if recipient is offline and send email notification
-      if (otherUserDetails?.email && otherUserDetails?.lastSeen) {
-        const isRecipientActive = isUserRecentlyActive(otherUserDetails.lastSeen)
+      console.log("Other user details:", otherUserDetails)
+      
+      if (otherUserDetails?.email) {
+        // If lastSeen doesn't exist, assume user is offline (backward compatibility)
+        // If lastSeen exists, check if user is recently active
+        const isRecipientActive = otherUserDetails.lastSeen 
+          ? isUserRecentlyActive(otherUserDetails.lastSeen)
+          : false
+          
+        console.log("Is recipient active?", isRecipientActive, "Has lastSeen:", !!otherUserDetails.lastSeen)
         
         if (!isRecipientActive) {
-          // Recipient is offline (not active in last 5 minutes), send email
+          // Recipient is offline (not active in last 5 minutes or no lastSeen data), send email
+          console.log("Sending email notification to:", otherUserDetails.email)
+          
           fetch("/api/send-message-notification", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               email: otherUserDetails.email,
-              senderName: currentUserName || "Someone",
+              senderName: currentUserName || otherUserDetails.fullName || "Someone",
               productName: product?.name || "a product",
               chatLink: `https://trybemarket.online/chat/${conversationId}`,
             }),
-          }).catch((error) => {
-            console.error("Error sending email notification:", error)
           })
+            .then(response => response.json())
+            .then(data => console.log("Email notification response:", data))
+            .catch((error) => {
+              console.error("Error sending email notification:", error)
+            })
         } else {
           console.log("Recipient is online, skipping email notification")
         }
+      } else {
+        console.log("Cannot send email - missing email address")
       }
     } catch (error) {
       console.error("Error sending message:", error)
@@ -99,7 +117,7 @@ export default function ChatPage() {
     console.log("Fetching conversation with ID:", conversationId)
 
     const unsubscribe = getConversationWithID(conversationId, (conversationData) => {
-      console.log("Conversation data received:", conversationData)
+      // console.log("Conversation data received:", conversationData)
       setConversation(conversationData)
 
       if (conversationData) {
@@ -114,6 +132,7 @@ export default function ChatPage() {
           // Fetch full user details including email and lastSeen
           getUserInfo(otherUserId).then((userInfo) => {
             if (userInfo) {
+              console.log("Fetched other user details:", userInfo)
               setOtherUserDetails(userInfo)
               setOtherUser({
                 id: otherUserId,
