@@ -159,7 +159,7 @@ export default function ServicePage({ params }) {
           email: service.email, // You may need to fetch provider email if not present
           senderName: instigatorName,
           productName: service.name,
-          chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
+          chatLink: `https://trybemarket.online/chat/${conversationId}`,
         }),
       }).catch((error) => {
         console.error("Error sending email notification:", error);

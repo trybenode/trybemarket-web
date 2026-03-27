@@ -75,7 +75,7 @@ export default function ChatPage() {
               email: otherUserDetails.email,
               senderName: currentUserName || "Someone",
               productName: product?.name || "a product",
-              chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
+              chatLink: `https://trybemarket.online/chat/${conversationId}`,
             }),
           }).catch((error) => {
             console.error("Error sending email notification:", error)

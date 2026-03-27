@@ -169,7 +169,7 @@ export default function ListingDetailsPage({ params }) {
             email: AllUserInfo.email,
             senderName: instigatorName,
             productName: productDetails.name,
-            chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
+            chatLink: `https://trybemarket.online/chat/${conversationId}`,
           }),
         }).catch((error) => {
           console.error("Error sending email notification:", error);
