@@ -89,7 +89,7 @@ const getConversationWithID = (id, setConversationData) => {
     return onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log("Fetched conversation data:", data); // Log the fetched data
+        // console.log("Fetched conversation data:", data); // Log the fetched data
         // Mark as read when opened
         markConversationAsRead(id, auth.currentUser?.uid);
         setConversationData(data);
