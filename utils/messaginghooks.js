@@ -84,7 +84,7 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
 
 const getConversationWithID = (id, setConversationData) => {
   try {
-    console.log("Fetching conversation with ID:", id); // Log the conversation ID
+    // console.log("Fetching conversation with ID:", id); // Log the conversation ID
     const docRef = doc(firestore, 'conversation', id);
     return onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {

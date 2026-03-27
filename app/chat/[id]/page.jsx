@@ -114,7 +114,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!conversationId) return
 
-    console.log("Fetching conversation with ID:", conversationId)
+    // console.log("Fetching conversation with ID:", conversationId)
 
     const unsubscribe = getConversationWithID(conversationId, (conversationData) => {
       // console.log("Conversation data received:", conversationData)
@@ -132,7 +132,7 @@ export default function ChatPage() {
           // Fetch full user details including email and lastSeen
           getUserInfo(otherUserId).then((userInfo) => {
             if (userInfo) {
-              console.log("Fetched other user details:", userInfo)
+              // console.log("Fetched other user details:", userInfo)
               setOtherUserDetails(userInfo)
               setOtherUser({
                 id: otherUserId,
