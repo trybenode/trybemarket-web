@@ -1,4 +1,4 @@
-import {checkAndIncrementEmailSent, checkAndIncrementWhatsAppReceived } from "@/lib/notifications";
+import {checkAndIncrementEmailSent, checkWhatsAppQuota, incrementWhatsAppReceived } from "@/lib/notifications";
 import { sendWhatsAppNotification } from "@/lib/whatsapp";
 import { newMessageTemplate } from "@/emails/newMessageTemplate";
 import { Resend } from "resend";
@@ -35,50 +35,45 @@ export async function POST(req) {
     let emailLimit = 0;
     let whatsappRemaining = 0;
     let whatsappLimit = 0;
+    let emailLimitReached = false;
 
     // Send Email (check SENDER's limit)
     if (channels?.includes("email") && recipientEmail) {
       console.log("Checking email quota for sender:", userId);
       const emailCheck = await checkAndIncrementEmailSent(userId);
       
-      if (!emailCheck.allowed) {
-        console.log(`Email blocked for sender ${userId} — daily limit (${emailCheck.limit}) reached`);
-        return Response.json(
-          { 
-            success: false, 
-            reason: "email_limit_reached",
-            channel: "email",
-            limit: emailCheck.limit,
-            remaining: 0 
-          },
-          { status: 429 }
-        );
-      }
-
       emailRemaining = emailCheck.remaining;
       emailLimit = emailCheck.limit;
-
-      console.log(`Email quota OK. Sending to: ${recipientEmail}`);
-      try {
-        const emailResult = await resend.emails.send({
-          from: "Trybe Market <noreply@trybenode.space>",
-          to: recipientEmail,
-          subject: `📩 New message about ${productName || "your listing"}`,
-          html: newMessageTemplate({ senderName, productName, chatLink }),
-        });
-        results.email = !!emailResult.data;
-        if (results.email) successCount++;
-        console.log("Email sent:", emailResult);
-      } catch (error) {
-        console.error("Email send failed:", error);
+      
+      if (!emailCheck.allowed) {
+        console.log(`Email blocked for sender ${userId} — daily limit (${emailCheck.limit}) reached`);
         results.email = false;
+        results.emailBlocked = true;
+        emailLimitReached = true;
+        // Don't return 429 yet - still check WhatsApp
+      } else {
+        console.log(`Email quota OK. Sending to: ${recipientEmail}`);
+        try {
+          const emailResult = await resend.emails.send({
+            from: "Trybe Market <noreply@trybenode.space>",
+            to: recipientEmail,
+            subject: `📩 New message about ${productName || "your listing"}`,
+            html: newMessageTemplate({ senderName, productName, chatLink }),
+          });
+          results.email = !!emailResult.data;
+          if (results.email) successCount++;
+          console.log("Email sent:", emailResult);
+        } catch (error) {
+          console.error("Email send failed:", error);
+          results.email = false;
+        }
       }
     }
 
     // Send WhatsApp (check RECIPIENT's limit)
     if (channels?.includes("whatsapp") && recipientPhone && recipientId) {
       console.log("Checking WhatsApp quota for recipient:", recipientId);
-      const whatsappCheck = await checkAndIncrementWhatsAppReceived(recipientId);
+      const whatsappCheck = await checkWhatsAppQuota(recipientId);
       
       if (!whatsappCheck.allowed) {
         console.log(`WhatsApp blocked for recipient ${recipientId} — daily limit (${whatsappCheck.limit}) reached`);
@@ -87,18 +82,34 @@ export async function POST(req) {
         results.whatsapp = false;
         results.whatsappBlocked = true;
         results.whatsappBlockReason = "Recipient has reached their daily WhatsApp limit";
-      } else {
         whatsappRemaining = whatsappCheck.remaining;
         whatsappLimit = whatsappCheck.limit;
-
-        console.log(`WhatsApp quota OK. Sending to: ${recipientPhone}`);
-        results.whatsapp = await sendWhatsAppNotification({
+      } else {
+        console.log(`WhatsApp quota OK. Attempting to send to: ${recipientPhone}`);
+        
+        // Try to send WhatsApp
+        const sendSuccess = await sendWhatsAppNotification({
           recipientPhone,
           recipientName,
           senderName,
           chatId: conversationId,
         });
-        if (results.whatsapp) successCount++;
+        
+        results.whatsapp = sendSuccess;
+        
+        if (sendSuccess) {
+          // Only increment counter if send was successful
+          console.log("WhatsApp sent successfully, incrementing counter...");
+          const incrementResult = await incrementWhatsAppReceived(recipientId);
+          whatsappRemaining = incrementResult.remaining;
+          whatsappLimit = incrementResult.limit;
+          successCount++;
+        } else {
+          // Send failed, don't increment counter
+          console.log("WhatsApp send failed, NOT incrementing counter");
+          whatsappRemaining = whatsappCheck.remaining;
+          whatsappLimit = whatsappCheck.limit;
+        }
       }
     }
 
@@ -116,6 +127,18 @@ export async function POST(req) {
     };
     
     console.log("=== Notification API Response:", response);
+    
+    // If ONLY email was requested and it's blocked, return 429
+    // But if WhatsApp sent successfully, return 200 (partial success)
+    if (emailLimitReached && !results.whatsapp) {
+      return Response.json(
+        { 
+          ...response,
+          reason: "email_limit_reached",
+        },
+        { status: 429 }
+      );
+    }
     
     return Response.json(response);
   } catch (error) {
