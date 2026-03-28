@@ -23,6 +23,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+
+# Md files
+*.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
