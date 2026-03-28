@@ -13,7 +13,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { toast } from "react-hot-toast";
 import BackBtn from "@/components/BackButton";
 import { formatNumber } from "@/lib/utils";
@@ -29,6 +29,7 @@ export default function ServicePage({ params }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [message, setMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [liked, setLiked] = useState(false);
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -151,19 +152,51 @@ export default function ServicePage({ params }) {
         duration: 2000,
         position: "top-right",
       });
-      // Fire and forget the email notification (API call)
-      fetch("/api/send-message-notification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: service.email, // You may need to fetch provider email if not present
-          senderName: instigatorName,
-          productName: service.name,
-          chatLink: `https://trybemarket.online/chat/${conversationId}`,
-        }),
-      }).catch((error) => {
-        console.error("Error sending email notification:", error);
-      });
+      
+      // Send notification via unified API (checks sender's daily limit)
+      const channels = [];
+      if (service.whatsappNotifications && service.phone) {
+        channels.push("whatsapp");
+      }
+      if (service.emailNotifications !== false && service.email) {
+        channels.push("email");
+      }
+
+      if (channels.length > 0) {
+        fetch("/api/notifications/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: currentUser.id, // Sender's ID - for email quota check
+            recipientId: service.userId, // Recipient's ID - for WhatsApp quota check
+            recipientPhone: service.phone,
+            recipientEmail: service.email,
+            recipientName: service.fullName || "User",
+            senderName: instigatorName,
+            productName: service.name,
+            chatLink: `https://trybemarket.online/chat/${conversationId}`,
+            conversationId,
+            channels,
+          }),
+        })
+          .then(async (response) => {
+            const data = await response.json();
+            
+            if (response.status === 429 && data.reason === "email_limit_reached") {
+              setShowUpgradePrompt(true);
+              return;
+            }
+            
+            if (data.success) {
+              console.log("Notification sent. Email remaining:", data.emailSent?.remaining);
+              console.log("WhatsApp blocked?", data.results?.whatsappBlocked);
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending notification:", error);
+          });
+      }
+      
       router.push(`/chat/${conversationId}`);
     } catch (error) {
       toast.error("Failed to send message", {
@@ -378,6 +411,12 @@ export default function ServicePage({ params }) {
           </Card>
         </div>
       </div>
+      
+      {/* Upgrade prompt when limit reached */}
+      <UpgradePrompt
+        open={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+      />
     </div>
   );
 }

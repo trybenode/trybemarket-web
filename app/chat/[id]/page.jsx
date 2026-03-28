@@ -104,7 +104,8 @@ export default function ChatPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  userId: currentUserId, // Sender's ID - check THEIR daily limit (they're paying for this)
+                  userId: currentUserId, // Sender's ID - for email quota check
+                  recipientId: otherUser.id, // Recipient's ID - for WhatsApp quota check
                   recipientPhone: otherUserDetails.phone,
                   recipientEmail: otherUserDetails.email,
                   recipientName: otherUserDetails.fullName || "User",
@@ -118,15 +119,23 @@ export default function ChatPage() {
                 .then(async (response) => {
                   const data = await response.json()
                   
-                  if (response.status === 429 && data.reason === "daily_limit_reached") {
-                    // Sender has reached their daily limit - show upgrade prompt
-                    console.log("You have reached your daily notification limit")
-                    setShowUpgradePrompt(true)
-                    return
+                  console.log("Notification API response status:", response.status)
+                  console.log("Notification API response data:", data)
+                  
+                  if (response.status === 429) {
+                    if (data.reason === "email_limit_reached") {
+                      // Sender has reached their email limit - show upgrade prompt
+                      console.log("You have reached your daily email notification limit")
+                      setShowUpgradePrompt(true)
+                      return
+                    }
                   }
                   
                   console.log("Notification response:", data)
                   if (data.success && data.results) {
+                    console.log("Notification sent successfully.")
+                    console.log("Email sent - Remaining:", data.emailSent?.remaining, "Limit:", data.emailSent?.limit)
+                    console.log("WhatsApp blocked?", data.results?.whatsappBlocked)
                     // Update recipient's lastNotifiedAt timestamp on successful notification
                     // This prevents spamming the same person multiple times in 5 minutes
                     try {

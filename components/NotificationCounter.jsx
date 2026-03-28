@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Bell, Zap } from "lucide-react"
-import { getNotificationStatus } from "@/lib/notifications"
 import { useRouter } from "next/navigation"
 
 /**
- * Shows user's remaining daily notifications with upgrade prompt
+ * Shows user's remaining daily email notifications (what they can send)
  */
 export default function NotificationCounter({ userId }) {
   const [status, setStatus] = useState({ count: 0, remaining: 0, limit: 0 })
@@ -21,8 +20,12 @@ export default function NotificationCounter({ userId }) {
 
     const fetchStatus = async () => {
       try {
-        const data = await getNotificationStatus(userId)
-        setStatus(data)
+        console.log("=== NotificationCounter fetching status for userId:", userId);
+        const response = await fetch(`/api/notifications/status?userId=${userId}`);
+        const data = await response.json();
+        console.log("NotificationCounter received status:", data);
+        // Extract email sent stats (what user controls)
+        setStatus(data.emailSent || { count: 0, remaining: 0, limit: 0 })
       } catch (error) {
         console.error("Error fetching notification status:", error)
       } finally {
@@ -33,7 +36,10 @@ export default function NotificationCounter({ userId }) {
     fetchStatus()
     
     // Refresh every minute
-    const interval = setInterval(fetchStatus, 60000)
+    const interval = setInterval(() => {
+      console.log("NotificationCounter: 60-second refresh triggered");
+      fetchStatus();
+    }, 60000)
     return () => clearInterval(interval)
   }, [userId])
 
@@ -44,7 +50,7 @@ export default function NotificationCounter({ userId }) {
   const isEmpty = status.remaining === 0
 
   return (
-    <div className="fixed bottom-20 right-4 z-50">
+    <div className="fixed top-6 right-4 z-50">
       <div
         className={`rounded-lg shadow-lg border p-3 backdrop-blur-sm transition-all ${
           isEmpty
@@ -69,7 +75,7 @@ export default function NotificationCounter({ userId }) {
               >
                 {status.remaining} / {status.limit}
               </span>
-              <span className="text-xs text-gray-600">notifications left today</span>
+              <span className="text-xs text-gray-600">email sends left today</span>
             </div>
 
             {isEmpty && (
