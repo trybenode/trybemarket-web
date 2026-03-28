@@ -19,7 +19,7 @@ import BackBtn from "@/components/BackButton";
 import { formatNumber } from "@/lib/utils";
 import { getServiceById } from "@/hooks/servicesHooks";
 import useUserStore from "@/lib/userStore";
-import { initiateConversation } from "@/utils/messaginghooks";
+import { initiateConversation, getUserInfo } from "@/utils/messaginghooks";
 import useFavoritesStore from "@/lib/FavouriteStore";
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 
@@ -32,6 +32,7 @@ export default function ServicePage({ params }) {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [liked, setLiked] = useState(false);
   const [service, setService] = useState(null);
+  const [sellerInfo, setSellerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const currentUser = useUserStore((state) => state.user);
   const getUserFullName = useUserStore((state) => state.getUserFullName);
@@ -64,6 +65,27 @@ export default function ServicePage({ params }) {
       setLiked(favoriteIds.includes(service.id));
     }
   }, [service, favoriteIds]);
+
+  // Fetch seller info when service is loaded
+  useEffect(() => {
+    const fetchSellerInfo = async () => {
+      if (!service || !service.userId) return;
+
+      try {
+        const userInfo = await getUserInfo(service.userId);
+        if (userInfo) {
+          setSellerInfo(userInfo);
+          console.log("Seller info fetched:", userInfo);
+        } else {
+          console.warn("Seller not found");
+        }
+      } catch (error) {
+        console.error("Error fetching seller info:", error);
+      }
+    };
+
+    fetchSellerInfo();
+  }, [service]);
 
   // Function to format availability display
   const formatAvailability = (availability) => {
@@ -155,10 +177,10 @@ export default function ServicePage({ params }) {
       
       // Send notification via unified API (checks sender's daily limit)
       const channels = [];
-      if (service.whatsappNotifications && service.phone) {
+      if (sellerInfo?.whatsappNotifications && sellerInfo?.phone) {
         channels.push("whatsapp");
       }
-      if (service.emailNotifications !== false && service.email) {
+      if (sellerInfo?.emailNotifications !== false && sellerInfo?.email) {
         channels.push("email");
       }
 
@@ -169,9 +191,9 @@ export default function ServicePage({ params }) {
           body: JSON.stringify({
             userId: currentUser.id, // Sender's ID - for email quota check
             recipientId: service.userId, // Recipient's ID - for WhatsApp quota check
-            recipientPhone: service.phone,
-            recipientEmail: service.email,
-            recipientName: service.fullName || "User",
+            recipientPhone: sellerInfo.phone,
+            recipientEmail: sellerInfo.email,
+            recipientName: sellerInfo.fullName || "User",
             senderName: instigatorName,
             productName: service.name,
             chatLink: `https://trybemarket.online/chat/${conversationId}`,
