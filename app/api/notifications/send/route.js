@@ -8,7 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(req) {
   try {
     const {
-      userId,           // recipient's Firestore user ID
+      userId,           // SENDER's Firestore user ID (whose daily limit to check)
       recipientPhone,   // "2348012345678"
       recipientEmail,   // "user@example.com"
       recipientName,
