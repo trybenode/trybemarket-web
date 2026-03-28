@@ -63,7 +63,7 @@ export default function UpgradePrompt({ open, onClose, currentPlan = "product_fr
             </DialogTitle>
           </div>
           <DialogDescription>
-            You've used all {currentPlanInfo.notifications} notifications for today on your {currentPlanInfo.name}
+            You've sent all {currentPlanInfo.notifications} notifications allowed for today on your {currentPlanInfo.name}. Upgrade to send more!
           </DialogDescription>
         </DialogHeader>
 

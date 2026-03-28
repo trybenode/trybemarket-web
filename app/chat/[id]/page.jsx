@@ -104,7 +104,7 @@ export default function ChatPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  userId: otherUser.id,
+                  userId: currentUserId, // Sender's ID - check THEIR daily limit (they're paying for this)
                   recipientPhone: otherUserDetails.phone,
                   recipientEmail: otherUserDetails.email,
                   recipientName: otherUserDetails.fullName || "User",
@@ -119,18 +119,19 @@ export default function ChatPage() {
                   const data = await response.json()
                   
                   if (response.status === 429 && data.reason === "daily_limit_reached") {
-                    // User has reached their daily limit - show upgrade prompt
-                    console.log("Recipient has reached daily notification limit")
+                    // Sender has reached their daily limit - show upgrade prompt
+                    console.log("You have reached your daily notification limit")
                     setShowUpgradePrompt(true)
                     return
                   }
                   
                   console.log("Notification response:", data)
                   if (data.success && data.results) {
-                    // Update lastNotifiedAt timestamp on successful notification
+                    // Update recipient's lastNotifiedAt timestamp on successful notification
+                    // This prevents spamming the same person multiple times in 5 minutes
                     try {
-                      const userRef = doc(db, "users", otherUser.id)
-                      await updateDoc(userRef, {
+                      const recipientRef = doc(db, "users", otherUser.id)
+                      await updateDoc(recipientRef, {
                         lastNotifiedAt: serverTimestamp()
                       })
                     } catch (error) {

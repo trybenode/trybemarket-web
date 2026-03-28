@@ -69,7 +69,7 @@ export default function NotificationCounter({ userId }) {
               >
                 {status.remaining} / {status.limit}
               </span>
-              <span className="text-xs text-gray-600">notifications left</span>
+              <span className="text-xs text-gray-600">notifications left today</span>
             </div>
 
             {isEmpty && (
@@ -78,7 +78,7 @@ export default function NotificationCounter({ userId }) {
                 className="mt-2 flex items-center gap-1 text-xs font-medium text-red-700 hover:text-red-800 transition-colors"
               >
                 <Zap className="h-3 w-3" />
-                Upgrade for more
+                Upgrade to send more
               </button>
             )}
 

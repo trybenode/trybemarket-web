@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { FiCamera } from "react-icons/fi";
-import { ChevronLeft, Bell, Mail, MessageSquare } from "lucide-react";
+import { ChevronLeft, Bell, Mail, MessageSquare, Check } from "lucide-react";
 import { useUser } from "../../context/UserContext";
 import toast from "react-hot-toast"; // Using react-hot-toast
 import Header from "@/components/Header";
@@ -29,6 +29,7 @@ export default function EditProfilePage() {
   const [loading, setLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
   const [isFetching, setIsFetching] = useState(true);
+  const [savingNotifications, setSavingNotifications] = useState(false);
 
   // Notification settings state
   const [phone, setPhone] = useState("");
@@ -161,24 +162,8 @@ export default function EditProfilePage() {
     }
   };
 
-  // Function to save updated profile data
-  const handleSave = async () => {
-    // Validate phone if WhatsApp is enabled
-    if (whatsappNotifications && phone) {
-      const error = validatePhone(phone);
-      if (error) {
-        setPhoneError(error);
-        toast.error(error);
-        return;
-      }
-    }
-
-    // Disable WhatsApp if no valid phone
-    if (whatsappNotifications && !phone) {
-      toast.error("Please enter a valid phone number to enable WhatsApp notifications");
-      return;
-    }
-
+  // Function to save updated profile data (without notifications)
+  const handleSaveProfile = async () => {
     setLoading(true);
     try {
       let imageUrl = image;
@@ -193,10 +178,6 @@ export default function EditProfilePage() {
         profilePicture: imageUrl,
         address: moreInfo,
         locationType: selected,
-        // Notification settings - convert to international format for storage
-        phone: phone ? convertToInternationalFormat(phone) : null,
-        emailNotifications,
-        whatsappNotifications: whatsappNotifications && phone ? true : false,
       };
 
       const userRef = doc(db, "users", currentUser.uid);
@@ -214,6 +195,49 @@ export default function EditProfilePage() {
       toast.error("Failed to update profile. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to save notification settings only
+  const handleSaveNotifications = async () => {
+    // Validate phone if WhatsApp is enabled
+    if (whatsappNotifications && phone) {
+      const error = validatePhone(phone);
+      if (error) {
+        setPhoneError(error);
+        toast.error(error);
+        return;
+      }
+    }
+
+    // Disable WhatsApp if no valid phone
+    if (whatsappNotifications && !phone) {
+      toast.error("Please enter a valid phone number to enable WhatsApp notifications");
+      return;
+    }
+
+    setSavingNotifications(true);
+    try {
+      const notificationData = {
+        phone: phone ? convertToInternationalFormat(phone) : null,
+        emailNotifications,
+        whatsappNotifications: whatsappNotifications && phone ? true : false,
+      };
+
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, notificationData);
+
+      setCurrentUser((prevUser) => ({
+        ...prevUser,
+        ...notificationData,
+      }));
+
+      toast.success("Notification settings saved successfully");
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      toast.error("Failed to save notification settings. Please try again.");
+    } finally {
+      setSavingNotifications(false);
     }
   };
 
@@ -337,14 +361,14 @@ export default function EditProfilePage() {
             </div>
           </div>
 
-          <Button onClick={handleSave} disabled={loading} className='w-full'>
+          <Button onClick={handleSaveProfile} disabled={loading} className='w-full'>
             {loading ? (
               <>
                 <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
                 Saving...
               </>
             ) : (
-              "Save"
+              "Save Profile"
             )}
           </Button>
         </CardContent>
@@ -377,7 +401,7 @@ export default function EditProfilePage() {
               id='email-notifications'
               checked={emailNotifications}
               onCheckedChange={setEmailNotifications}
-              disabled={loading}
+              disabled={savingNotifications}
             />
           </div>
 
@@ -399,7 +423,7 @@ export default function EditProfilePage() {
                 id='whatsapp-notifications'
                 checked={whatsappNotifications}
                 onCheckedChange={setWhatsappNotifications}
-                disabled={loading}
+                disabled={savingNotifications}
               />
             </div>
 
@@ -413,7 +437,7 @@ export default function EditProfilePage() {
                 value={phone}
                 onChange={handlePhoneChange}
                 className={phoneError ? 'border-red-500' : ''}
-                disabled={loading}
+                disabled={savingNotifications}
               />
               {phoneError && (
                 <p className='text-sm text-red-600'>{phoneError}</p>
@@ -424,15 +448,36 @@ export default function EditProfilePage() {
             </div>
           </div>
 
+          <Separator />
+
+          {/* Save Notification Settings Button */}
+          <Button
+            onClick={handleSaveNotifications}
+            disabled={savingNotifications || (whatsappNotifications && phoneError)}
+            className='w-full'
+          >
+            {savingNotifications ? (
+              <div className='flex items-center gap-2'>
+                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white' />
+                <span>Saving...</span>
+              </div>
+            ) : (
+              <div className='flex items-center gap-2'>
+                <Check className='h-4 w-4' />
+                <span>Save Notification Settings</span>
+              </div>
+            )}
+          </Button>
+
           {/* Info about notifications */}
           <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
             <div className='space-y-2 text-sm text-gray-600'>
               <p className='font-medium text-blue-800'>📱 About Notifications:</p>
               <ul className='list-disc list-inside space-y-1 ml-2'>
-                <li>Notifications are sent only when you're offline</li>
-                <li>Daily limits apply based on your subscription plan</li>
-                <li>You won't be notified more than once every 5 minutes</li>
-                <li>Upgrade your plan for more daily notifications</li>
+                <li>Notifications are sent when your messages reach offline users</li>
+                <li>Daily sending limits apply based on your subscription plan</li>
+                <li>Each notification you send counts toward your daily quota</li>
+                <li>Upgrade your plan to send more notifications per day</li>
               </ul>
             </div>
           </div>
