@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Image from "next/image"
-import { auth } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import ReviewForm from "@/components/ReviewForm"
@@ -13,6 +14,9 @@ import { ChevronLeft, Send } from "lucide-react"
 import { getConversationWithID, addMessageToConversation, getUserInfo } from "@/utils/messaginghooks"
 import { isUserRecentlyActive, useLastSeen } from "@/hooks/useLastSeen"
 import useUserStore from "@/lib/userStore"
+import NotificationCounter from "@/components/NotificationCounter"
+import UpgradePrompt from "@/components/UpgradePrompt"
+import { useSubscription } from "@/hooks/useSubscription"
 
 export default function ChatPage() {
   const router = useRouter()
@@ -30,9 +34,11 @@ export default function ChatPage() {
   const [otherUserDetails, setOtherUserDetails] = useState(null)
 
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   const messagesEndRef = useRef(null)
   const currentUserName = useUserStore((state) => state.getUserFullName())
+  const { subscription } = useSubscription(currentUserId)
   
   // Track current user's activity
   useLastSeen(currentUserId)
@@ -65,42 +71,83 @@ export default function ChatPage() {
       await addMessageToConversation(messageObj, conversationId)
       setNewMessage("")
 
-      // Check if recipient is offline and send email notification
-      console.log("Other user details:", otherUserDetails)
-      
-      if (otherUserDetails?.email) {
-        // If lastSeen doesn't exist, assume user is offline (backward compatibility)
-        // If lastSeen exists, check if user is recently active
+      // Send notification if recipient is offline
+      if (otherUserDetails) {
+        // Check if recipient is active (within last 5 minutes)
         const isRecipientActive = otherUserDetails.lastSeen 
           ? isUserRecentlyActive(otherUserDetails.lastSeen)
           : false
           
-        console.log("Is recipient active?", isRecipientActive, "Has lastSeen:", !!otherUserDetails.lastSeen)
+        console.log("Recipient active?", isRecipientActive)
         
         if (!isRecipientActive) {
-          // Recipient is offline (not active in last 5 minutes or no lastSeen data), send email
-          console.log("Sending email notification to:", otherUserDetails.email)
-          
-          fetch("/api/send-message-notification", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: otherUserDetails.email,
-              senderName: currentUserName || otherUserDetails.fullName || "Someone",
-              productName: product?.name || "a product",
-              chatLink: `https://trybemarket.online/chat/${conversationId}`,
-            }),
-          })
-            .then(response => response.json())
-            .then(data => console.log("Email notification response:", data))
-            .catch((error) => {
-              console.error("Error sending email notification:", error)
-            })
+          // Check for debounce (only notify once per 5 minutes)
+          const lastNotified = otherUserDetails.lastNotifiedAt?.toMillis?.() || 0
+          const fiveMinutes = 5 * 60 * 1000
+          const shouldNotify = Date.now() - lastNotified > fiveMinutes
+
+          if (shouldNotify) {
+            // Determine which channels to use based on opt-ins
+            const channels = []
+            if (otherUserDetails.whatsappNotifications && otherUserDetails.phone) {
+              channels.push("whatsapp")
+            }
+            if (otherUserDetails.emailNotifications !== false && otherUserDetails.email) {
+              // Default to true if not set
+              channels.push("email")
+            }
+
+            if (channels.length > 0) {
+              console.log("Sending notifications via:", channels)
+              
+              fetch("/api/notifications/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: otherUser.id,
+                  recipientPhone: otherUserDetails.phone,
+                  recipientEmail: otherUserDetails.email,
+                  recipientName: otherUserDetails.fullName || "User",
+                  senderName: currentUserName || "Someone",
+                  productName: product?.name || "a product",
+                  chatLink: `https://trybemarket.online/chat/${conversationId}`,
+                  conversationId,
+                  channels,
+                }),
+              })
+                .then(async (response) => {
+                  const data = await response.json()
+                  
+                  if (response.status === 429 && data.reason === "daily_limit_reached") {
+                    // User has reached their daily limit - show upgrade prompt
+                    console.log("Recipient has reached daily notification limit")
+                    setShowUpgradePrompt(true)
+                    return
+                  }
+                  
+                  console.log("Notification response:", data)
+                  if (data.success && data.results) {
+                    // Update lastNotifiedAt timestamp on successful notification
+                    try {
+                      const userRef = doc(db, "users", otherUser.id)
+                      await updateDoc(userRef, {
+                        lastNotifiedAt: serverTimestamp()
+                      })
+                    } catch (error) {
+                      console.error("Error updating lastNotifiedAt:", error)
+                    }
+                  }
+                })
+                .catch((error) => {
+                  console.error("Notification error:", error)
+                })
+            }
+          } else {
+            console.log("Skipping notification - recently notified")
+          }
         } else {
-          console.log("Recipient is online, skipping email notification")
+          console.log("Recipient is online, skipping notification")
         }
-      } else {
-        console.log("Cannot send email - missing email address")
       }
     } catch (error) {
       console.error("Error sending message:", error)
@@ -351,6 +398,21 @@ export default function ChatPage() {
           </Button>
         </form>
       </div>
+
+      {/* Notification Counter */}
+      <NotificationCounter userId={currentUserId} />
+
+      {/* Upgrade Prompt Modal */}
+      <UpgradePrompt
+        open={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        currentPlan={
+          subscription?.product?.planId ||
+          subscription?.service?.planId ||
+          subscription?.bundle?.planId ||
+          "product_free"
+        }
+      />
     </div>
   )
 }
