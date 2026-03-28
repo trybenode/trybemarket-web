@@ -1,4 +1,4 @@
-import { checkAndIncrementNotificationCount } from "@/lib/notifications";
+import {checkAndIncrementEmailSent, checkAndIncrementWhatsAppReceived } from "@/lib/notifications";
 import { sendWhatsAppNotification } from "@/lib/whatsapp";
 import { newMessageTemplate } from "@/emails/newMessageTemplate";
 import { Resend } from "resend";
@@ -8,7 +8,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(req) {
   try {
     const {
-      userId,           // SENDER's Firestore user ID (whose daily limit to check)
+      userId,           // SENDER's Firestore user ID (for email limit checking)
+      recipientId,      // RECIPIENT's Firestore user ID (for WhatsApp limit checking)
       recipientPhone,   // "2348012345678"
       recipientEmail,   // "user@example.com"
       recipientName,
@@ -19,7 +20,7 @@ export async function POST(req) {
       channels,         // ["whatsapp", "email"] — which channels to use
     } = await req.json();
 
-    console.log("Unified notification API called:", { userId, channels });
+    console.log("Unified notification API called:", { userId, recipientId, channels });
 
     if (!userId || !recipientName || !senderName || !conversationId) {
       return Response.json(
@@ -28,42 +29,36 @@ export async function POST(req) {
       );
     }
 
-    // Check daily limit (shared across all channels)
-    const { allowed, remaining, limit } = await checkAndIncrementNotificationCount(userId);
-
-    if (!allowed) {
-      console.log(`Notification blocked for user ${userId} — daily limit (${limit}) reached`);
-      return Response.json(
-        { 
-          success: false, 
-          reason: "daily_limit_reached",
-          limit,
-          remaining: 0 
-        },
-        { status: 429 }
-      );
-    }
-
-    console.log(`Notification allowed. Remaining: ${remaining}/${limit}`);
-
     const results = {};
     let successCount = 0;
+    let emailRemaining = 0;
+    let emailLimit = 0;
+    let whatsappRemaining = 0;
+    let whatsappLimit = 0;
 
-    // Send WhatsApp
-    if (channels?.includes("whatsapp") && recipientPhone) {
-      console.log("Sending WhatsApp to:", recipientPhone);
-      results.whatsapp = await sendWhatsAppNotification({
-        recipientPhone,
-        recipientName,
-        senderName,
-        chatId: conversationId,
-      });
-      if (results.whatsapp) successCount++;
-    }
-
-    // Send Email
+    // Send Email (check SENDER's limit)
     if (channels?.includes("email") && recipientEmail) {
-      console.log("Sending email to:", recipientEmail);
+      console.log("Checking email quota for sender:", userId);
+      const emailCheck = await checkAndIncrementEmailSent(userId);
+      
+      if (!emailCheck.allowed) {
+        console.log(`Email blocked for sender ${userId} — daily limit (${emailCheck.limit}) reached`);
+        return Response.json(
+          { 
+            success: false, 
+            reason: "email_limit_reached",
+            channel: "email",
+            limit: emailCheck.limit,
+            remaining: 0 
+          },
+          { status: 429 }
+        );
+      }
+
+      emailRemaining = emailCheck.remaining;
+      emailLimit = emailCheck.limit;
+
+      console.log(`Email quota OK. Sending to: ${recipientEmail}`);
       try {
         const emailResult = await resend.emails.send({
           from: "Trybe Market <noreply@trybenode.space>",
@@ -80,12 +75,49 @@ export async function POST(req) {
       }
     }
 
-    return Response.json({
+    // Send WhatsApp (check RECIPIENT's limit)
+    if (channels?.includes("whatsapp") && recipientPhone && recipientId) {
+      console.log("Checking WhatsApp quota for recipient:", recipientId);
+      const whatsappCheck = await checkAndIncrementWhatsAppReceived(recipientId);
+      
+      if (!whatsappCheck.allowed) {
+        console.log(`WhatsApp blocked for recipient ${recipientId} — daily limit (${whatsappCheck.limit}) reached`);
+        // Don't return 429 - recipient hitting their limit doesn't block the sender
+        // Just skip sending WhatsApp but continue
+        results.whatsapp = false;
+        results.whatsappBlocked = true;
+        results.whatsappBlockReason = "Recipient has reached their daily WhatsApp limit";
+      } else {
+        whatsappRemaining = whatsappCheck.remaining;
+        whatsappLimit = whatsappCheck.limit;
+
+        console.log(`WhatsApp quota OK. Sending to: ${recipientPhone}`);
+        results.whatsapp = await sendWhatsAppNotification({
+          recipientPhone,
+          recipientName,
+          senderName,
+          chatId: conversationId,
+        });
+        if (results.whatsapp) successCount++;
+      }
+    }
+
+    const response = {
       success: successCount > 0,
       results,
-      remaining,
-      limit,
-    });
+      emailSent: {
+        remaining: emailRemaining,
+        limit: emailLimit
+      },
+      whatsappReceived: {
+        remaining: whatsappRemaining,
+        limit: whatsappLimit
+      }
+    };
+    
+    console.log("=== Notification API Response:", response);
+    
+    return Response.json(response);
   } catch (error) {
     console.error("Notification route error:", error);
     return Response.json(
