@@ -207,11 +207,7 @@ export default function ListingDetailsPage({ params }) {
               if (data.success) {
                 console.log("Notification sent. Email remaining:", data.emailSent?.remaining);
                 console.log("WhatsApp blocked?", data.results?.whatsappBlocked);
-                // Update recipient's lastNotifiedAt
-                const recipientRef = doc(db, "users", sellerID);
-                await updateDoc(recipientRef, {
-                  lastNotifiedAt: serverTimestamp()
-                });
+                // lastNotifiedAt is now updated server-side in the API route
               }
             })
             .catch((error) => {

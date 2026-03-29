@@ -136,16 +136,7 @@ export default function ChatPage() {
                     console.log("Notification sent successfully.")
                     console.log("Email sent - Remaining:", data.emailSent?.remaining, "Limit:", data.emailSent?.limit)
                     console.log("WhatsApp blocked?", data.results?.whatsappBlocked)
-                    // Update recipient's lastNotifiedAt timestamp on successful notification
-                    // This prevents spamming the same person multiple times in 5 minutes
-                    try {
-                      const recipientRef = doc(db, "users", otherUser.id)
-                      await updateDoc(recipientRef, {
-                        lastNotifiedAt: serverTimestamp()
-                      })
-                    } catch (error) {
-                      console.error("Error updating lastNotifiedAt:", error)
-                    }
+                    // lastNotifiedAt is now updated server-side in the API route
                   }
                 })
                 .catch((error) => {
