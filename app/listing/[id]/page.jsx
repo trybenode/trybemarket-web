@@ -31,6 +31,7 @@ import {
   getUserIdOfSeller,
   initiateConversation,
 } from "@/utils/messaginghooks";
+import { isUserRecentlyActive } from "@/hooks/useLastSeen";
 
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 
@@ -160,17 +161,26 @@ export default function ListingDetailsPage({ params }) {
       setMessage("");
 
       if (conversationId) {
-        // Send notification via unified API (checks sender's daily limit)
-        const channels = [];
-        if (AllUserInfo.whatsappNotifications && AllUserInfo.phone) {
-          channels.push("whatsapp");
-        }
-        if (AllUserInfo.emailNotifications !== false && AllUserInfo.email) {
-          channels.push("email");
-        }
+        // Check if seller is recently active (within last 5 minutes)
+        const isSellerActive = AllUserInfo.lastSeen 
+          ? isUserRecentlyActive(AllUserInfo.lastSeen)
+          : false;
+        
+        console.log("Seller active?", isSellerActive);
+        
+        // Only send notification if seller is offline
+        if (!isSellerActive) {
+          // Send notification via unified API (checks sender's daily limit)
+          const channels = [];
+          if (AllUserInfo.whatsappNotifications && AllUserInfo.phone) {
+            channels.push("whatsapp");
+          }
+          if (AllUserInfo.emailNotifications !== false && AllUserInfo.email) {
+            channels.push("email");
+          }
 
-        if (channels.length > 0) {
-          fetch("/api/notifications/send", {
+          if (channels.length > 0) {
+            fetch("/api/notifications/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -207,6 +217,9 @@ export default function ListingDetailsPage({ params }) {
             .catch((error) => {
               console.error("Error sending notification:", error);
             });
+          }
+        } else {
+          console.log("Seller is online - skipping notification");
         }
         
         // Navigate user immediately
