@@ -20,6 +20,7 @@ import { formatNumber } from "@/lib/utils";
 import { getServiceById } from "@/hooks/servicesHooks";
 import useUserStore from "@/lib/userStore";
 import { initiateConversation, getUserInfo } from "@/utils/messaginghooks";
+import { isUserRecentlyActive } from "@/hooks/useLastSeen";
 import useFavoritesStore from "@/lib/FavouriteStore";
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 
@@ -175,17 +176,26 @@ export default function ServicePage({ params }) {
         position: "top-right",
       });
       
-      // Send notification via unified API (checks sender's daily limit)
-      const channels = [];
-      if (sellerInfo?.whatsappNotifications && sellerInfo?.phone) {
-        channels.push("whatsapp");
-      }
-      if (sellerInfo?.emailNotifications !== false && sellerInfo?.email) {
-        channels.push("email");
-      }
+      // Check if seller is recently active (within last 5 minutes)
+      const isSellerActive = sellerInfo?.lastSeen 
+        ? isUserRecentlyActive(sellerInfo.lastSeen)
+        : false;
+      
+      console.log("Seller active?", isSellerActive);
+      
+      // Only send notification if seller is offline
+      if (!isSellerActive) {
+        // Send notification via unified API (checks sender's daily limit)
+        const channels = [];
+        if (sellerInfo?.whatsappNotifications && sellerInfo?.phone) {
+          channels.push("whatsapp");
+        }
+        if (sellerInfo?.emailNotifications !== false && sellerInfo?.email) {
+          channels.push("email");
+        }
 
-      if (channels.length > 0) {
-        fetch("/api/notifications/send", {
+        if (channels.length > 0) {
+          fetch("/api/notifications/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -217,8 +227,11 @@ export default function ServicePage({ params }) {
           .catch((error) => {
             console.error("Error sending notification:", error);
           });
+        }
+      } else {
+        console.log("Seller is online - skipping notification");
       }
-      
+
       router.push(`/chat/${conversationId}`);
     } catch (error) {
       toast.error("Failed to send message", {
