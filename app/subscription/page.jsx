@@ -34,7 +34,7 @@ export default function SubscriptionPage() {
   const [dbPlans, setDbPlans] = useState([]);
   const [loadingDbPlans, setLoadingDbPlans] = useState(true);
 
-  const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
+  const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_TEST_KEY;
 
   const {
     subscriptions,
