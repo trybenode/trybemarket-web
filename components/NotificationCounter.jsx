@@ -73,9 +73,11 @@ export default function NotificationCounter({ userId }) {
                   isEmpty ? "text-red-700" : isLow ? "text-yellow-700" : "text-blue-700"
                 }`}
               >
-                {status.remaining} / {status.limit}
+                {status.remaining}
               </span>
-              <span className="text-xs text-gray-600">email sends left today</span>
+              <span className="text-xs text-gray-600">
+                of {status.limit} emails left today
+              </span>
             </div>
 
             {isEmpty && (
