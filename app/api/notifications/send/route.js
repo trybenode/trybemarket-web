@@ -1,6 +1,8 @@
 import {checkAndIncrementEmailSent, checkWhatsAppQuota, incrementWhatsAppReceived } from "@/lib/notifications";
 import { sendWhatsAppNotification } from "@/lib/whatsapp";
 import { newMessageTemplate } from "@/emails/newMessageTemplate";
+import { adminDB } from "@/lib/firebaseAdmin";
+import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -110,6 +112,20 @@ export async function POST(req) {
           whatsappRemaining = whatsappCheck.remaining;
           whatsappLimit = whatsappCheck.limit;
         }
+      }
+    }
+
+    // Update recipient's lastNotifiedAt if any notification was sent successfully
+    if (successCount > 0 && recipientId) {
+      try {
+        const recipientRef = adminDB.collection("users").doc(recipientId);
+        await recipientRef.update({
+          lastNotifiedAt: FieldValue.serverTimestamp()
+        });
+        console.log("Updated lastNotifiedAt for recipient:", recipientId);
+      } catch (error) {
+        console.error("Error updating lastNotifiedAt:", error);
+        // Don't fail the request if this update fails
       }
     }
 
