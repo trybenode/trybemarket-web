@@ -84,12 +84,12 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
 
 const getConversationWithID = (id, setConversationData) => {
   try {
-    console.log("Fetching conversation with ID:", id); // Log the conversation ID
+    // console.log("Fetching conversation with ID:", id); // Log the conversation ID
     const docRef = doc(firestore, 'conversation', id);
     return onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log("Fetched conversation data:", data); // Log the fetched data
+        // console.log("Fetched conversation data:", data); // Log the fetched data
         // Mark as read when opened
         markConversationAsRead(id, auth.currentUser?.uid);
         setConversationData(data);
@@ -165,11 +165,35 @@ const getAllConversations = async (userID, setConversations) => {
   }
 }
 
+const getUserInfo = async (userId) => {
+  try {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+    const userRef = doc(firestore, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      return {
+        id: userSnap.id,
+        ...userSnap.data(),
+      };
+    } else {
+      console.log("No user found with ID:", userId);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error in getUserInfo:", error);
+    throw error;
+  }
+};
+
 export {
   initiateConversation,
   getConversationWithID,
   addMessageToConversation,
   getUserIdOfSeller,
   getAllConversations,
-  markConversationAsRead
+  markConversationAsRead,
+  getUserInfo
 };

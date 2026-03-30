@@ -1,6 +1,7 @@
 import "./globals.css";
 import { UserProvider } from "@/context/UserContext";
 import ToastProvider from "@/components/ToastProvider";
+import UserActivityTracker from "@/components/UserActivityTracker";
 import { SpeedInsights } from "@vercel/speed-insights/next"
 export const metadata = {
   title: {
@@ -79,6 +80,7 @@ export default function RootLayout({ children }) {
     <html lang='en'>
       <body>
         <ToastProvider />
+        <UserActivityTracker />
         <UserProvider>
           {children}
         </UserProvider>

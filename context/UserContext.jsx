@@ -15,6 +15,7 @@ import {
 import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import useUserStore from "../lib/userStore";
+import { useLastSeen } from "../hooks/useLastSeen";
 
 const UserContext = createContext();
 
@@ -23,6 +24,9 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const kycListenerRef = useRef(null);
   const { setUser, clearUser } = useUserStore();
+
+  // Track user's last seen timestamp automatically
+  useLastSeen(currentUser?.id);
 
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
