@@ -20,6 +20,9 @@ yarn-error.log*
 # env files
 .env*
 
+#Mardown fies
+*.md
+
 # vercel
 .vercel
 

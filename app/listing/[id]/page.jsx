@@ -12,8 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, MessageCircle, ChevronLeft, Loader } from "lucide-react";
-import UpgradePrompt from "@/components/UpgradePrompt";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Heart, MessageCircle, ChevronLeft, Loader, ChevronRight, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
 import { getUserInfo } from "@/utils/userInfo";
@@ -52,7 +57,7 @@ export default function ListingDetailsPage({ params }) {
   const [message, setMessage] = useState("");
   const [AllUserInfo, setAllUserInfo] = useState({});
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const effectiveProductId = itemId || currentProduct?.id;
 
   //product fetch
@@ -122,6 +127,30 @@ export default function ListingDetailsPage({ params }) {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleImageClick = () => {
+    setIsImageModalOpen(true);
+  };
+
+  const handlePrevImage = () => {
+    const currentIndex = images.findIndex((img) => {
+      const imgSrc = img.url || img;
+      return imgSrc === selectedImage;
+    });
+    const prevIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
+    const prevImgSrc = images[prevIndex]?.url || images[prevIndex];
+    setSelectedImage(prevImgSrc);
+  };
+
+  const handleNextImage = () => {
+    const currentIndex = images.findIndex((img) => {
+      const imgSrc = img.url || img;
+      return imgSrc === selectedImage;
+    });
+    const nextIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
+    const nextImgSrc = images[nextIndex]?.url || images[nextIndex];
+    setSelectedImage(nextImgSrc);
+  };
 
   const handleSendMessage = async () => {
     try {
@@ -281,7 +310,10 @@ export default function ListingDetailsPage({ params }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Images */}
         <div className="space-y-4">
-          <div className="relative rounded-lg overflow-hidden bg-gray-100 aspect-square">
+          <div 
+            className="relative rounded-lg overflow-hidden bg-gray-100 aspect-square cursor-pointer hover:opacity-95 transition-opacity"
+            onClick={handleImageClick}
+          >
             {selectedImage ? (
               <Image
                 src={selectedImage}
@@ -297,6 +329,34 @@ export default function ListingDetailsPage({ params }) {
               <div className="flex items-center justify-center h-full">
                 <p className="text-gray-500">No image available</p>
               </div>
+            )}
+            {images && images.length > 1 && (
+              <>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevImage();
+                  }}
+                  aria-label='Previous image'
+                >
+                  <ChevronLeft className='h-5 w-5' />
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextImage();
+                  }}
+                  aria-label='Next image'
+                >
+                  <ChevronRight className='h-5 w-5' />
+                </Button>
+              </>
             )}
           </div>
 
@@ -422,12 +482,107 @@ export default function ListingDetailsPage({ params }) {
           />
         )}
       </div>
-      
-      {/* Upgrade prompt when limit reached */}
-      <UpgradePrompt
-        open={showUpgradePrompt}
-        onClose={() => setShowUpgradePrompt(false)}
-      />
+
+      {/* Image Modal */}
+      <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+        <DialogContent className='max-w-4xl w-[90vw] md:w-[85vw] p-0 bg-white border-gray-200'>
+          <DialogTitle className='sr-only'>Product image viewer</DialogTitle>
+          <DialogClose className='absolute right-3 top-3 z-50 rounded-full bg-black/60 hover:bg-black/80 p-2.5 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white'>
+            <X className='h-5 w-5 text-white' />
+            <span className='sr-only'>Close</span>
+          </DialogClose>
+          <div className='relative w-full'>
+
+            {/* Image Container */}
+            <div className='relative w-full bg-gray-50 rounded-lg overflow-hidden'>
+              <div className='relative w-full' style={{ minHeight: '300px', maxHeight: '80vh' }}>
+                {selectedImage ? (
+                  <div className='relative w-full h-full flex items-center justify-center p-4 md:p-8'>
+                    <Image
+                      src={selectedImage}
+                      alt={name}
+                      width={1200}
+                      height={800}
+                      className='object-contain w-full h-auto max-h-[70vh] rounded-md'
+                      sizes='(max-width: 768px) 90vw, 85vw'
+                      priority
+                    />
+                  </div>
+                ) : (
+                  <div className='flex items-center justify-center h-64'>
+                    <p className='text-gray-500 text-lg'>No image available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation Buttons */}
+              {images && images.length > 1 && (
+                <>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='absolute left-2 md:left-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrevImage();
+                    }}
+                    aria-label='Previous image'
+                  >
+                    <ChevronLeft className='h-5 w-5 md:h-6 md:w-6' />
+                  </Button>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='absolute right-2 md:right-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextImage();
+                    }}
+                    aria-label='Next image'
+                  >
+                    <ChevronRight className='h-5 w-5 md:h-6 md:w-6' />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnail Navigation & Counter */}
+            {images && images.length > 1 && (
+              <div className='p-4 bg-white border-t'>
+                <div className='flex items-center justify-center gap-2 mb-3'>
+                  <span className='text-sm text-gray-600 font-medium'>
+                    {images.findIndex((img) => (img.url || img) === selectedImage) + 1} / {images.length}
+                  </span>
+                </div>
+                <div className='flex justify-center gap-2 overflow-x-auto pb-2'>
+                  {images.map((image, index) => {
+                    const imgSrc = image.url || image;
+                    return (
+                      <div
+                        key={index}
+                        className={`relative w-14 h-14 md:w-16 md:h-16 rounded-md overflow-hidden cursor-pointer border-2 transition-all flex-shrink-0 ${
+                          selectedImage === imgSrc
+                            ? 'border-blue-500 ring-2 ring-blue-200'
+                            : 'border-gray-200 hover:border-gray-400'
+                        }`}
+                        onClick={() => setSelectedImage(imgSrc)}
+                      >
+                        <Image
+                          src={imgSrc}
+                          alt={`Thumbnail ${index + 1}`}
+                          fill
+                          className='object-cover'
+                          sizes='64px'
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
