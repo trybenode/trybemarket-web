@@ -6,11 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
   MapPin,
   Calendar,
+  X,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -32,6 +38,7 @@ export default function ServicePage({ params }) {
   const [liked, setLiked] = useState(false);
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const currentUser = useUserStore((state) => state.user);
   const getUserFullName = useUserStore((state) => state.getUserFullName);
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
@@ -103,6 +110,10 @@ export default function ServicePage({ params }) {
     setCurrentImageIndex((prev) =>
       prev === service.images.length - 1 ? 0 : prev + 1
     );
+  };
+
+  const handleImageClick = () => {
+    setIsImageModalOpen(true);
   };
 
   const handleSendMessage = async () => {
@@ -220,7 +231,10 @@ export default function ServicePage({ params }) {
       <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
         {/* Left Column - Images */}
         <div className='space-y-4'>
-          <div className='relative rounded-lg overflow-hidden bg-gray-100 aspect-square'>
+          <div 
+            className='relative rounded-lg overflow-hidden bg-gray-100 aspect-square cursor-pointer hover:opacity-95 transition-opacity'
+            onClick={handleImageClick}
+          >
             {service.images[currentImageIndex] ? (
               <div key={currentImageIndex}>
                 <Image
@@ -242,7 +256,10 @@ export default function ServicePage({ params }) {
               variant='ghost'
               size='icon'
               className='absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
-              onClick={handlePrevImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrevImage();
+              }}
               aria-label='Previous image'
             >
               <ChevronLeft className='h-5 w-5' />
@@ -251,7 +268,10 @@ export default function ServicePage({ params }) {
               variant='ghost'
               size='icon'
               className='absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
-              onClick={handleNextImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextImage();
+              }}
               aria-label='Next image'
             >
               <ChevronRight className='h-5 w-5' />
@@ -378,6 +398,104 @@ export default function ServicePage({ params }) {
           </Card>
         </div>
       </div>
+
+      {/* Image Modal */}
+      <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+        <DialogContent className='max-w-4xl w-[90vw] md:w-[85vw] p-0 bg-white border-gray-200'>
+          <div className='relative w-full'>
+            {/* Close Button */}
+            <DialogClose className='absolute -right-2 -top-2 md:right-2 md:top-2 z-50 rounded-full bg-gray-100 hover:bg-gray-200 p-2 opacity-90 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400'>
+              <X className='h-5 w-5 text-gray-700' />
+              <span className='sr-only'>Close</span>
+            </DialogClose>
+
+            {/* Image Container */}
+            <div className='relative w-full bg-gray-50 rounded-lg overflow-hidden'>
+              <div className='relative w-full' style={{ minHeight: '300px', maxHeight: '80vh' }}>
+                {service?.images[currentImageIndex] ? (
+                  <div className='relative w-full h-full flex items-center justify-center p-4 md:p-8'>
+                    <Image
+                      src={service.images[currentImageIndex]}
+                      alt={`${service.name} image ${currentImageIndex + 1}`}
+                      width={1200}
+                      height={800}
+                      className='object-contain w-full h-auto max-h-[70vh] rounded-md'
+                      sizes='(max-width: 768px) 90vw, 85vw'
+                      priority
+                    />
+                  </div>
+                ) : (
+                  <div className='flex items-center justify-center h-64'>
+                    <p className='text-gray-500 text-lg'>No image available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation Buttons */}
+              {service?.images && service.images.length > 1 && (
+                <>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='absolute left-2 md:left-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrevImage();
+                    }}
+                    aria-label='Previous image'
+                  >
+                    <ChevronLeft className='h-5 w-5 md:h-6 md:w-6' />
+                  </Button>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='absolute right-2 md:right-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextImage();
+                    }}
+                    aria-label='Next image'
+                  >
+                    <ChevronRight className='h-5 w-5 md:h-6 md:w-6' />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnail Navigation & Counter */}
+            {service?.images && service.images.length > 1 && (
+              <div className='p-4 bg-white border-t'>
+                <div className='flex items-center justify-center gap-2 mb-3'>
+                  <span className='text-sm text-gray-600 font-medium'>
+                    {currentImageIndex + 1} / {service.images.length}
+                  </span>
+                </div>
+                <div className='flex justify-center gap-2 overflow-x-auto pb-2'>
+                  {service.images.map((image, index) => (
+                    <div
+                      key={index}
+                      className={`relative w-14 h-14 md:w-16 md:h-16 rounded-md overflow-hidden cursor-pointer border-2 transition-all flex-shrink-0 ${
+                        currentImageIndex === index
+                          ? 'border-blue-500 ring-2 ring-blue-200'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                      onClick={() => setCurrentImageIndex(index)}
+                    >
+                      <Image
+                        src={image}
+                        alt={`Thumbnail ${index + 1}`}
+                        fill
+                        className='object-cover'
+                        sizes='64px'
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
