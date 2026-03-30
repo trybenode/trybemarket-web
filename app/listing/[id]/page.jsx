@@ -286,6 +286,34 @@ export default function ListingDetailsPage({ params }) {
                 <p className="text-gray-500">No image available</p>
               </div>
             )}
+            {images && images.length > 1 && (
+              <>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevImage();
+                  }}
+                  aria-label='Previous image'
+                >
+                  <ChevronLeft className='h-5 w-5' />
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextImage();
+                  }}
+                  aria-label='Next image'
+                >
+                  <ChevronRight className='h-5 w-5' />
+                </Button>
+              </>
+            )}
           </div>
 
           <div className="flex space-x-2 overflow-x-auto pb-2">
