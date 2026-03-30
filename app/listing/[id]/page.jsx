@@ -15,9 +15,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, ChevronLeft, Loader, X, ChevronRight } from "lucide-react";
+import { Heart, MessageCircle, ChevronLeft, Loader, ChevronRight, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
 import { getUserInfo } from "@/utils/userInfo";
@@ -413,12 +414,12 @@ export default function ListingDetailsPage({ params }) {
       {/* Image Modal */}
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
         <DialogContent className='max-w-4xl w-[90vw] md:w-[85vw] p-0 bg-white border-gray-200'>
+          <DialogTitle className='sr-only'>Product image viewer</DialogTitle>
+          <DialogClose className='absolute right-3 top-3 z-50 rounded-full bg-black/60 hover:bg-black/80 p-2.5 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white'>
+            <X className='h-5 w-5 text-white' />
+            <span className='sr-only'>Close</span>
+          </DialogClose>
           <div className='relative w-full'>
-            {/* Close Button */}
-            <DialogClose className='absolute -right-2 -top-2 md:right-2 md:top-2 z-50 rounded-full bg-gray-100 hover:bg-gray-200 p-2 opacity-90 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-gray-400'>
-              <X className='h-5 w-5 text-gray-700' />
-              <span className='sr-only'>Close</span>
-            </DialogClose>
 
             {/* Image Container */}
             <div className='relative w-full bg-gray-50 rounded-lg overflow-hidden'>
