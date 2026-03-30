@@ -3,10 +3,11 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import vision from "@google-cloud/vision";
-import path from "path";
 import { adminDB } from "../../../lib/firebaseAdmin";
-import nodemailer from "nodemailer";
-import hbs from "nodemailer-express-handlebars";
+import { Resend } from "resend";
+import { kycSuccessTemplate, kycRejectedTemplate } from "@/emails/kycEmailTemplates";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Use environment variable for service account credentials
 let credentials;
@@ -21,37 +22,29 @@ const client = credentials
   ? new vision.ImageAnnotatorClient({ credentials })
   : new vision.ImageAnnotatorClient(); // Falls back to default credentials
 
-// Helper to send KYC email
+// Helper to send KYC email using Resend
 async function sendKycEmail({ email, fullName, status }) {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-  transporter.use(
-    "compile",
-    hbs({
-      viewEngine: {
-        partialsDir: path.resolve("./emails/"),
-        defaultLayout: false,
-      },
-      viewPath: path.resolve("./emails/"),
-      extName: ".hbs",
-    })
-  );
-  const templateName = status === "verified" ? "kycSuccess" : "kycRejected";
-  await transporter.sendMail({
-    from: `Trybe Market <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject:
-      status === "verified"
-        ? "Your Trybe Market KYC Status Update"
-        : "Your KYC Was Rejected",
-    template: templateName,
-    context: { name: fullName },
-  });
+  try {
+    const isVerified = status === "verified";
+    const htmlTemplate = isVerified 
+      ? kycSuccessTemplate({ name: fullName })
+      : kycRejectedTemplate({ name: fullName });
+    
+    const result = await resend.emails.send({
+      from: "Trybe Market <noreply@trybenode.space>",
+      to: email,
+      subject: isVerified
+        ? "✅ Your Trybe Market KYC Status - Verified!"
+        : "⚠️ Your Trybe Market KYC Status - Action Required",
+      html: htmlTemplate,
+    });
+    
+    console.log("KYC email sent via Resend:", result);
+    return result;
+  } catch (error) {
+    console.error("Error sending KYC email via Resend:", error);
+    throw error;
+  }
 }
 
 function normalize(str) {

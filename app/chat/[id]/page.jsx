@@ -3,14 +3,20 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Image from "next/image"
-import { auth } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import ReviewForm from "@/components/ReviewForm"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ChevronLeft, Send } from "lucide-react"
-import { getConversationWithID, addMessageToConversation } from "@/utils/messaginghooks"
+import { getConversationWithID, addMessageToConversation, getUserInfo } from "@/utils/messaginghooks"
+import { isUserRecentlyActive, useLastSeen } from "@/hooks/useLastSeen"
+import useUserStore from "@/lib/userStore"
+import NotificationCounter from "@/components/NotificationCounter"
+import UpgradePrompt from "@/components/UpgradePrompt"
+import { useSubscription } from "@/hooks/useSubscription"
 
 export default function ChatPage() {
   const router = useRouter()
@@ -25,10 +31,17 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   const [currentUserId, setCurrentUserId] = useState(null)
   const [otherUser, setOtherUser] = useState(null)
+  const [otherUserDetails, setOtherUserDetails] = useState(null)
 
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
   const messagesEndRef = useRef(null)
+  const currentUserName = useUserStore((state) => state.getUserFullName())
+  const { subscription } = useSubscription(currentUserId)
+  
+  // Track current user's activity
+  useLastSeen(currentUserId)
 
   // Check if user is authenticated
   useEffect(() => {
@@ -57,6 +70,86 @@ export default function ChatPage() {
 
       await addMessageToConversation(messageObj, conversationId)
       setNewMessage("")
+
+      // Send notification if recipient is offline
+      if (otherUserDetails) {
+        // Check if recipient is active (within last 5 minutes)
+        const isRecipientActive = otherUserDetails.lastSeen 
+          ? isUserRecentlyActive(otherUserDetails.lastSeen)
+          : false
+          
+        console.log("Recipient active?", isRecipientActive)
+        
+        if (!isRecipientActive) {
+          // Check for debounce (only notify once per 5 minutes)
+          const lastNotified = otherUserDetails.lastNotifiedAt?.toMillis?.() || 0
+          const fiveMinutes = 5 * 60 * 1000
+          const shouldNotify = Date.now() - lastNotified > fiveMinutes
+
+          if (shouldNotify) {
+            // Determine which channels to use based on opt-ins
+            const channels = []
+            if (otherUserDetails.whatsappNotifications && otherUserDetails.phone) {
+              channels.push("whatsapp")
+            }
+            if (otherUserDetails.emailNotifications !== false && otherUserDetails.email) {
+              // Default to true if not set
+              channels.push("email")
+            }
+
+            if (channels.length > 0) {
+              console.log("Sending notifications via:", channels)
+              
+              fetch("/api/notifications/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: currentUserId, // Sender's ID - for email quota check
+                  recipientId: otherUser.id, // Recipient's ID - for WhatsApp quota check
+                  recipientPhone: otherUserDetails.phone,
+                  recipientEmail: otherUserDetails.email,
+                  recipientName: otherUserDetails.fullName || "User",
+                  senderName: currentUserName || "Someone",
+                  productName: product?.name || "a product",
+                  chatLink: `https://trybemarket.online/chat/${conversationId}`,
+                  conversationId,
+                  channels,
+                }),
+              })
+                .then(async (response) => {
+                  const data = await response.json()
+                  
+                  console.log("Notification API response status:", response.status)
+                  console.log("Notification API response data:", data)
+                  
+                  if (response.status === 429) {
+                    if (data.reason === "email_limit_reached") {
+                      // Sender has reached their email limit - show upgrade prompt
+                      console.log("You have reached your daily email notification limit")
+                      setShowUpgradePrompt(true)
+                      return
+                    }
+                  }
+                  
+                  console.log("Notification response:", data)
+                  if (data.success && data.results) {
+                    console.log("Notification sent successfully.")
+                    console.log("Email sent - Remaining:", data.emailSent?.remaining, "Limit:", data.emailSent?.limit)
+                    console.log("WhatsApp blocked?", data.results?.whatsappBlocked)
+                    // lastNotifiedAt is now updated server-side in the API route
+                  }
+                })
+                .catch((error) => {
+                  console.error("Notification error:", error)
+                })
+            }
+          } else {
+            console.log("Skipping notification - recently notified")
+          }
+        } else {
+          console.log("Recipient is online, skipping notification")
+        }
+      }
     } catch (error) {
       console.error("Error sending message:", error)
       // You can add toast notification here if you have it set up
@@ -69,10 +162,10 @@ export default function ChatPage() {
   useEffect(() => {
     if (!conversationId) return
 
-    console.log("Fetching conversation with ID:", conversationId)
+    // console.log("Fetching conversation with ID:", conversationId)
 
     const unsubscribe = getConversationWithID(conversationId, (conversationData) => {
-      console.log("Conversation data received:", conversationData)
+      // console.log("Conversation data received:", conversationData)
       setConversation(conversationData)
 
       if (conversationData) {
@@ -82,8 +175,22 @@ export default function ChatPage() {
         // Set other user info
         if (conversationData.participants && currentUserId) {
           const otherUserId = conversationData.participants.find((id) => id !== currentUserId)
-          // You might want to fetch user details here
           setOtherUser({ id: otherUserId, name: "Other User", avatar: "/placeholder.svg" })
+          
+          // Fetch full user details including email and lastSeen
+          getUserInfo(otherUserId).then((userInfo) => {
+            if (userInfo) {
+              // console.log("Fetched other user details:", userInfo)
+              setOtherUserDetails(userInfo)
+              setOtherUser({
+                id: otherUserId,
+                name: userInfo.fullName || "Other User",
+                avatar: userInfo.profilePicture || "/placeholder.svg",
+              })
+            }
+          }).catch(error => {
+            console.error("Error fetching other user details:", error)
+          })
         }
       }
 
@@ -164,7 +271,7 @@ export default function ChatPage() {
   // console.log("Product loaded:", product);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 py-8 max-w-3xl min-h-screen flex flex-col">
       <div className="flex items-center mb-6">
         <Button variant="ghost" className="p-0 mr-2" onClick={() => router.push("/messages")}>
           <ChevronLeft className="h-6 w-6" />
@@ -210,8 +317,8 @@ export default function ChatPage() {
       )}
 
       {/* Messages Container */}
-      <div className="bg-gray-50 rounded-lg border border-gray-200 mb-4">
-        <div className="h-[400px] overflow-y-auto p-4">
+      <div className="bg-gray-50 rounded-lg border border-gray-200 mb-4 flex-1 flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4 min-h-[400px]">
           {Object.keys(groupedMessages).length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-500">No messages yet. Start the conversation!</p>
@@ -292,6 +399,21 @@ export default function ChatPage() {
           </Button>
         </form>
       </div>
+
+      {/* Notification Counter */}
+      <NotificationCounter userId={currentUserId} />
+
+      {/* Upgrade Prompt Modal */}
+      <UpgradePrompt
+        open={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        currentPlan={
+          subscription?.product?.planId ||
+          subscription?.service?.planId ||
+          subscription?.bundle?.planId ||
+          "product_free"
+        }
+      />
     </div>
   )
 }

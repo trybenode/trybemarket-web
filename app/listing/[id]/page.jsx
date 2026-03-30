@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useInView } from "react-intersection-observer";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,6 +36,7 @@ import {
   getUserIdOfSeller,
   initiateConversation,
 } from "@/utils/messaginghooks";
+import { isUserRecentlyActive } from "@/hooks/useLastSeen";
 
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 
@@ -189,22 +190,65 @@ export default function ListingDetailsPage({ params }) {
       setMessage("");
 
       if (conversationId) {
+        // Check if seller is recently active (within last 5 minutes)
+        const isSellerActive = AllUserInfo.lastSeen 
+          ? isUserRecentlyActive(AllUserInfo.lastSeen)
+          : false;
+        
+        console.log("Seller active?", isSellerActive);
+        
+        // Only send notification if seller is offline
+        if (!isSellerActive) {
+          // Send notification via unified API (checks sender's daily limit)
+          const channels = [];
+          if (AllUserInfo.whatsappNotifications && AllUserInfo.phone) {
+            channels.push("whatsapp");
+          }
+          if (AllUserInfo.emailNotifications !== false && AllUserInfo.email) {
+            channels.push("email");
+          }
+
+          if (channels.length > 0) {
+            fetch("/api/notifications/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: currentUserId, // Sender's ID - for email quota check
+              recipientId: sellerID, // Recipient's ID - for WhatsApp quota check
+              recipientPhone: AllUserInfo.phone,
+              recipientEmail: AllUserInfo.email,
+              recipientName: AllUserInfo.fullName || "User",
+              senderName: instigatorName,
+              productName: productDetails.name,
+              chatLink: `https://trybemarket.online/chat/${conversationId}`,
+              conversationId,
+              channels,
+            }),
+          })
+            .then(async (response) => {
+              const data = await response.json();
+              
+              if (response.status === 429 && data.reason === "email_limit_reached") {
+                setShowUpgradePrompt(true);
+                return;
+              }
+              
+              if (data.success) {
+                console.log("Notification sent. Email remaining:", data.emailSent?.remaining);
+                console.log("WhatsApp blocked?", data.results?.whatsappBlocked);
+                // lastNotifiedAt is now updated server-side in the API route
+              }
+            })
+            .catch((error) => {
+              console.error("Error sending notification:", error);
+            });
+          }
+        } else {
+          console.log("Seller is online - skipping notification");
+        }
+        
         // Navigate user immediately
         router.push(`/chat/${conversationId}`);
-
-        // Fire and forget the email notification
-        fetch("/api/send-message-notification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: AllUserInfo.email,
-            senderName: instigatorName,
-            productName: productDetails.name,
-            chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
-          }),
-        }).catch((error) => {
-          console.error("Error sending email notification:", error);
-        });
       }
     } catch (error) {
       console.error("Error sending message:", error);

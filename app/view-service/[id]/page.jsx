@@ -20,13 +20,14 @@ import {
   X,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { toast } from "react-hot-toast";
 import BackBtn from "@/components/BackButton";
 import { formatNumber } from "@/lib/utils";
 import { getServiceById } from "@/hooks/servicesHooks";
 import useUserStore from "@/lib/userStore";
-import { initiateConversation } from "@/utils/messaginghooks";
+import { initiateConversation, getUserInfo } from "@/utils/messaginghooks";
+import { isUserRecentlyActive } from "@/hooks/useLastSeen";
 import useFavoritesStore from "@/lib/FavouriteStore";
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 
@@ -36,8 +37,10 @@ export default function ServicePage({ params }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [message, setMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [liked, setLiked] = useState(false);
   const [service, setService] = useState(null);
+  const [sellerInfo, setSellerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const currentUser = useUserStore((state) => state.user);
@@ -71,6 +74,27 @@ export default function ServicePage({ params }) {
       setLiked(favoriteIds.includes(service.id));
     }
   }, [service, favoriteIds]);
+
+  // Fetch seller info when service is loaded
+  useEffect(() => {
+    const fetchSellerInfo = async () => {
+      if (!service || !service.userId) return;
+
+      try {
+        const userInfo = await getUserInfo(service.userId);
+        if (userInfo) {
+          setSellerInfo(userInfo);
+          console.log("Seller info fetched:", userInfo);
+        } else {
+          console.warn("Seller not found");
+        }
+      } catch (error) {
+        console.error("Error fetching seller info:", error);
+      }
+    };
+
+    fetchSellerInfo();
+  }, [service]);
 
   // Function to format availability display
   const formatAvailability = (availability) => {
@@ -163,19 +187,63 @@ export default function ServicePage({ params }) {
         duration: 2000,
         position: "top-right",
       });
-      // Fire and forget the email notification (API call)
-      fetch("/api/send-message-notification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: service.email, // You may need to fetch provider email if not present
-          senderName: instigatorName,
-          productName: service.name,
-          chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
-        }),
-      }).catch((error) => {
-        console.error("Error sending email notification:", error);
-      });
+      
+      // Check if seller is recently active (within last 5 minutes)
+      const isSellerActive = sellerInfo?.lastSeen 
+        ? isUserRecentlyActive(sellerInfo.lastSeen)
+        : false;
+      
+      console.log("Seller active?", isSellerActive);
+      
+      // Only send notification if seller is offline
+      if (!isSellerActive) {
+        // Send notification via unified API (checks sender's daily limit)
+        const channels = [];
+        if (sellerInfo?.whatsappNotifications && sellerInfo?.phone) {
+          channels.push("whatsapp");
+        }
+        if (sellerInfo?.emailNotifications !== false && sellerInfo?.email) {
+          channels.push("email");
+        }
+
+        if (channels.length > 0) {
+          fetch("/api/notifications/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: currentUser.id, // Sender's ID - for email quota check
+            recipientId: service.userId, // Recipient's ID - for WhatsApp quota check
+            recipientPhone: sellerInfo.phone,
+            recipientEmail: sellerInfo.email,
+            recipientName: sellerInfo.fullName || "User",
+            senderName: instigatorName,
+            productName: service.name,
+            chatLink: `https://trybemarket.online/chat/${conversationId}`,
+            conversationId,
+            channels,
+          }),
+        })
+          .then(async (response) => {
+            const data = await response.json();
+            
+            if (response.status === 429 && data.reason === "email_limit_reached") {
+              setShowUpgradePrompt(true);
+              return;
+            }
+            
+            if (data.success) {
+              console.log("Notification sent. Email remaining:", data.emailSent?.remaining);
+              console.log("WhatsApp blocked?", data.results?.whatsappBlocked);
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending notification:", error);
+          });
+        }
+      } else {
+        console.log("Seller is online - skipping notification");
+      }
+
       router.push(`/chat/${conversationId}`);
     } catch (error) {
       toast.error("Failed to send message", {
