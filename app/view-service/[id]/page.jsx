@@ -6,20 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
   MapPin,
   Calendar,
+  X,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { toast } from "react-hot-toast";
 import BackBtn from "@/components/BackButton";
 import { formatNumber } from "@/lib/utils";
 import { getServiceById } from "@/hooks/servicesHooks";
 import useUserStore from "@/lib/userStore";
-import { initiateConversation } from "@/utils/messaginghooks";
+import { initiateConversation, getUserInfo } from "@/utils/messaginghooks";
+import { isUserRecentlyActive } from "@/hooks/useLastSeen";
 import useFavoritesStore from "@/lib/FavouriteStore";
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 
@@ -29,9 +37,12 @@ export default function ServicePage({ params }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [message, setMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [liked, setLiked] = useState(false);
   const [service, setService] = useState(null);
+  const [sellerInfo, setSellerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const currentUser = useUserStore((state) => state.user);
   const getUserFullName = useUserStore((state) => state.getUserFullName);
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
@@ -63,6 +74,27 @@ export default function ServicePage({ params }) {
       setLiked(favoriteIds.includes(service.id));
     }
   }, [service, favoriteIds]);
+
+  // Fetch seller info when service is loaded
+  useEffect(() => {
+    const fetchSellerInfo = async () => {
+      if (!service || !service.userId) return;
+
+      try {
+        const userInfo = await getUserInfo(service.userId);
+        if (userInfo) {
+          setSellerInfo(userInfo);
+          console.log("Seller info fetched:", userInfo);
+        } else {
+          console.warn("Seller not found");
+        }
+      } catch (error) {
+        console.error("Error fetching seller info:", error);
+      }
+    };
+
+    fetchSellerInfo();
+  }, [service]);
 
   // Function to format availability display
   const formatAvailability = (availability) => {
@@ -103,6 +135,10 @@ export default function ServicePage({ params }) {
     setCurrentImageIndex((prev) =>
       prev === service.images.length - 1 ? 0 : prev + 1
     );
+  };
+
+  const handleImageClick = () => {
+    setIsImageModalOpen(true);
   };
 
   const handleSendMessage = async () => {
@@ -151,19 +187,63 @@ export default function ServicePage({ params }) {
         duration: 2000,
         position: "top-right",
       });
-      // Fire and forget the email notification (API call)
-      fetch("/api/send-message-notification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: service.email, // You may need to fetch provider email if not present
-          senderName: instigatorName,
-          productName: service.name,
-          chatLink: `https://trybemarket.vercel.app/chat/${conversationId}`,
-        }),
-      }).catch((error) => {
-        console.error("Error sending email notification:", error);
-      });
+      
+      // Check if seller is recently active (within last 5 minutes)
+      const isSellerActive = sellerInfo?.lastSeen 
+        ? isUserRecentlyActive(sellerInfo.lastSeen)
+        : false;
+      
+      console.log("Seller active?", isSellerActive);
+      
+      // Only send notification if seller is offline
+      if (!isSellerActive) {
+        // Send notification via unified API (checks sender's daily limit)
+        const channels = [];
+        if (sellerInfo?.whatsappNotifications && sellerInfo?.phone) {
+          channels.push("whatsapp");
+        }
+        if (sellerInfo?.emailNotifications !== false && sellerInfo?.email) {
+          channels.push("email");
+        }
+
+        if (channels.length > 0) {
+          fetch("/api/notifications/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: currentUser.id, // Sender's ID - for email quota check
+            recipientId: service.userId, // Recipient's ID - for WhatsApp quota check
+            recipientPhone: sellerInfo.phone,
+            recipientEmail: sellerInfo.email,
+            recipientName: sellerInfo.fullName || "User",
+            senderName: instigatorName,
+            productName: service.name,
+            chatLink: `https://trybemarket.online/chat/${conversationId}`,
+            conversationId,
+            channels,
+          }),
+        })
+          .then(async (response) => {
+            const data = await response.json();
+            
+            if (response.status === 429 && data.reason === "email_limit_reached") {
+              setShowUpgradePrompt(true);
+              return;
+            }
+            
+            if (data.success) {
+              console.log("Notification sent. Email remaining:", data.emailSent?.remaining);
+              console.log("WhatsApp blocked?", data.results?.whatsappBlocked);
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending notification:", error);
+          });
+        }
+      } else {
+        console.log("Seller is online - skipping notification");
+      }
+
       router.push(`/chat/${conversationId}`);
     } catch (error) {
       toast.error("Failed to send message", {
@@ -220,7 +300,10 @@ export default function ServicePage({ params }) {
       <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
         {/* Left Column - Images */}
         <div className='space-y-4'>
-          <div className='relative rounded-lg overflow-hidden bg-gray-100 aspect-square'>
+          <div 
+            className='relative rounded-lg overflow-hidden bg-gray-100 aspect-square cursor-pointer hover:opacity-95 transition-opacity'
+            onClick={handleImageClick}
+          >
             {service.images[currentImageIndex] ? (
               <div key={currentImageIndex}>
                 <Image
@@ -242,7 +325,10 @@ export default function ServicePage({ params }) {
               variant='ghost'
               size='icon'
               className='absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
-              onClick={handlePrevImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePrevImage();
+              }}
               aria-label='Previous image'
             >
               <ChevronLeft className='h-5 w-5' />
@@ -251,7 +337,10 @@ export default function ServicePage({ params }) {
               variant='ghost'
               size='icon'
               className='absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
-              onClick={handleNextImage}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNextImage();
+              }}
               aria-label='Next image'
             >
               <ChevronRight className='h-5 w-5' />
@@ -378,6 +467,104 @@ export default function ServicePage({ params }) {
           </Card>
         </div>
       </div>
+
+      {/* Image Modal */}
+      <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+        <DialogContent className='max-w-4xl w-[90vw] md:w-[85vw] p-0 bg-white border-gray-200'>
+          <DialogTitle className='sr-only'>Image viewer</DialogTitle>
+          <DialogClose className='absolute right-3 top-3 z-50 rounded-full bg-black/60 hover:bg-black/80 p-2.5 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white'>
+            <X className='h-5 w-5 text-white' />
+            <span className='sr-only'>Close</span>
+          </DialogClose>
+          <div className='relative w-full'>
+
+            {/* Image Container */}
+            <div className='relative w-full bg-gray-50 rounded-lg overflow-hidden'>
+              <div className='relative w-full' style={{ minHeight: '300px', maxHeight: '80vh' }}>
+                {service?.images[currentImageIndex] ? (
+                  <div className='relative w-full h-full flex items-center justify-center p-4 md:p-8'>
+                    <Image
+                      src={service.images[currentImageIndex]}
+                      alt={`${service.name} image ${currentImageIndex + 1}`}
+                      width={1200}
+                      height={800}
+                      className='object-contain w-full h-auto max-h-[70vh] rounded-md'
+                      sizes='(max-width: 768px) 90vw, 85vw'
+                      priority
+                    />
+                  </div>
+                ) : (
+                  <div className='flex items-center justify-center h-64'>
+                    <p className='text-gray-500 text-lg'>No image available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation Buttons */}
+              {service?.images && service.images.length > 1 && (
+                <>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='absolute left-2 md:left-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePrevImage();
+                    }}
+                    aria-label='Previous image'
+                  >
+                    <ChevronLeft className='h-5 w-5 md:h-6 md:w-6' />
+                  </Button>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='absolute right-2 md:right-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/90 hover:bg-white text-gray-700 rounded-full shadow-md'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNextImage();
+                    }}
+                    aria-label='Next image'
+                  >
+                    <ChevronRight className='h-5 w-5 md:h-6 md:w-6' />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnail Navigation & Counter */}
+            {service?.images && service.images.length > 1 && (
+              <div className='p-4 bg-white border-t'>
+                <div className='flex items-center justify-center gap-2 mb-3'>
+                  <span className='text-sm text-gray-600 font-medium'>
+                    {currentImageIndex + 1} / {service.images.length}
+                  </span>
+                </div>
+                <div className='flex justify-center gap-2 overflow-x-auto pb-2'>
+                  {service.images.map((image, index) => (
+                    <div
+                      key={index}
+                      className={`relative w-14 h-14 md:w-16 md:h-16 rounded-md overflow-hidden cursor-pointer border-2 transition-all flex-shrink-0 ${
+                        currentImageIndex === index
+                          ? 'border-blue-500 ring-2 ring-blue-200'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                      onClick={() => setCurrentImageIndex(index)}
+                    >
+                      <Image
+                        src={image}
+                        alt={`Thumbnail ${index + 1}`}
+                        fill
+                        className='object-cover'
+                        sizes='64px'
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

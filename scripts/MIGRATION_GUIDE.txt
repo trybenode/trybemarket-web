@@ -1,0 +1,113 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║          📋 LASTSEEN MIGRATION - QUICK START GUIDE           ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────┐
+│ STEP 1: Preview (Safe - No Changes Made)                      │
+└───────────────────────────────────────────────────────────────┘
+
+  npm run preview:lastseen
+
+  ✓ Shows how many users need updating
+  ✓ Lists affected users
+  ✓ No database changes
+
+
+┌───────────────────────────────────────────────────────────────┐
+│ STEP 2: Run Migration (Makes Database Changes)                │
+└───────────────────────────────────────────────────────────────┘
+
+  npm run migrate:lastseen
+
+  ⚠️  This WILL update Firestore
+  ✓ Safe to run multiple times
+  ✓ Processes 500 users per batch
+
+
+┌───────────────────────────────────────────────────────────────┐
+│ EXPECTED OUTPUT                                                │
+└───────────────────────────────────────────────────────────────┘
+
+  🚀 Starting lastSeen migration...
+  📊 Found 150 users to process
+  ✅ Committed batch of 100 updates
+  ✅ Committed final batch of 50 updates
+  
+  ==================================================
+  📈 MIGRATION SUMMARY
+  ==================================================
+  Total users: 150
+  ✅ Updated: 150
+  ⏭️  Skipped (already had lastSeen): 0
+  ❌ Errors: 0
+  ==================================================
+  
+  🎉 Migration completed successfully!
+
+
+┌───────────────────────────────────────────────────────────────┐
+│ WHAT IT DOES                                                   │
+└───────────────────────────────────────────────────────────────┘
+
+  1. Fetches all users from Firestore
+  2. Checks if they have lastSeen field
+  3. If missing → Sets to current timestamp
+  4. Uses batched writes (efficient)
+  5. Shows detailed summary
+
+
+┌───────────────────────────────────────────────────────────────┐
+│ SAFETY FEATURES                                                │
+└───────────────────────────────────────────────────────────────┘
+
+  ✓ Idempotent (safe to run multiple times)
+  ✓ Batched writes (won't timeout)
+  ✓ Error handling (logs errors, continues)
+  ✓ Skips users who already have lastSeen
+
+
+┌───────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING                                                │
+└───────────────────────────────────────────────────────────────┘
+
+  Error: "Missing credentials"
+  → Check .env file has:
+    - NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    - FIREBASE_CLIENT_EMAIL  
+    - FIREBASE_PRIVATE_KEY
+
+  Error: "Permission denied"
+  → Ensure Firebase service account has write permissions
+
+  Some users not updated
+  → Check error logs in console
+  → Can safely re-run to catch missed users
+
+
+┌───────────────────────────────────────────────────────────────┐
+│ AFTER MIGRATION                                                │
+└───────────────────────────────────────────────────────────────┘
+
+  ✅ All users will have lastSeen initialized
+  ✅ isUserRecentlyActive() works correctly  
+  ✅ Notification debounce logic functions properly
+  ✅ No "no lastSeen" edge cases
+  ✅ Ready for production deployment
+
+
+┌───────────────────────────────────────────────────────────────┐
+│ BEST PRACTICES                                                 │
+└───────────────────────────────────────────────────────────────┘
+
+  1. Always run preview first
+  2. Review the output carefully
+  3. Run during low-traffic period
+  4. Keep console output for records
+  5. Verify a few users manually after migration
+
+
+╔═══════════════════════════════════════════════════════════════╗
+║  💡 TIP: Run preview in production-like environment first     ║
+╚═══════════════════════════════════════════════════════════════╝
