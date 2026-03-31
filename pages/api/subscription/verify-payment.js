@@ -1,5 +1,23 @@
-import { activateSubscription } from "@/lib/subscriptionStore";
 import { adminDB } from "@/lib/firebaseAdmin";
+
+function calculateExpiryDate(cycle = "monthly", durationMonths = 1) {
+  const date = new Date();
+
+  if (cycle === "monthly") {
+    date.setMonth(date.getMonth() + 1);
+  } else if (cycle === "quarterly") {
+    date.setMonth(date.getMonth() + 3);
+  } else if (cycle === "yearly") {
+    date.setFullYear(date.getFullYear() + 1);
+  } else if (cycle === "one-time") {
+    const durationDays = Number(durationMonths) * 30;
+    date.setDate(date.getDate() + (Number.isFinite(durationDays) ? durationDays : 30));
+  } else if (durationMonths) {
+    date.setMonth(date.getMonth() + Number(durationMonths));
+  }
+
+  return date.toISOString();
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -57,13 +75,63 @@ export default async function handler(req, res) {
       });
     }
 
-    // Activate subscription with plan object
-    const result = await activateSubscription(userId, plan, reference);
+    // Activate subscription with Firebase Admin SDK to avoid client-rule permission checks.
+    const now = new Date().toISOString();
+    const expiryDate = calculateExpiryDate(plan.cycle, plan.durationMonths || 1);
+    const subscriptionData = {
+      planId: plan.id,
+      planName: plan.name,
+      category: plan.category,
+      amount: plan.price,
+      isActive: true,
+      subscribedAt: now,
+      expiryDate,
+      features: plan.features || [],
+      limits: plan.limits || {},
+      paymentReference: reference,
+      autoRenew: false,
+    };
+
+    const subscriptionUpdate =
+      plan.category === "bundle"
+        ? { bundle: subscriptionData }
+        : { [plan.category]: subscriptionData };
+
+    await adminDB.collection("subscriptions").doc(userId).set(subscriptionUpdate, { merge: true });
+
+    await adminDB.collection("users").doc(userId).set(
+      {
+        notifications: {
+          emailSent: {
+            dailyCount: 0,
+            lastResetDate: now.split("T")[0],
+          },
+          whatsappReceived: {
+            dailyCount: 0,
+            lastResetDate: now.split("T")[0],
+          },
+        },
+      },
+      { merge: true }
+    );
+
+    await adminDB.collection("subscriptionPayments").doc(reference).set(
+      {
+        userId,
+        planId: plan.id,
+        category: plan.category,
+        amount: plan.price,
+        reference,
+        status: "success",
+        verifiedAt: now,
+      },
+      { merge: true }
+    );
 
     return res.status(200).json({
       success: true,
       message: "Subscription activated successfully",
-      subscription: result.subscription,
+      subscription: subscriptionData,
     });
   } catch (error) {
     console.error("Error verifying payment:", error);
