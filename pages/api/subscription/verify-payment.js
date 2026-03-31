@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     const { reference, userId, planId } = req.body;
 
     if (!reference || !userId || !planId) {
-      return res.status(400).json({ error: "Missing required fields" });
+      return res.status(400).json({ error: "Missing required fields: reference, userId, and planId" });
     }
 
     // Verify payment with Paystack
