@@ -4,8 +4,11 @@ import { newMessageTemplate } from "@/emails/newMessageTemplate";
 import { adminDB } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
+import {Expo} from "expo-server-sdk";
+
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const expo = new Expo();
 
 export async function POST(req) {
   try {
@@ -15,6 +18,7 @@ export async function POST(req) {
       recipientPhone,   // "2348012345678"
       recipientEmail,   // "user@example.com"
       recipientName,
+      recipientPushToken, // Expo push token for recipient (optional)
       senderName,
       productName,
       chatLink,
@@ -41,7 +45,7 @@ export async function POST(req) {
 
     // Send Email (check SENDER's limit)
     if (channels?.includes("email") && recipientEmail) {
-      console.log("Checking email quota for sender:", userId);
+      // console.log("Checking email quota for sender:", userId);
       const emailCheck = await checkAndIncrementEmailSent(userId);
       
       emailRemaining = emailCheck.remaining;
@@ -59,14 +63,14 @@ export async function POST(req) {
           const emailResult = await resend.emails.send({
             from: "Trybe Market <noreply@trybenode.space>",
             to: recipientEmail,
-            subject: `📩 New message about ${productName || "your listing"}`,
+            subject: ` New message about ${productName || "your listing"}`,
             html: newMessageTemplate({ senderName, productName, chatLink }),
           });
           results.email = !!emailResult.data;
           if (results.email) successCount++;
-          console.log("Email sent:", emailResult);
+          // console.log("Email sent:", emailResult);
         } catch (error) {
-          console.error("Email send failed:", error);
+          // console.error("Email send failed:", error);
           results.email = false;
         }
       }
@@ -114,6 +118,62 @@ export async function POST(req) {
         }
       }
     }
+
+        if (channels?.includes("push") && recipientPushToken) {
+      if (!Expo.isExpoPushToken(recipientPushToken)) {
+        console.warn("Invalid Expo push token:", recipientPushToken);
+        results.push = false;
+        results.pushError = "Invalid push token";
+      } else {
+        try {
+          const messages = [
+            {
+              to: recipientPushToken,
+              sound: "default",
+              title: senderName,
+              body: `New message about ${productName || "your listing"}`,
+              data: { chatId: conversationId }, // used by app to navigate to chat
+              channelId: "messages",            // matches Android channel in mobile
+              badge: 1,
+            },
+          ];
+
+          const chunks = expo.chunkPushNotifications(messages);
+
+          for (const chunk of chunks) {
+            const receipts = await expo.sendPushNotificationsAsync(chunk);
+
+            for (const receipt of receipts) {
+              if (receipt.status === "error") {
+                console.error("Push receipt error:", receipt.message, receipt.details);
+
+                // Clean up stale token from Firestore
+                if (receipt.details?.error === "DeviceNotRegistered") {
+                  try {
+                    await adminDB.collection("users").doc(recipientId).update({
+                      expoPushToken: FieldValue.delete(),
+                    });
+                    console.log("Removed stale push token for:", recipientId);
+                  } catch (e) {
+                    console.error("Failed to remove stale token:", e);
+                  }
+                }
+
+                results.push = false;
+              } else {
+                results.push = true;
+                successCount++;
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Push send failed:", error);
+          results.push = false;
+        }
+      }
+    }
+
+     
 
     // Update recipient's lastNotifiedAt if any notification was sent successfully
     if (successCount > 0 && recipientId) {
