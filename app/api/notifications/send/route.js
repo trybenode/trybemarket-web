@@ -57,7 +57,7 @@ export async function POST(req) {
         console.log(`Email quota OK. Sending to: ${recipientEmail}`);
         try {
           const emailResult = await resend.emails.send({
-            from: "Trybe Market <noreply@trybenode.space>",
+            from: "Trybe Market <contact@trybemarket.online>",
             to: recipientEmail,
             subject: `📩 New message about ${productName || "your listing"}`,
             html: newMessageTemplate({ senderName, productName, chatLink }),

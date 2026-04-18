@@ -69,7 +69,7 @@ export const newMessageTemplate = ({ senderName, productName, chatLink }) => `
 
       <p>
         If you have any questions or concerns, please contact our support team at
-        <a href="mailto:contact@trybenode.space">contact@trybenode.space</a>.
+        <a href="mailto:contact@trybemarket.online">contact@trybemarket.online</a>.
       </p>
 
       <div class="footer">

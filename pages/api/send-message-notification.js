@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     console.log("Attempting to send email to:", email);
     
     const result = await resend.emails.send({
-      from: "Trybe Market <noreply@trybenode.space>",
+      from: "Trybe Market <contact@trybemarket.online>",
       to: email,
       subject: `📩 New message about ${productName}`,
       html: newMessageTemplate({ senderName, productName, chatLink }),

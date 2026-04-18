@@ -31,7 +31,7 @@ async function sendKycEmail({ email, fullName, status }) {
       : kycRejectedTemplate({ name: fullName });
     
     const result = await resend.emails.send({
-      from: "Trybe Market <noreply@trybenode.space>",
+      from: "Trybe Market <contact@trybemarket.online>",
       to: email,
       subject: isVerified
         ? "✅ Your Trybe Market KYC Status - Verified!"

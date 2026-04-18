@@ -71,7 +71,7 @@ export function kycSuccessTemplate({ name }) {
 
       <p>
         If you have any questions or notice any incorrect information, please contact our support team at
-        <a href="mailto:contact@trybenode.space">contact@trybenode.space</a>.
+        <a href="mailto:contact@trybemarket.online">contact@trybemarket.online</a>.
       </p>
 
       <div class="footer">
@@ -168,7 +168,7 @@ export function kycRejectedTemplate({ name }) {
 
       <p>
         If you believe this is an error or need assistance, please contact our support team at
-        <a href="mailto:contact@trybenode.space">contact@trybenode.space</a>.
+        <a href="mailto:contact@trybemarket.online">contact@trybemarket.online</a>.
       </p>
 
       <a href="https://trybemarket.online/kyc" class="retry-button">Retry KYC Verification</a>
