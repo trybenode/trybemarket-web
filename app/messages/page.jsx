@@ -10,8 +10,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getAllConversations } from "@/utils/messaginghooks";
 
 import Header from "@/components/Header";
-import UserProfile from "@/components/UserProfile";
-import { ArrowLeft, ChevronLeft } from "lucide-react";
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -95,14 +93,7 @@ export default function MessagesPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-       <div className="flex justify-between items-center mb-6">
-        <Button variant="ghost" className="p-0 mr-2" onClick={() => router.push("/")}>
-          <ArrowLeft size={20} className="text-yellow-600 hover:text-yellow-800"/>
-        </Button>
-        <h1 className="text-2xl font-bold">Messages</h1>
-        <UserProfile/>
-      </div>
-      
+      <Header title={"Messages"} />
 
       {conversations.length > 0 ? (
         <div className="space-y-4">

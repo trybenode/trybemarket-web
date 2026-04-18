@@ -15,7 +15,6 @@
     "update:plan-limits": "node scripts/update-plan-notification-limits.js"
   },
   "dependencies": {
-    "@firebase/util": "^1.15.0",
     "@google-cloud/vision": "^5.2.0",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.9.1",
@@ -55,7 +54,6 @@
     "cmdk": "1.0.4",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "8.5.1",
-    "expo-server-sdk": "^3.15.0",
     "firebase": "latest",
     "firebase-admin": "^13.4.0",
     "framer-motion": "^12.19.1",

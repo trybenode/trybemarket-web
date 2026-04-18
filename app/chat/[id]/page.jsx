@@ -1,115 +1,105 @@
-"use client";
+"use client"
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
-import Image from "next/image";
-import { auth } from "@/lib/firebase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import ReviewForm from "@/components/ReviewForm";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ChevronLeft, Send } from "lucide-react";
-import {
-  getConversationWithID,
-  addMessageToConversation,
-  getUserInfo,
-} from "@/utils/messaginghooks";
-import { isUserRecentlyActive, useLastSeen } from "@/hooks/useLastSeen";
-import useUserStore from "@/lib/userStore";
-import NotificationCounter from "@/components/NotificationCounter";
-import UpgradePrompt from "@/components/UpgradePrompt";
-import { useSubscription } from "@/hooks/useSubscription";
+import { useState, useEffect, useRef } from "react"
+import { useRouter, useParams } from "next/navigation"
+import Image from "next/image"
+import { auth, db } from "@/lib/firebase"
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import ReviewForm from "@/components/ReviewForm"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { ChevronLeft, Send } from "lucide-react"
+import { getConversationWithID, addMessageToConversation, getUserInfo } from "@/utils/messaginghooks"
+import { isUserRecentlyActive, useLastSeen } from "@/hooks/useLastSeen"
+import useUserStore from "@/lib/userStore"
+import NotificationCounter from "@/components/NotificationCounter"
+import UpgradePrompt from "@/components/UpgradePrompt"
+import { useSubscription } from "@/hooks/useSubscription"
 
 export default function ChatPage() {
-  const router = useRouter();
-  const params = useParams();
-  const conversationId = params.id;
+  const router = useRouter()
+  const params = useParams()
+  const conversationId = params.id
 
-  const [conversation, setConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [otherUser, setOtherUser] = useState(null);
-  const [otherUserDetails, setOtherUserDetails] = useState(null);
+  const [conversation, setConversation] = useState(null)
+  const [messages, setMessages] = useState([])
+  const [newMessage, setNewMessage] = useState("")
+  const [product, setProduct] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState(null)
+  const [otherUser, setOtherUser] = useState(null)
+  const [otherUserDetails, setOtherUserDetails] = useState(null)
 
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
 
-  const messagesEndRef = useRef(null);
-  const currentUserName = useUserStore((state) => state.getUserFullName());
-  const { subscription } = useSubscription(currentUserId);
-
+  const messagesEndRef = useRef(null)
+  const currentUserName = useUserStore((state) => state.getUserFullName())
+  const { subscription } = useSubscription(currentUserId)
+  
   // Track current user's activity
-  useLastSeen(currentUserId);
+  useLastSeen(currentUserId)
 
   // Check if user is authenticated
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
-        router.push("/login");
+        router.push("/login")
       } else {
-        setCurrentUserId(user.uid);
+        setCurrentUserId(user.uid)
       }
-    });
+    })
 
-    return () => unsubscribe();
-  }, [router]);
+    return () => unsubscribe()
+  }, [router])
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !currentUserId || sending) return;
+    e.preventDefault()
+    if (!newMessage.trim() || !currentUserId || sending) return
 
-    setSending(true);
+    setSending(true)
     try {
       const messageObj = {
         senderID: currentUserId,
         text: newMessage.trim(),
         timestamp: Date.now(),
-      };
+      }
 
-      await addMessageToConversation(messageObj, conversationId);
-      setNewMessage("");
+      await addMessageToConversation(messageObj, conversationId)
+      setNewMessage("")
 
       // Send notification if recipient is offline
       if (otherUserDetails) {
         // Check if recipient is active (within last 5 minutes)
-        const isRecipientActive = otherUserDetails.lastSeen
+        const isRecipientActive = otherUserDetails.lastSeen 
           ? isUserRecentlyActive(otherUserDetails.lastSeen)
-          : false;
-
-        console.log("Recipient active?", isRecipientActive);
-
+          : false
+          
+        console.log("Recipient active?", isRecipientActive)
+        
         if (!isRecipientActive) {
           // Check for debounce (only notify once per 5 minutes)
-          const lastNotified =
-            otherUserDetails.lastNotifiedAt?.toMillis?.() || 0;
-          const fiveMinutes = 5 * 60 * 1000;
-          const shouldNotify = Date.now() - lastNotified > fiveMinutes;
+          const lastNotified = otherUserDetails.lastNotifiedAt?.toMillis?.() || 0
+          const fiveMinutes = 5 * 60 * 1000
+          const shouldNotify = Date.now() - lastNotified > fiveMinutes
 
           if (shouldNotify) {
             // Determine which channels to use based on opt-ins
-            const channels = [];
-            if (
-              otherUserDetails.whatsappNotifications &&
-              otherUserDetails.phone
-            ) {
-              channels.push("whatsapp");
+            const channels = []
+            if (otherUserDetails.whatsappNotifications && otherUserDetails.phone) {
+              channels.push("whatsapp")
             }
-            if (
-              otherUserDetails.emailNotifications !== false &&
-              otherUserDetails.email
-            ) {
+            if (otherUserDetails.emailNotifications !== false && otherUserDetails.email) {
               // Default to true if not set
-              channels.push("email");
+              channels.push("email")
             }
 
             if (channels.length > 0) {
-              console.log("Sending notifications via:", channels);
-
+              console.log("Sending notifications via:", channels)
+              
               fetch("/api/notifications/send", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -127,140 +117,113 @@ export default function ChatPage() {
                 }),
               })
                 .then(async (response) => {
-                  const data = await response.json();
-
-                  console.log(
-                    "Notification API response status:",
-                    response.status,
-                  );
-                  console.log("Notification API response data:", data);
-
+                  const data = await response.json()
+                  
+                  console.log("Notification API response status:", response.status)
+                  console.log("Notification API response data:", data)
+                  
                   if (response.status === 429) {
                     if (data.reason === "email_limit_reached") {
                       // Sender has reached their email limit - show upgrade prompt
-                      console.log(
-                        "You have reached your daily email notification limit",
-                      );
-                      setShowUpgradePrompt(true);
-                      return;
+                      console.log("You have reached your daily email notification limit")
+                      setShowUpgradePrompt(true)
+                      return
                     }
                   }
-
-                  console.log("Notification response:", data);
+                  
+                  console.log("Notification response:", data)
                   if (data.success && data.results) {
-                    console.log("Notification sent successfully.");
-                    console.log(
-                      "Email sent - Remaining:",
-                      data.emailSent?.remaining,
-                      "Limit:",
-                      data.emailSent?.limit,
-                    );
-                    console.log(
-                      "WhatsApp blocked?",
-                      data.results?.whatsappBlocked,
-                    );
+                    console.log("Notification sent successfully.")
+                    console.log("Email sent - Remaining:", data.emailSent?.remaining, "Limit:", data.emailSent?.limit)
+                    console.log("WhatsApp blocked?", data.results?.whatsappBlocked)
                     // lastNotifiedAt is now updated server-side in the API route
                   }
                 })
                 .catch((error) => {
-                  console.error("Notification error:", error);
-                });
+                  console.error("Notification error:", error)
+                })
             }
           } else {
-            console.log("Skipping notification - recently notified");
+            console.log("Skipping notification - recently notified")
           }
         } else {
-          console.log("Recipient is online, skipping notification");
+          console.log("Recipient is online, skipping notification")
         }
       }
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("Error sending message:", error)
       // You can add toast notification here if you have it set up
     } finally {
-      setSending(false);
+      setSending(false)
     }
-  };
+  }
 
   // Fetch conversation and messages
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId) return
 
     // console.log("Fetching conversation with ID:", conversationId)
 
-    const unsubscribe = getConversationWithID(
-      conversationId,
-      (conversationData) => {
-        // console.log("Conversation data received:", conversationData)
-        setConversation(conversationData);
+    const unsubscribe = getConversationWithID(conversationId, (conversationData) => {
+      // console.log("Conversation data received:", conversationData)
+      setConversation(conversationData)
 
-        if (conversationData) {
-          setProduct(conversationData.product || null);
-          setMessages(conversationData.messages || []);
+      if (conversationData) {
+        setProduct(conversationData.product || null)
+        setMessages(conversationData.messages || [])
 
-          // Set other user info
-          if (conversationData.participants && currentUserId) {
-            const otherUserId = conversationData.participants.find(
-              (id) => id !== currentUserId,
-            );
-            setOtherUser({
-              id: otherUserId,
-              name: "Other User",
-              avatar: "/placeholder.svg",
-            });
-
-            // Fetch full user details including email and lastSeen
-            getUserInfo(otherUserId)
-              .then((userInfo) => {
-                if (userInfo) {
-                  // console.log("Fetched other user details:", userInfo)
-                  setOtherUserDetails(userInfo);
-                  setOtherUser({
-                    id: otherUserId,
-                    name: userInfo.fullName || "Other User",
-                    avatar: userInfo.profilePicture || "/placeholder.svg",
-                  });
-                }
+        // Set other user info
+        if (conversationData.participants && currentUserId) {
+          const otherUserId = conversationData.participants.find((id) => id !== currentUserId)
+          setOtherUser({ id: otherUserId, name: "Other User", avatar: "/placeholder.svg" })
+          
+          // Fetch full user details including email and lastSeen
+          getUserInfo(otherUserId).then((userInfo) => {
+            if (userInfo) {
+              // console.log("Fetched other user details:", userInfo)
+              setOtherUserDetails(userInfo)
+              setOtherUser({
+                id: otherUserId,
+                name: userInfo.fullName || "Other User",
+                avatar: userInfo.profilePicture || "/placeholder.svg",
               })
-              .catch((error) => {
-                console.error("Error fetching other user details:", error);
-              });
-          }
+            }
+          }).catch(error => {
+            console.error("Error fetching other user details:", error)
+          })
         }
+      }
 
-        setLoading(false);
-      },
-    );
+      setLoading(false)
+    })
 
-    return () => unsubscribe();
-  }, [conversationId, currentUserId]);
+    return () => unsubscribe()
+  }, [conversationId, currentUserId])
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
 
   const formatTimestamp = (ts) => {
-    if (!ts) return "";
-    return new Date(ts).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+    if (!ts) return ""
+    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  }
 
   const formatDate = (ts) => {
-    if (!ts) return "";
-    const date = new Date(ts);
-    const today = new Date();
-    if (date.toDateString() === today.toDateString()) return "Today";
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+    if (!ts) return ""
+    const date = new Date(ts)
+    const today = new Date()
+    if (date.toDateString() === today.toDateString()) return "Today"
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    if (date.toDateString() === yesterday.toDateString()) return "Yesterday"
     return date.toLocaleDateString([], {
       weekday: "long",
       month: "short",
       day: "numeric",
-    });
-  };
+    })
+  }
 
   const handleProcuctClick = () => {
     // Prefer persona from product, then conversation, fallback to product
@@ -270,39 +233,32 @@ export default function ChatPage() {
     } else {
       router.push(`/listing/${product.id}`);
     }
-  };
+  }
   // {showReviewForm && (
   //   <ReviewForm sellerId={product.sellerId} />
   // )}
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
-    const dateLabel = formatDate(message.timestamp);
-    if (!groups[dateLabel]) groups[dateLabel] = [];
-    groups[dateLabel].push(message);
-    return groups;
-  }, {});
+    const dateLabel = formatDate(message.timestamp)
+    if (!groups[dateLabel]) groups[dateLabel] = []
+    groups[dateLabel].push(message)
+    return groups
+  }, {})
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
-    );
+    )
   }
 
   if (!conversation) {
     return (
       <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="ghost"
-            className="p-0 mr-2"
-            onClick={() => router.push("/messages")}
-          >
-            <ArrowLeft
-              size={20}
-              className="text-yellow-600 hover:text-yellow-800"
-            />
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" className="p-0 mr-2" onClick={() => router.push("/messages")}>
+            <ChevronLeft className="h-6 w-6" />
           </Button>
           <h1 className="text-2xl font-bold">Chat</h1>
         </div>
@@ -310,25 +266,17 @@ export default function ChatPage() {
           <p className="text-gray-500">Conversation not found</p>
         </div>
       </div>
-    );
+    )
   }
   // console.log("Product loaded:", product);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl min-h-screen flex flex-col">
-      <div className="flex justify-between items-center mb-2">
-        <Button
-          variant="ghost"
-          className="p-0 mr-2"
-          onClick={() => router.push("/messages")}
-        >
-          <ArrowLeft
-            size={20}
-            className="text-yellow-600 hover:text-yellow-800"
-          />
+      <div className="flex items-center mb-6">
+        <Button variant="ghost" className="p-0 mr-2" onClick={() => router.push("/messages")}>
+          <ChevronLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-2xl font-bold">Chat</h1>
-        <NotificationCounter   userId={currentUserId}/>
       </div>
 
       {/* Product Card */}
@@ -338,9 +286,7 @@ export default function ChatPage() {
             <div className="flex items-center justify-between">
               <div className="relative h-16 w-16 rounded-lg overflow-hidden">
                 <Image
-                  src={
-                    product.imageUrl || "/placeholder.svg?height=64&width=64"
-                  }
+                  src={product.imageUrl || "/placeholder.svg?height=64&width=64"}
                   alt={product.name || "Product"}
                   fill
                   className="object-cover"
@@ -348,9 +294,7 @@ export default function ChatPage() {
                 />
               </div>
               <div className="ml-4">
-                <CardTitle className="text-lg">
-                  {product.name || "Product"}
-                </CardTitle>
+                <CardTitle className="text-lg">{product.name || "Product"}</CardTitle>
                 <Button
                   variant="link"
                   className="p-0 h-auto text-sm text-blue-600"
@@ -360,9 +304,12 @@ export default function ChatPage() {
                 </Button>
               </div>
               <div>
+                {/* <Button variant="ghost" onClick={() => setShowReviewForm(true)}>
+                  Rate Seller
+                </Button> */}
                 {product?.sellerId && (
-                  <ReviewForm sellerId={product.sellerId} />
-                )}
+  <ReviewForm sellerId={product.sellerId} />
+)}
               </div>
             </div>
           </CardHeader>
@@ -374,23 +321,19 @@ export default function ChatPage() {
         <div className="flex-1 overflow-y-auto p-4 min-h-[400px]">
           {Object.keys(groupedMessages).length === 0 ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">
-                No messages yet. Start the conversation!
-              </p>
+              <p className="text-gray-500">No messages yet. Start the conversation!</p>
             </div>
           ) : (
             Object.entries(groupedMessages).map(([date, msgs]) => (
               <div key={date}>
                 {/* Date separator */}
                 <div className="flex justify-center my-4">
-                  <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
-                    {date}
-                  </span>
+                  <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">{date}</span>
                 </div>
 
                 {/* Messages for this date */}
                 {msgs.map((msg, index) => {
-                  const isMe = msg.senderID === currentUserId;
+                  const isMe = msg.senderID === currentUserId
                   return (
                     <div
                       key={`${msg.timestamp}-${index}`}
@@ -399,10 +342,7 @@ export default function ChatPage() {
                       {!isMe && (
                         <div className="relative h-8 w-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
                           <Image
-                            src={
-                              otherUser?.avatar ||
-                              "/placeholder.svg?height=32&width=32"
-                            }
+                            src={otherUser?.avatar || "/placeholder.svg?height=32&width=32"}
                             alt={otherUser?.name || "User"}
                             fill
                             className="object-cover"
@@ -420,14 +360,12 @@ export default function ChatPage() {
                         >
                           <p className="text-sm">{msg.text}</p>
                         </div>
-                        <p
-                          className={`text-xs text-gray-500 mt-1 ${isMe ? "text-right" : "text-left"}`}
-                        >
+                        <p className={`text-xs text-gray-500 mt-1 ${isMe ? "text-right" : "text-left"}`}>
                           {formatTimestamp(msg.timestamp)}
                         </p>
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             ))
@@ -447,16 +385,12 @@ export default function ChatPage() {
             disabled={sending}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(e);
+                e.preventDefault()
+                handleSendMessage(e)
               }
             }}
           />
-          <Button
-            type="submit"
-            disabled={sending || !newMessage.trim()}
-            className="px-3"
-          >
+          <Button type="submit" disabled={sending || !newMessage.trim()} className="px-3">
             {sending ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
             ) : (
@@ -467,7 +401,7 @@ export default function ChatPage() {
       </div>
 
       {/* Notification Counter */}
-      {/* <NotificationCounter userId={currentUserId} /> */}
+      <NotificationCounter userId={currentUserId} />
 
       {/* Upgrade Prompt Modal */}
       <UpgradePrompt
@@ -481,5 +415,5 @@ export default function ChatPage() {
         }
       />
     </div>
-  );
+  )
 }
