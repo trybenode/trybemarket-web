@@ -97,8 +97,18 @@ export default function LoginPage() {
         duration: 3000,
       });
 
-      // Use selectedUniversity from store for redirect
+      // Track login event
+      const { trackEvent, EVENT_TYPES } = await import('@/utils/analytics');
+      const { getOrCreateSessionId } = await import('@/utils/session');
       const { selectedUniversity } = useUserStore.getState();
+      
+      trackEvent(EVENT_TYPES.USER_LOGIN, user.uid, 'user', {
+        campus_id: selectedUniversity || null,
+        session_id: getOrCreateSessionId(),
+        login_method: 'email',
+      });
+
+      // Use selectedUniversity from store for redirect
       router.push(selectedUniversity ? "/" : "/select-university");
     } catch (error) {
       console.error("Login error:", error.message);
@@ -183,8 +193,18 @@ export default function LoginPage() {
         duration: 3000,
       });
 
-      // Use selectedUniversity from store for redirect
+      // Track login event
+      const { trackEvent, EVENT_TYPES } = await import('@/utils/analytics');
+      const { getOrCreateSessionId } = await import('@/utils/session');
       const { selectedUniversity } = useUserStore.getState();
+      
+      trackEvent(EVENT_TYPES.USER_LOGIN, user.uid, 'user', {
+        campus_id: selectedUniversity || null,
+        session_id: getOrCreateSessionId(),
+        login_method: 'google',
+      });
+
+      // Use selectedUniversity from store for redirect
       router.push(selectedUniversity ? "/" : "/select-university");
     } catch (error) {
       console.error("Google Sign-In Error:", error);

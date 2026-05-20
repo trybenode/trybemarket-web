@@ -82,6 +82,23 @@ export default function ListingDetailsPage({ params }) {
               productData.images[0]?.url || productData.images[0]
             );
           }
+          
+          // Track listing viewed event
+          import('@/utils/analytics').then(({ trackEvent, EVENT_TYPES }) => {
+            import('@/utils/session').then(({ getOrCreateSessionId }) => {
+              import('@/lib/userStore').then((module) => {
+                const useUserStore = module.default;
+                trackEvent(EVENT_TYPES.LISTING_VIEWED, productData.id, 'listing', {
+                  campus_id: productData.university || useUserStore.getState().selectedUniversity,
+                  seller_id: productData.userId,
+                  category: productData.categoryId,
+                  listing_type: 'product',
+                  price: productData.price,
+                  session_id: getOrCreateSessionId(),
+                });
+              });
+            });
+          });
         } else {
           console.warn("Product not found");
         }
@@ -190,6 +207,21 @@ export default function ListingDetailsPage({ params }) {
       setMessage("");
 
       if (conversationId) {
+        // Track conversation started — always a new conversation from here
+        import('@/utils/analytics').then(({ trackEvent, EVENT_TYPES }) => {
+          import('@/utils/session').then(({ getOrCreateSessionId }) => {
+            import('@/lib/userStore').then((module) => {
+              const useUserStore = module.default;
+              trackEvent(EVENT_TYPES.CONVERSATION_STARTED, conversationId, 'conversation', {
+                listing_id: effectiveProductId,
+                seller_id: sellerID,
+                campus_id: useUserStore.getState().selectedUniversity,
+                session_id: getOrCreateSessionId(),
+              });
+            });
+          });
+        });
+
         // Check if seller is recently active (within last 5 minutes)
         const isSellerActive = AllUserInfo.lastSeen 
           ? isUserRecentlyActive(AllUserInfo.lastSeen)
@@ -305,7 +337,7 @@ export default function ListingDetailsPage({ params }) {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <ProductDetailsHeader id={id} currentUserId={currentUserId} />
+      <ProductDetailsHeader id={id} currentUserId={currentUserId} category={categoryId} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Images */}
