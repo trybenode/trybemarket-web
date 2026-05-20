@@ -6,6 +6,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { useSubscription } from "@/hooks/useSubscription";
+import { isSubscriptionActive } from "@/lib/subscriptionStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -44,7 +45,10 @@ export default function MyShopPage() {
     if (!subscriptions) return null;
 
     // Check for VIP (highest tier)
-    if (subscriptions.product?.planId === "product_vip" || subscriptions.service?.planId === "service_vip") {
+    if (
+      (subscriptions.product && isSubscriptionActive(subscriptions.product) && subscriptions.product.planId === "product_vip") ||
+      (subscriptions.service && isSubscriptionActive(subscriptions.service) && subscriptions.service.planId === "service_vip")
+    ) {
       return {
         label: "VIP",
         icon: Crown,
@@ -53,7 +57,10 @@ export default function MyShopPage() {
     }
 
     // Check for Premium
-    if (subscriptions.product?.planId === "product_premium" || subscriptions.service?.planId === "service_premium") {
+    if (
+      (subscriptions.product && isSubscriptionActive(subscriptions.product) && subscriptions.product.planId === "product_premium") ||
+      (subscriptions.service && isSubscriptionActive(subscriptions.service) && subscriptions.service.planId === "service_premium")
+    ) {
       return {
         label: "Premium",
         icon: Sparkles,
@@ -63,7 +70,7 @@ export default function MyShopPage() {
     }
 
     // Check for Bundle
-    if (subscriptions.bundle?.planId?.includes("bundle")) {
+    if (subscriptions.bundle && isSubscriptionActive(subscriptions.bundle) && subscriptions.bundle.planId?.includes("bundle")) {
       return {
         label: "Bundle",
         icon: Shield,

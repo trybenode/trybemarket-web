@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
 import { Check, Sparkles, Crown, Shield, Zap, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
-import { SUBSCRIPTION_PLANS, getPlansByCategory, checkPlanEligibility } from "@/lib/subscriptionStore";
+import { SUBSCRIPTION_PLANS, getPlansByCategory, checkPlanEligibility, isSubscriptionActive } from "@/lib/subscriptionStore";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -219,10 +219,10 @@ export default function SubscriptionPage() {
 
   const isPlanActive = (planId, category) => {
     if (!subscriptions) return false;
-    if (subscriptions.bundle?.isActive && subscriptions.bundle?.planId === planId) {
+    if (subscriptions.bundle && isSubscriptionActive(subscriptions.bundle) && subscriptions.bundle.planId === planId) {
       return true;
     }
-    if (subscriptions[category]?.isActive && subscriptions[category]?.planId === planId) {
+    if (subscriptions[category] && isSubscriptionActive(subscriptions[category]) && subscriptions[category].planId === planId) {
       return true;
     }
     return false;
