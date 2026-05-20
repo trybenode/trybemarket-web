@@ -6,7 +6,7 @@ import useFavoritesStore from "@/lib/FavouriteStore";
 
 import {Button} from "../components/ui/button";
 
-export default function ProductDetailsHeader({id, currentUserId}) {
+export default function ProductDetailsHeader({id, currentUserId, category = null}) {
   const [liked, setLiked] = useState(false);
     const favoriteIds = useFavoritesStore((state) => state.favoriteIds);
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
@@ -27,12 +27,29 @@ const handleLiked = () => {
       return;
     }
 
+    const isAdding = !liked;
     toggleFavorite(id);
     setLiked(!liked);
     toast.success(liked ? "Removed from favorites" : "Added to favorites", {
       duration: 2000,
       position: "top-right",
     });
+    
+    // Track favorite added event (only when adding, not removing)
+    if (isAdding) {
+      import('@/utils/analytics').then(({ trackEvent, EVENT_TYPES }) => {
+        import('@/utils/session').then(({ getOrCreateSessionId }) => {
+          import('@/lib/userStore').then((module) => {
+            const useUserStore = module.default;
+            trackEvent(EVENT_TYPES.FAVORITE_ADDED, id, 'listing', {
+              category: category,
+              campus_id: useUserStore.getState().selectedUniversity,
+              session_id: getOrCreateSessionId(),
+            });
+          });
+        });
+      });
+    }
   };
   return (
     <div className="mb-8 flex justify-between items-center">
