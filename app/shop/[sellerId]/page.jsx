@@ -99,6 +99,18 @@ export default function SellerShopPage() {
           ...sellerSnap.data(),
         };
         setSellerInfo(sellerData);
+        
+        // Track shop visited event
+        import('@/utils/analytics').then(({ trackEvent, EVENT_TYPES }) => {
+          import('@/utils/session').then(({ getOrCreateSessionId }) => {
+            trackEvent(EVENT_TYPES.SHOP_VISITED, sellerId, 'shop', {
+              seller_id: sellerId,
+              campus_id: sellerData.selectedUniversity,
+              session_id: getOrCreateSessionId(),
+              source: typeof document !== 'undefined' && document.referrer ? 'referral' : 'direct',
+            });
+          });
+        });
 
         // Fetch seller subscriptions (using the document ID as userId)
         const subscriptionRef = doc(db, "subscriptions", sellerId);

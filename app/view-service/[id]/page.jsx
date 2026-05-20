@@ -292,7 +292,7 @@ export default function ServicePage({ params }) {
 
   return (
     <div className='container mx-auto px-4 py-6 max-w-6xl'>
-      <ProductDetailsHeader id={id} currentUserId={currentUser} />
+      <ProductDetailsHeader id={id} currentUserId={currentUser} category={service?.categoryId} />
 
       {/* Header */}
 

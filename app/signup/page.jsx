@@ -141,6 +141,15 @@ export default function SignupPage() {
         duration: 3000,
       });
 
+      // Track signup event
+      const { trackEvent, EVENT_TYPES } = await import('@/utils/analytics');
+      const { getOrCreateSessionId } = await import('@/utils/session');
+      trackEvent(EVENT_TYPES.USER_SIGNUP, user.uid, 'user', {
+        campus_id: selectedUniversity || null,
+        session_id: getOrCreateSessionId(),
+        signup_method: 'email',
+      });
+
       router.push(selectedUniversity ? "/" : "/select-university");
     } catch (err) {
       console.error("Sign up error:", err.message);
