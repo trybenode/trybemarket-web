@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import ReviewForm from "@/components/ReviewForm";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ChevronLeft, Send } from "lucide-react";
+import { ArrowLeft, ChevronLeft, Send, Paperclip, X } from "lucide-react";
 import {
   getConversationWithID,
   addMessageToConversation,
@@ -39,8 +39,12 @@ export default function ChatPage() {
 
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const messagesEndRef = useRef(null);
+  const imageInputRef = useRef(null);
   const currentUserName = useUserStore((state) => state.getUserFullName());
   const { subscription } = useSubscription(currentUserId);
 
@@ -60,16 +64,66 @@ export default function ChatPage() {
     return () => unsubscribe();
   }, [router]);
 
+  const uploadImageToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "ProductImage");
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: "POST", body: formData }
+    );
+    const data = await response.json();
+    if (!data.secure_url) throw new Error("Upload failed");
+    return data.secure_url;
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      alert("Only JPEG, PNG, GIF, or WebP images are allowed.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be smaller than 5MB.");
+      return;
+    }
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const removeSelectedImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !currentUserId || sending) return;
+    if ((!newMessage.trim() && !selectedImage) || !currentUserId || sending) return;
 
     setSending(true);
     try {
+      let imageUrl = null;
+      if (selectedImage) {
+        setUploadingImage(true);
+        try {
+          imageUrl = await uploadImageToCloudinary(selectedImage);
+        } finally {
+          setUploadingImage(false);
+        }
+        setSelectedImage(null);
+        setImagePreview(null);
+      }
+
       const messageObj = {
         senderID: currentUserId,
         text: newMessage.trim(),
         timestamp: Date.now(),
+        ...(imageUrl && { imageUrl, type: "image" }),
       };
 
       await addMessageToConversation(messageObj, conversationId);
@@ -411,13 +465,26 @@ export default function ChatPage() {
                       )}
                       <div className="max-w-[70%]">
                         <div
-                          className={`p-3 rounded-lg ${
+                          className={`rounded-lg overflow-hidden ${
                             isMe
                               ? "bg-blue-600 text-white rounded-br-none"
                               : "bg-white border border-gray-200 rounded-bl-none"
-                          }`}
+                          } ${msg.imageUrl ? "p-1" : "p-3"}`}
                         >
-                          <p className="text-sm">{msg.text}</p>
+                          {msg.imageUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={msg.imageUrl}
+                              alt="Shared image"
+                              className="max-w-[220px] rounded-md cursor-pointer block"
+                              onClick={() => window.open(msg.imageUrl, "_blank")}
+                            />
+                          )}
+                          {msg.text && (
+                            <p className={`text-sm ${msg.imageUrl ? "mt-1 px-2 pb-1" : ""}`}>
+                              {msg.text}
+                            </p>
+                          )}
                         </div>
                         <p
                           className={`text-xs text-gray-500 mt-1 ${isMe ? "text-right" : "text-left"}`}
@@ -436,8 +503,48 @@ export default function ChatPage() {
 
         <Separator />
 
+        {/* Image preview */}
+        {imagePreview && (
+          <div className="px-4 pt-3 flex items-start gap-2">
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="h-20 w-20 object-cover rounded-lg border border-gray-200"
+              />
+              <button
+                type="button"
+                onClick={removeSelectedImage}
+                className="absolute -top-1.5 -right-1.5 bg-gray-700 text-white rounded-full h-5 w-5 flex items-center justify-center"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Payment screenshot ready to send</p>
+          </div>
+        )}
+
         {/* Message Input */}
-        <form onSubmit={handleSendMessage} className="p-4 flex gap-2">
+        <form onSubmit={handleSendMessage} className="p-4 flex gap-2 items-center">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0 text-gray-500 hover:text-blue-600"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={sending}
+            title="Attach image"
+          >
+            <Paperclip className="h-5 w-5" />
+          </Button>
           <Input
             placeholder="Type your message..."
             value={newMessage}
@@ -453,10 +560,10 @@ export default function ChatPage() {
           />
           <Button
             type="submit"
-            disabled={sending || !newMessage.trim()}
+            disabled={sending || (!newMessage.trim() && !selectedImage)}
             className="px-3"
           >
-            {sending ? (
+            {sending || uploadingImage ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
             ) : (
               <Send className="h-4 w-4" />
