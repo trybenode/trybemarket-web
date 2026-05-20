@@ -43,6 +43,7 @@ export default function ChatPage() {
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [showUserModal, setShowUserModal] = useState(false);
 
   const messagesEndRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -451,7 +452,10 @@ export default function ChatPage() {
                       className={`flex mb-4 ${isMe ? "justify-end" : "justify-start"}`}
                     >
                       {!isMe && (
-                        <div className="relative h-8 w-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
+                        <div
+                          className="relative h-8 w-8 rounded-full overflow-hidden mr-2 flex-shrink-0 cursor-pointer ring-2 ring-transparent hover:ring-blue-400 transition-all"
+                          onClick={() => setShowUserModal(true)}
+                        >
                           <Image
                             src={
                               otherUser?.avatar ||
@@ -605,6 +609,65 @@ export default function ChatPage() {
             className="max-h-[90vh] max-w-full rounded-lg object-contain"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Other user profile modal */}
+      {showUserModal && otherUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowUserModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center gap-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
+              onClick={() => setShowUserModal(false)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Avatar */}
+            <div className="relative h-20 w-20 rounded-full overflow-hidden border-4 border-blue-100">
+              <Image
+                src={otherUser.avatar || "/placeholder.svg?height=80&width=80"}
+                alt={otherUser.name || "User"}
+                fill
+                className="object-cover"
+                sizes="80px"
+              />
+            </div>
+
+            <div className="text-center">
+              <p className="text-lg font-semibold text-gray-900">{otherUser.name || "Unknown User"}</p>
+              {otherUserDetails?.lastSeen && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {isUserRecentlyActive(otherUserDetails.lastSeen) ? "🟢 Online" : "Recently active"}
+                </p>
+              )}
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => {
+                setShowUserModal(false);
+                router.push(`/shop/${otherUser.id}`);
+              }}
+            >
+              View their shop
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full text-gray-500"
+              onClick={() => setShowUserModal(false)}
+            >
+              Close
+            </Button>
+          </div>
         </div>
       )}
     </div>
