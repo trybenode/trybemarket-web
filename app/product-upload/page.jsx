@@ -271,7 +271,7 @@ export default function SellPage() {
           );
           const json = await res.json();
           if (!json.secure_url) throw new Error("Upload failed");
-          return json.secure_url;
+          return json.secure_url.replace("/upload/", "/upload/q_auto,f_auto,w_1200/");
         })
       );
       setImages((prev) => [...prev, ...urls]);

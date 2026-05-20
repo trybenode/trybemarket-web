@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import ReviewForm from "@/components/ReviewForm";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ChevronLeft, Send, Paperclip, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, Send, Paperclip, X, ChevronRight } from "lucide-react";
+import { compressImage } from "@/utils/compressImage";
 import {
   getConversationWithID,
   addMessageToConversation,
@@ -42,7 +43,7 @@ export default function ChatPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(null); // index into imageUrls array
   const [showUserModal, setShowUserModal] = useState(false);
 
   const messagesEndRef = useRef(null);
@@ -66,9 +67,15 @@ export default function ChatPage() {
     return () => unsubscribe();
   }, [router]);
 
+  // Collect all image URLs from messages for gallery navigation
+  const imageUrls = messages
+    .filter((m) => m.imageUrl)
+    .map((m) => m.imageUrl);
+
   const uploadImageToCloudinary = async (file) => {
+    const compressed = await compressImage(file);
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", compressed);
     formData.append("upload_preset", "ProductImage");
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
@@ -76,7 +83,7 @@ export default function ChatPage() {
     );
     const data = await response.json();
     if (!data.secure_url) throw new Error("Upload failed");
-    return data.secure_url;
+    return data.secure_url.replace("/upload/", "/upload/q_auto,f_auto,w_1200/");
   };
 
   const handleImageSelect = (e) => {
@@ -482,7 +489,7 @@ export default function ChatPage() {
                               src={msg.imageUrl}
                               alt="Shared image"
                               className="max-w-[220px] rounded-md cursor-pointer block"
-                              onClick={() => setLightboxUrl(msg.imageUrl)}
+                              onClick={() => setLightboxIndex(imageUrls.indexOf(msg.imageUrl))}
                             />
                           )}
                           {msg.text && (
@@ -589,26 +596,58 @@ export default function ChatPage() {
         }
       />
 
-      {/* Image lightbox */}
-      {lightboxUrl && (
+      {/* Image gallery lightbox */}
+      {lightboxIndex !== null && imageUrls.length > 0 && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          onClick={() => setLightboxUrl(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          onClick={() => setLightboxIndex(null)}
         >
+          {/* Close */}
           <button
             type="button"
-            className="absolute top-4 right-4 text-white bg-gray-800 rounded-full h-9 w-9 flex items-center justify-center hover:bg-gray-700"
-            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 text-white bg-gray-800 rounded-full h-9 w-9 flex items-center justify-center hover:bg-gray-700 z-10"
+            onClick={() => setLightboxIndex(null)}
           >
             <X className="h-5 w-5" />
           </button>
+
+          {/* Counter */}
+          {imageUrls.length > 1 && (
+            <span className="absolute top-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded-full z-10">
+              {lightboxIndex + 1} / {imageUrls.length}
+            </span>
+          )}
+
+          {/* Prev */}
+          {lightboxIndex > 0 && (
+            <button
+              type="button"
+              className="absolute left-3 text-white bg-black/50 rounded-full h-10 w-10 flex items-center justify-center hover:bg-black/80 z-10"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => i - 1); }}
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+          )}
+
+          {/* Image */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={lightboxUrl}
-            alt="Full size image"
-            className="max-h-[90vh] max-w-full rounded-lg object-contain"
+            src={imageUrls[lightboxIndex]}
+            alt={`Image ${lightboxIndex + 1}`}
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
             onClick={(e) => e.stopPropagation()}
           />
+
+          {/* Next */}
+          {lightboxIndex < imageUrls.length - 1 && (
+            <button
+              type="button"
+              className="absolute right-3 text-white bg-black/50 rounded-full h-10 w-10 flex items-center justify-center hover:bg-black/80 z-10"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => i + 1); }}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          )}
         </div>
       )}
 
