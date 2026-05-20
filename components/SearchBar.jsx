@@ -80,6 +80,22 @@ export default React.memo(function SearchBar({ onResults }) {
       return 0; // Keep original order for same type
     });
 
+    // Track search event
+    import('@/utils/analytics').then(({ trackEvent, EVENT_TYPES }) => {
+      import('@/utils/session').then(({ getOrCreateSessionId }) => {
+        import('@/lib/userStore').then((module) => {
+          const useUserStore = module.default;
+          trackEvent(EVENT_TYPES.SEARCH_PERFORMED, null, 'search', {
+            query: debouncedQuery.trim().toLowerCase(),
+            results_count: sortedFiltered.length,
+            has_results: sortedFiltered.length > 0,
+            campus_id: useUserStore.getState().selectedUniversity,
+            session_id: getOrCreateSessionId(),
+          });
+        });
+      });
+    });
+
     onResults(sortedFiltered, true);
   }, [debouncedQuery, products]);
 
