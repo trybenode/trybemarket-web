@@ -42,6 +42,7 @@ export default function ChatPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   const messagesEndRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -477,7 +478,7 @@ export default function ChatPage() {
                               src={msg.imageUrl}
                               alt="Shared image"
                               className="max-w-[220px] rounded-md cursor-pointer block"
-                              onClick={() => window.open(msg.imageUrl, "_blank")}
+                              onClick={() => setLightboxUrl(msg.imageUrl)}
                             />
                           )}
                           {msg.text && (
@@ -521,7 +522,7 @@ export default function ChatPage() {
                 <X className="h-3 w-3" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Payment screenshot ready to send</p>
+            <p className="text-xs text-gray-500 mt-1">Image ready to send</p>
           </div>
         )}
 
@@ -583,6 +584,29 @@ export default function ChatPage() {
           "product_free"
         }
       />
+
+      {/* Image lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 text-white bg-gray-800 rounded-full h-9 w-9 flex items-center justify-center hover:bg-gray-700"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X className="h-5 w-5" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxUrl}
+            alt="Full size image"
+            className="max-h-[90vh] max-w-full rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
