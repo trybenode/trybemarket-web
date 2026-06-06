@@ -1,85 +1,112 @@
 import "./globals.css";
+import Script from "next/script";
 import { UserProvider } from "@/context/UserContext";
 import ToastProvider from "@/components/ToastProvider";
 import UserActivityTracker from "@/components/UserActivityTracker";
 import PageViewTracker from "@/components/PageViewTracker";
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
+
+const GA_ID = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID;
+
 export const metadata = {
   title: {
-  default: "TrybeMarket | Campus Marketplace for Students & Artisans",
-  template: "TrybeMarket | %s",
-  absolute: "TrybeMarket | Buy, Sell & Hire Services on Campus",
-},
-description:
-  "TrybeMarket is the smart campus marketplace that lets students buy, sell, and hire services effortlessly. Create your shop link, list products, showcase your skills, and reach more buyers without spamming group chats. Built for student entrepreneurs, vendors, and campus artisans.",
-keywords: [
-  "TrybeMarket",
-  "TrybeNode",
-  "student marketplace Nigeria",
-  "campus e-commerce",
-  "sell on campus",
-  "hire student artisans",
-  "student service providers",
-  "campus business app",
-  "campus marketplace Africa",
-  "student hustlers platform",
-  "shop link generator",
-  "sell online Nigeria students",
-  "student freelance platform",
-],
-
-openGraph: {
-  title: "TrybeMarket | Campus Marketplace for Students & Artisans",
+    default: "TrybeMarket | Campus Marketplace for Students & Artisans",
+    template: "TrybeMarket | %s",
+    absolute: "TrybeMarket | Buy, Sell & Hire Services on Campus",
+  },
   description:
-    "Create your shop link, list products, and reach more buyers without spamming groups. TrybeMarket helps students sell smarter, showcase services, and grow their brand on campus.",
-  url: "https://trybemarket.online",
-  siteName: "TrybeMarket",
-  // images: [
-  //   {
-  //     url: "https://trybemarket.onlineopengraph-image.png",
-  //     width: 1200,
-  //     height: 630,
-  //     alt: "TrybeMarket - Campus Marketplace for Students",
-  //   },
-  // ],
-  locale: "en_US",
-  type: "website",
-},
+    "TrybeMarket is the smart campus marketplace that lets students buy, sell, and hire services effortlessly. Create your shop link, list products, showcase your skills, and reach more buyers without spamming group chats. Built for student entrepreneurs, vendors, and campus artisans.",
+  keywords: [
+    "TrybeMarket",
+    "TrybeNode",
+    "student marketplace Nigeria",
+    "campus e-commerce",
+    "sell on campus",
+    "hire student artisans",
+    "student service providers",
+    "campus business app",
+    "campus marketplace Africa",
+    "student hustlers platform",
+    "shop link generator",
+    "sell online Nigeria students",
+    "student freelance platform",
+  ],
 
-twitter: {
-  card: "summary_large_image",
-  title: "TrybeMarket | Buy, Sell & Hire Services on Campus",
-  description:
-    "TrybeMarket empowers students to sell products, showcase their services, and grow without stress. One link. Zero spam. Full campus reach.",
-  images: ["https://trybemarket.com/opengraph-image.png"],
-  creator: "@TrybeMarket",
-},
+  openGraph: {
+    title: "TrybeMarket | Campus Marketplace for Students & Artisans",
+    description:
+      "Create your shop link, list products, and reach more buyers without spamming groups. TrybeMarket helps students sell smarter, showcase services, and grow their brand on campus.",
+    url: "https://trybemarket.online",
+    siteName: "TrybeMarket",
+    images: [
+      {
+        url: "https://trybemarket.online/trybemarket.png",
+        width: 512,
+        height: 512,
+        alt: "TrybeMarket - Campus Marketplace for Students",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
 
-metadataBase: new URL("https://trybemarket.online"),
+  twitter: {
+    card: "summary_large_image",
+    title: "TrybeMarket | Buy, Sell & Hire Services on Campus",
+    description:
+      "TrybeMarket empowers students to sell products, showcase their services, and grow without stress. One link. Zero spam. Full campus reach.",
+    images: ["https://trybemarket.online/trybemarket.png"],
+    creator: "@TrybeMarket",
+  },
 
-robots: {
-  index: true,
-  follow: true,
-  googleBot: {
+  metadataBase: new URL("https://trybemarket.online"),
+
+  robots: {
     index: true,
     follow: true,
-    "max-video-preview": -1,
-    "max-image-preview": "large",
-    "max-snippet": -1,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
-},
 
-verification: {
-  // Google, Meta, Pinterest, or others
-},
+  verification: {
+    // Add Google Search Console verification code here:
+    // google: "your-verification-code",
+  },
 
   icons: { icon: "/trybemarket.png" },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "TrybeMarket",
+  url: "https://trybemarket.online",
+  description:
+    "The smart campus marketplace that lets students buy, sell, and hire services effortlessly.",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: {
+      "@type": "EntryPoint",
+      urlTemplate: "https://trybemarket.online/explore-services?q={search_term_string}",
+    },
+    "query-input": "required name=search_term_string",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang='en'>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <ToastProvider />
         <UserActivityTracker />
         <PageViewTracker />
@@ -87,6 +114,23 @@ export default function RootLayout({ children }) {
           {children}
         </UserProvider>
         <SpeedInsights />
+        <Analytics />
+        {GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_ID}');
+              `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
