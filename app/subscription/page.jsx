@@ -533,7 +533,7 @@ export default function SubscriptionPage() {
                     Save More with Longer Plans
                   </h4>
                   <p className="text-sm text-gray-600">
-                    Monthly Bundle: ₦2,500/month • Quarterly: ₦3,000 (save ₦4,500) • Yearly: ₦10,000 (save ₦20,000)
+                    Monthly Bundle: ₦2,500/month • Quarterly: ₦6,000 (save ₦1,500) • Yearly: ₦21,000 (save ₦9,000)
                   </p>
                 </div>
               </div>
