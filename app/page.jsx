@@ -12,6 +12,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getTierWeight } from "@/lib/sellerTier";
 
 import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 import ToolBarSkeleton from "@/components/ui/ToolBarSkeleton";
@@ -120,8 +121,14 @@ export default function HomePage() {
           },
         }));
 
-        // 🔀 Apply randomness (perfect + cheap)
-        const shuffled = docs.sort(() => Math.random() - 0.5);
+        // 🔀 Premium/VIP sellers rank first; shuffle within each tier for fairness
+        const shuffled = docs
+          .map((d) => ({ d, r: Math.random() }))
+          .sort((a, b) => {
+            const tierDiff = getTierWeight(b.d.product.sellerTier) - getTierWeight(a.d.product.sellerTier);
+            return tierDiff !== 0 ? tierDiff : a.r - b.r;
+          })
+          .map((x) => x.d);
 
         if (loadMore) {
           setProducts((prev) => [...prev, ...shuffled]);

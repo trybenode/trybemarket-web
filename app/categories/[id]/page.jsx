@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useParams } from 'next/navigation'
 import { collection, query, where, getDocs, doc, getDoc, orderBy, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { getTierWeight } from '@/lib/sellerTier'
 import ListingCards from '@/components/ListingCards'
 import UserProfile from '@/components/UserProfile'
 import { Loader } from 'lucide-react'
@@ -70,6 +71,9 @@ export default function CategoryProductList() {
           updatedAt: doc.data().updatedAt?.toDate() || new Date(),
         },
       }))
+
+      // Premium/VIP sellers rank first; createdAt order preserved within each tier
+      productsData.sort((a, b) => getTierWeight(b.product.sellerTier) - getTierWeight(a.product.sellerTier))
 
       setProducts(productsData)
     } catch (err) {

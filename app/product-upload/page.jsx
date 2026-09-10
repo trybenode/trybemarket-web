@@ -48,6 +48,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { canUserUploadProduct } from '../../hooks/UploadLimiter';
 import { useSubscription } from "@/hooks/useSubscription";
+import { computeSellerTier } from "@/lib/sellerTier";
 import { compressImage } from '@/utils/imageCompress';
 
 import Header from "@/components/Header";
@@ -55,7 +56,7 @@ export default function SellPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading } = useUser();
-  const { limits, loading: subLoading } = useSubscription(currentUser?.uid);
+  const { limits, subscriptions, loading: subLoading } = useSubscription(currentUser?.uid);
   const productId = searchParams.get("id");
   const isEditMode = Boolean(productId);
 
@@ -343,6 +344,7 @@ export default function SellPage() {
         userId,
         university,
         isVip: isVip,
+        sellerTier: computeSellerTier(subscriptions, "product"),
         ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
       };
   
