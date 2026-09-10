@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Facebook, Instagram, MessageCircleCode, Share, Crown, Sparkles, Shield } from "lucide-react";
+import { Eye } from "lucide-react";
 import SellerProfileSkeleton from "./ui/SellerProfileSkeleton";
 
 const icons = [
@@ -157,6 +158,10 @@ export default function SellerProfileCard({ sellerInfo, subscriptionBadge }) {
             <h2 className="text-xl font-bold text-gray-900">{fullName || "Seller"}</h2>
             <p className="text-sm text-gray-500 mt-1">Member since {yearCreated}</p>
             <p className="text-sm text-gray-500">{address || "No address provided"}</p>
+            <p className="text-sm text-gray-500 flex items-center justify-center gap-1 mt-1">
+              <Eye className="h-3.5 w-3.5" />
+              {selectedUser.shopViewCount || 0} shop {selectedUser.shopViewCount === 1 ? "view" : "views"}
+            </p>
             
             {/* Subscription Badge Label */}
             {subscriptionBadge && (
