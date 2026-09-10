@@ -62,6 +62,42 @@ async function getVipItemsByUserIds(collectionName, userIds) {
 }
 
 /**
+ * Fetches all items from a collection whose userId is in the given list,
+ * regardless of isVip status (used to reset sellerTier on expiry).
+ * Firestore 'in' operator supports max 30 values, so we chunk.
+ */
+async function getItemsByUserIds(collectionName, userIds) {
+  const CHUNK_SIZE = 30;
+  const docs = [];
+  for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
+    const chunk = userIds.slice(i, i + CHUNK_SIZE);
+    const snap = await adminDB
+      .collection(collectionName)
+      .where("userId", "in", chunk)
+      .get();
+    docs.push(...snap.docs);
+  }
+  return docs;
+}
+
+/**
+ * Writes sellerTier: "free" in chunks of 400 (safely under Firestore's
+ * 500-writes-per-batch limit).
+ */
+async function resetSellerTierInBatches(docs) {
+  const BATCH_SIZE = 400;
+  let reset = 0;
+  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+    const chunk = docs.slice(i, i + BATCH_SIZE);
+    const batch = adminDB.batch();
+    chunk.forEach((doc) => batch.update(doc.ref, { sellerTier: "free" }));
+    await batch.commit();
+    reset += chunk.length;
+  }
+  return reset;
+}
+
+/**
  * POST /api/subscription/cleanup-expired-vip
  * GET  /api/subscription/cleanup-expired-vip  (for Vercel cron)
  *
@@ -132,6 +168,22 @@ export default async function handler(req, res) {
       stripVipInBatches(vipServices),
     ]);
 
+    // Reset sellerTier to "free" for ALL of these users' listings (not just
+    // VIP-tagged ones), since their premium/vip ranking boost no longer applies.
+    const [allExpiredProducts, allExpiredServices] = await Promise.all([
+      expiredProductUserIds.size > 0
+        ? getItemsByUserIds("products", [...expiredProductUserIds])
+        : Promise.resolve([]),
+      expiredServiceUserIds.size > 0
+        ? getItemsByUserIds("services", [...expiredServiceUserIds])
+        : Promise.resolve([]),
+    ]);
+
+    const [productsTierReset, servicesTierReset] = await Promise.all([
+      resetSellerTierInBatches(allExpiredProducts),
+      resetSellerTierInBatches(allExpiredServices),
+    ]);
+
     // Mark expired subscriptions as inactive (prevents double-processing on next run)
     if (subMarkInactive.length > 0) {
       const BATCH_SIZE = 400;
@@ -152,6 +204,10 @@ export default async function handler(req, res) {
       vipStripped: {
         products: productsStripped,
         services: servicesStripped,
+      },
+      sellerTierReset: {
+        products: productsTierReset,
+        services: servicesTierReset,
       },
       subscriptionsMarkedInactive: subMarkInactive.length,
       runAt: new Date().toISOString(),

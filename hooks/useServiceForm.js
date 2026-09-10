@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import { compressImage } from "@/utils/compressImage";
 import serviceCategories from "@/public/serviceCategories.json";
 import { canUserUploadService } from "@/hooks/UploadLimiter";
+import { getUserSubscriptions } from "@/lib/subscriptionStore";
+import { computeSellerTier } from "@/lib/sellerTier";
 
 export const useServiceForm = (currentUser) => {
   const router = useRouter();
@@ -146,6 +148,8 @@ export const useServiceForm = (currentUser) => {
       const userSnap = await getDoc(doc(db, "users", userId));
       const university = userSnap.data()?.selectedUniversity || "Unknown";
 
+      const subscriptions = await getUserSubscriptions(userId);
+
       // Prepare availability data
       const availability = {
         type: availabilityType,
@@ -165,6 +169,7 @@ export const useServiceForm = (currentUser) => {
         userId,
         university,
         isVip: isVip || false,
+        sellerTier: computeSellerTier(subscriptions, "service"),
         createdAt: new Date(),
       };
 
