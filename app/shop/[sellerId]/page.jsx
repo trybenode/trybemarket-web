@@ -10,6 +10,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import SellerProfileCard from "@/components/SellerProfileCard";
 import ListingCard from "@/components/ListingCard";
 import Link from "next/link";
@@ -110,6 +111,28 @@ export default function SellerShopPage() {
               source: typeof document !== 'undefined' && document.referrer ? 'referral' : 'direct',
             });
           });
+        });
+
+        // Record shop view for the profile view counter (deduped server-side, per §4)
+        import('@/utils/session').then(({ getOrCreateSessionId }) => {
+          fetch('/api/shop-view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sellerId,
+              viewerId: auth.currentUser?.uid || null,
+              sessionId: getOrCreateSessionId(),
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.counted) {
+                setSellerInfo((prev) =>
+                  prev ? { ...prev, shopViewCount: (prev.shopViewCount || 0) + 1 } : prev
+                );
+              }
+            })
+            .catch((error) => console.error('Error recording shop view:', error));
         });
 
         // Fetch seller subscriptions (using the document ID as userId)
