@@ -3,6 +3,10 @@
 # dependencies
 /node_modules
 
+# Vercel builds with pnpm — an npm lockfile drifting out of sync with
+# pnpm-lock.yaml is what broke every production deploy from 2bcaeb7 onward.
+package-lock.json
+
 
 # next.js
 /.next/
