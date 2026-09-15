@@ -36,10 +36,10 @@ next-env.d.ts
 
 serviceAccountKey.json
 seed.js 
- 
+scripts/backups/
 
 markettrybe-cfed7-aeb679b5c606.json
 
 firestore.rules
 subscriptionPlan.js
-businessplan.txt
+businessplan.txtscripts/backups/

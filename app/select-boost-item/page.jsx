@@ -3,14 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  updateDoc,
-  Timestamp 
+import {
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { Zap, Package, Briefcase, AlertCircle, CheckCircle } from "lucide-react";
 import Header from "@/components/Header";
@@ -31,6 +28,8 @@ export default function SelectBoostItemPage() {
   const [activeTab, setActiveTab] = useState("products");
   const [boosting, setBoosting] = useState(false);
   const [hasActiveBoost, setHasActiveBoost] = useState(false);
+  const [availableCredits, setAvailableCredits] = useState([]);
+  const [checkingCredits, setCheckingCredits] = useState(true);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -38,6 +37,7 @@ export default function SelectBoostItemPage() {
         setUser(currentUser);
         fetchMyItems(currentUser.uid);
         checkActiveBoost(currentUser.uid);
+        fetchBoostCredits(currentUser.uid);
       } else {
         router.push("/login");
       }
@@ -45,6 +45,23 @@ export default function SelectBoostItemPage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  const fetchBoostCredits = async (userId) => {
+    try {
+      setCheckingCredits(true);
+      const creditsQuery = query(
+        collection(db, "boostCredits"),
+        where("userId", "==", userId),
+        where("status", "==", "unused")
+      );
+      const creditsSnap = await getDocs(creditsQuery);
+      setAvailableCredits(creditsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (error) {
+      console.error("Error fetching boost credits:", error);
+    } finally {
+      setCheckingCredits(false);
+    }
+  };
 
   const checkActiveBoost = async (userId) => {
     try {
@@ -164,22 +181,36 @@ export default function SelectBoostItemPage() {
   const handleBoostItem = async (itemId, itemType) => {
     if (!user) return;
 
+    if (availableCredits.length === 0) {
+      toast.error("You don't have a boost credit. Purchase a boost plan first.");
+      setTimeout(() => {
+        router.push("/subscription");
+      }, 1500);
+      return;
+    }
+
     try {
       setBoosting(true);
-      
-      // Calculate boost end date (7 days from now)
-      const boostEndDate = new Date();
-      boostEndDate.setDate(boostEndDate.getDate() + 7);
 
-      const collectionName = itemType === "product" ? "products" : "services";
-      const itemRef = doc(db, collectionName, itemId);
-
-      await updateDoc(itemRef, {
-        isBoosted: true,
-        boostStartDate: Timestamp.fromDate(new Date()),
-        boostEndDate: Timestamp.fromDate(boostEndDate),
-        updatedAt: Timestamp.fromDate(new Date()),
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/boost/apply-boost", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          itemId,
+          itemType,
+          creditId: availableCredits[0].id,
+        }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to boost item");
+      }
 
       toast.success("Item boosted successfully! 🚀", {
         duration: 4000,
@@ -188,14 +219,15 @@ export default function SelectBoostItemPage() {
       // Refresh the list
       await fetchMyItems(user.uid);
       await checkActiveBoost(user.uid);
-      
+      await fetchBoostCredits(user.uid);
+
       // Redirect to boosted products page after a delay
       setTimeout(() => {
         router.push("/boosted-products");
       }, 2000);
     } catch (error) {
       console.error("Error boosting item:", error);
-      toast.error("Failed to boost item. Please try again.");
+      toast.error(error.message || "Failed to boost item. Please try again.");
     } finally {
       setBoosting(false);
     }
@@ -258,7 +290,7 @@ export default function SelectBoostItemPage() {
             className="w-full text-white"
             style={{ backgroundColor: isCurrentlyBoosted ? '#6B7280' : 'rgb(37,99,235)' }}
             onClick={() => handleBoostItem(item.id, type)}
-            disabled={boosting || isCurrentlyBoosted}
+            disabled={boosting || isCurrentlyBoosted || (!checkingCredits && availableCredits.length === 0)}
             onMouseEnter={(e) => !isCurrentlyBoosted && (e.currentTarget.style.backgroundColor = 'rgb(29,78,216)')}
             onMouseLeave={(e) => !isCurrentlyBoosted && (e.currentTarget.style.backgroundColor = 'rgb(37,99,235)')}
           >
@@ -267,6 +299,8 @@ export default function SelectBoostItemPage() {
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Already Boosted
               </>
+            ) : !checkingCredits && availableCredits.length === 0 ? (
+              "No Boost Credit"
             ) : (
               <>
                 <Zap className="h-4 w-4 mr-2" />
@@ -322,6 +356,35 @@ export default function SelectBoostItemPage() {
             </div>
           </div>
         </div>
+
+        {!checkingCredits && availableCredits.length === 0 && (
+          <Alert className="mb-6 border-yellow-200 bg-yellow-50">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-900">No boost credit available</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              Purchase a boost plan to unlock a credit before boosting an item.{" "}
+              <Button
+                variant="link"
+                className="h-auto p-0 text-yellow-900 underline"
+                onClick={() => router.push("/subscription")}
+              >
+                View boost plans
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!checkingCredits && availableCredits.length > 0 && (
+          <Alert className="mb-6 border-blue-200 bg-blue-50">
+            <Zap className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-900">
+              {availableCredits.length} boost credit{availableCredits.length > 1 ? "s" : ""} available
+            </AlertTitle>
+            <AlertDescription className="text-blue-700">
+              Select an item below to use one of your boost credits.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {hasActiveBoost && (
           <Alert className="mb-6 border-green-200 bg-green-50">

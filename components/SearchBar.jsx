@@ -3,6 +3,7 @@
 import React,{ useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getTierWeight } from "@/lib/sellerTier";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
@@ -69,12 +70,13 @@ export default React.memo(function SearchBar({ onResults }) {
       );
     });
 
-    // Sort results: VIP products first, then regular products
+    // Sort results: seller tier first (VIP > Premium > Free), then VIP-tagged items within a tier
     const sortedFiltered = filtered.sort((a, b) => {
+      const tierDiff = getTierWeight(b.product.sellerTier) - getTierWeight(a.product.sellerTier);
+      if (tierDiff !== 0) return tierDiff;
+
       const aIsVip = a.product.isVip === true;
       const bIsVip = b.product.isVip === true;
-      
-      // VIP products come first
       if (aIsVip && !bIsVip) return -1;
       if (!aIsVip && bIsVip) return 1;
       return 0; // Keep original order for same type
