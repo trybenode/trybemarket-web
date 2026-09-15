@@ -129,6 +129,24 @@ export default async function handler(req, res) {
       { merge: true }
     );
 
+    // Boost plans are one-time, single-use purchases: record an unused
+    // credit that /api/boost/apply-boost consumes when the seller picks
+    // an item, instead of granting free boosts off the "boost" category alone.
+    if (plan.category === "boost") {
+      await adminDB.collection("boostCredits").doc(reference).set(
+        {
+          userId,
+          planId: plan.id,
+          tier: plan.type || plan.id,
+          durationDays: plan.limits?.durationDays || 7,
+          reference,
+          status: "unused",
+          createdAt: new Date(),
+        },
+        { merge: true }
+      );
+    }
+
     await syncSellerTierAdmin(userId);
 
     return res.status(200).json({
