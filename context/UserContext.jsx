@@ -96,7 +96,10 @@ export const UserProvider = ({ children }) => {
                     kycData.status === "verified" &&
                     !currentUserData.isVerified
                   ) {
-                    await updateDoc(userRef, { isVerified: true });
+                    // isVerified is written server-side only (app/api/kyc-submit),
+                    // atomically with the one-time KYC credit award — never
+                    // client-written, so this just reflects it in local state
+                    // once the kycRequests status flip confirms it happened.
                     const updatedUser = {
                       ...currentUserData,
                       isVerified: true,
