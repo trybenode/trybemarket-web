@@ -72,7 +72,17 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
           imageUrl: productDetails.imageUrl,
           id: productDetails.id,
           sellerId: productDetails.sellerID
-        }
+        },
+        // Explicit roles for the sale-confirmation flow (03-sale-confirmation.md) —
+        // whoever starts a conversation about a listing is always the buyer.
+        // Older conversations predate these fields; server code derives roles
+        // from product.sellerId + participants for those instead.
+        // buyerConfirmedAt/sellerConfirmedAt are deliberately omitted here —
+        // absence means "not confirmed" everywhere they're read, and
+        // firestore.rules flatly forbids either key at creation time.
+        buyerId: senderID,
+        sellerId: receiverID,
+        saleStatus: "none",
       });
     }
     return convoID;
