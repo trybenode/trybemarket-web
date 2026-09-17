@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Facebook, Instagram, MessageCircleCode, Share, Crown, Sparkles, Shield } from "lucide-react";
 import { Eye } from "lucide-react";
 import SellerProfileSkeleton from "./ui/SellerProfileSkeleton";
+import UserBadgesRow from "./UserBadgesRow";
 
 const icons = [
   { name: "Facebook", component: Facebook },
@@ -104,7 +105,7 @@ export default function SellerProfileCard({ sellerInfo, subscriptionBadge }) {
     );
   }
 
-  const { profilePicture, fullName, createdAt, address } = selectedUser;
+  const { uid, profilePicture, fullName, createdAt, address } = selectedUser;
   const yearCreated = createdAt ? new Date(createdAt).getFullYear() : "Unknown";
 
   const shopUrl =
@@ -173,6 +174,9 @@ export default function SellerProfileCard({ sellerInfo, subscriptionBadge }) {
                 {subscriptionBadge.label}
               </Badge>
             )}
+
+            {/* Earned achievement badges (Verified Student, Founding Member, Top Seller) */}
+            <UserBadgesRow userId={uid} className="mt-2" />
           </div>
 
           {/* Social Icons */}

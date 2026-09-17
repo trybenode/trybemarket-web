@@ -6,10 +6,11 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
-import { Check, Sparkles, Crown, Shield, Zap, AlertCircle } from "lucide-react";
+import { Check, Sparkles, Crown, Shield, Zap, AlertCircle, Coins } from "lucide-react";
 import Header from "@/components/Header";
 import { SUBSCRIPTION_PLANS, getPlansByCategory, checkPlanEligibility, isSubscriptionActive } from "@/lib/subscriptionStore";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,8 @@ export default function SubscriptionPage() {
     loading: subLoading,
     getCurrentPlan,
   } = useSubscription(user?.uid);
+
+  const { balance: creditBalance, loading: creditLoading } = useCreditBalance(user?.uid);
 
   // Fetch subscription plans from Firestore database
   useEffect(() => {
@@ -403,6 +406,23 @@ export default function SubscriptionPage() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {!creditLoading && (
+          <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-lg p-6 mb-8 shadow-sm flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Coins className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">App Credit</p>
+                <p className="text-2xl font-bold text-gray-900">{creditBalance.toLocaleString()} credits</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 max-w-xs text-right">
+              Earned from KYC verification and confirmed sales. Redeemable at checkout soon.
+            </p>
           </div>
         )}
 
