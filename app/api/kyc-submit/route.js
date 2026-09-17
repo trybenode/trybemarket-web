@@ -8,6 +8,7 @@ import { adminDB } from "../../../lib/firebaseAdmin";
 import { Resend } from "resend";
 import { kycSuccessTemplate, kycRejectedTemplate } from "@/emails/kycEmailTemplates";
 import { CREDIT_EVENT_TYPES } from "@/lib/creditConstants";
+import { BADGE_KEYS } from "@/lib/badgeConstants";
 
 const KYC_CREDIT_AMOUNT = 150;
 
@@ -108,19 +109,22 @@ export async function POST(req) {
     // const nameMatch = normalizedText.includes(normalize(fullName));
     const status = nameMatch && matricMatch ? "verified" : "rejected";
 
-    // Update Firestore KYC status, flip isVerified, and award the one-time
-    // KYC credit — all in a single transaction. This is the only place
-    // isVerified is ever set to true (never client-side; see firestore.rules),
-    // and the credit award is idempotent by construction: the ledger entry's
-    // fixed doc ID IS the "already awarded" check, so re-submitting an
-    // already-verified user (or a concurrent duplicate call) can't double-pay.
+    // Update Firestore KYC status, flip isVerified, award the one-time KYC
+    // credit, and award the Verified Student badge — all in a single
+    // transaction. This is the only place isVerified is ever set to true
+    // (never client-side; see firestore.rules), and both awards are
+    // idempotent by construction: each doc's fixed ID IS the "already
+    // awarded" check, so re-submitting an already-verified user (or a
+    // concurrent duplicate call) can't double-pay or double-award.
     const kycRef = adminDB.collection("kycRequests").doc(userId);
     const userRef = adminDB.collection("users").doc(userId);
     const ledgerRef = userRef.collection("creditLedger").doc("kyc_verification_complete");
+    const badgeRef = userRef.collection("badges").doc(BADGE_KEYS.VERIFIED_STUDENT);
 
     await adminDB.runTransaction(async (tx) => {
       // All reads must precede all writes in a Firestore transaction.
       const ledgerSnap = status === "verified" ? await tx.get(ledgerRef) : null;
+      const badgeSnap = status === "verified" ? await tx.get(badgeRef) : null;
 
       tx.update(kycRef, {
         status,
@@ -138,6 +142,13 @@ export async function POST(req) {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
           });
           userUpdate.creditBalance = admin.firestore.FieldValue.increment(KYC_CREDIT_AMOUNT);
+        }
+        if (!badgeSnap.exists) {
+          tx.set(badgeRef, {
+            badgeKey: BADGE_KEYS.VERIFIED_STUDENT,
+            awardedAt: admin.firestore.FieldValue.serverTimestamp(),
+            periodKey: null,
+          });
         }
         tx.set(userRef, userUpdate, { merge: true });
       }

@@ -62,6 +62,17 @@ export const UserProvider = ({ children }) => {
             userData = { ...userData, ...docSnap.data() };
           } else {
             await setDoc(userRef, userData, { merge: true });
+            // Backstop for any signup path other than app/signup/page.jsx's
+            // two (which already call this) — best-effort, idempotent.
+            user
+              .getIdToken()
+              .then((idToken) =>
+                fetch("/api/user/on-signup", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+                })
+              )
+              .catch((error) => console.error("[UserContext] Error checking Founding Member badge:", error));
           }
 
           if (user.emailVerified && !userData.emailVerified) {

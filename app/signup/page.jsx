@@ -109,6 +109,18 @@ export default function SignupPage() {
         createdAt: new Date().toISOString(),
       });
 
+      // Best-effort — Founding Member is a display badge, not worth failing
+      // signup over. See app/api/user/on-signup/route.js.
+      user
+        .getIdToken()
+        .then((idToken) =>
+          fetch("/api/user/on-signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          })
+        )
+        .catch((error) => console.error("Error checking Founding Member badge:", error));
+
       await useUserStore.getState().setUser({
         id: user.uid,
         email: user.email,
@@ -221,6 +233,17 @@ export default function SignupPage() {
         },
         { merge: true }
       );
+
+      // Best-effort, idempotent — safe even on a returning Google user.
+      user
+        .getIdToken()
+        .then((idToken) =>
+          fetch("/api/user/on-signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          })
+        )
+        .catch((error) => console.error("Error checking Founding Member badge:", error));
 
       await useUserStore.getState().setUser({
         id: user.uid,
