@@ -449,11 +449,20 @@ export default function SellPage() {
           <Alert className="mb-6 bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200">
             <Crown className="h-4 w-4 text-yellow-600" />
             <AlertDescription className="text-sm text-gray-700">
-              <strong className="text-gray-900">VIP Feature Available!</strong> You have{" "}
-              <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>
-                {vipTagsAvailable} VIP tag{vipTagsAvailable !== 1 ? "s" : ""}
-              </span>{" "}
-              remaining for products. VIP products get featured placement and priority visibility.
+              {vipTagsAvailable > 0 ? (
+                <>
+                  <strong className="text-gray-900">VIP Feature Available!</strong> You have{" "}
+                  <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>
+                    {vipTagsAvailable} VIP tag{vipTagsAvailable !== 1 ? "s" : ""}
+                  </span>{" "}
+                  remaining for products. VIP products get featured placement and priority visibility.
+                </>
+              ) : (
+                <>
+                  <strong className="text-gray-900">All VIP tags in use.</strong> You've used every VIP
+                  tag on your current plan — remove one from another product or upgrade to add more.
+                </>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -495,17 +504,29 @@ export default function SellPage() {
                   <h3 className="font-semibold text-gray-900">Mark as VIP Product</h3>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">
-                  VIP products receive featured placement, priority in search results, and a special badge.
-                  You have <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>{vipTagsAvailable}</span> VIP tag{vipTagsAvailable !== 1 ? "s" : ""} available.
+                  VIP products receive featured placement, priority in search results, and a special badge.{" "}
+                  {vipTagsAvailable > 0 ? (
+                    <>
+                      You have <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>{vipTagsAvailable}</span> VIP tag{vipTagsAvailable !== 1 ? "s" : ""} available.
+                    </>
+                  ) : isVip ? (
+                    "You've used all your VIP tags on this plan — you can still remove it from this item."
+                  ) : (
+                    "You've used all your VIP tags on this plan. Remove one from another listing or upgrade to add more."
+                  )}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setIsVip(!isVip)}
+                onClick={() => {
+                  if (vipTagsAvailable <= 0 && !isVip) return;
+                  setIsVip(!isVip);
+                }}
+                disabled={vipTagsAvailable <= 0 && !isVip}
+                title={vipTagsAvailable <= 0 && !isVip ? "No VIP tags left on your plan" : undefined}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                   isVip ? 'bg-yellow-500' : 'bg-gray-300'
-                }`}
-                style={isVip ? {} : {}}
+                } ${vipTagsAvailable <= 0 && !isVip ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${

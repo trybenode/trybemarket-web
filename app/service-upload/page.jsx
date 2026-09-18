@@ -94,7 +94,11 @@ export default function ServiceUpload() {
           <Alert className='mb-6 border-[rgb(37,99,235)] bg-blue-50'>
             <Crown className='h-4 w-4 text-[rgb(37,99,235)]' />
             <AlertDescription className='text-sm text-gray-700'>
-              You have <strong>{vipTagsAvailable} VIP tags</strong> available. Mark services as VIP for priority visibility.
+              {vipTagsAvailable > 0 ? (
+                <>You have <strong>{vipTagsAvailable} VIP tag{vipTagsAvailable !== 1 ? "s" : ""}</strong> available. Mark services as VIP for priority visibility.</>
+              ) : (
+                <><strong>All VIP tags in use.</strong> You've used every VIP tag on your current plan — remove one from another service or upgrade to add more.</>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -269,16 +273,25 @@ export default function ServiceUpload() {
                         Get priority placement in search results and featured sections
                       </p>
                       <p className='text-xs text-gray-500 mt-1'>
-                        {vipTagsAvailable} VIP {vipTagsAvailable === 1 ? 'tag' : 'tags'} available
+                        {vipTagsAvailable > 0
+                          ? `${vipTagsAvailable} VIP ${vipTagsAvailable === 1 ? 'tag' : 'tags'} available`
+                          : isVip
+                            ? "No tags left — you can still remove it from this service"
+                            : "No VIP tags left on your plan"}
                       </p>
                     </div>
                   </div>
                   <button
                     type='button'
-                    onClick={() => setIsVip(!isVip)}
+                    onClick={() => {
+                      if (vipTagsAvailable <= 0 && !isVip) return;
+                      setIsVip(!isVip);
+                    }}
+                    disabled={vipTagsAvailable <= 0 && !isVip}
+                    title={vipTagsAvailable <= 0 && !isVip ? "No VIP tags left on your plan" : undefined}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       isVip ? 'bg-[rgb(37,99,235)]' : 'bg-gray-300'
-                    }`}
+                    } ${vipTagsAvailable <= 0 && !isVip ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
