@@ -12,7 +12,6 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getTierWeight } from "@/lib/sellerTier";
 
 import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 import ToolBarSkeleton from "@/components/ui/ToolBarSkeleton";
@@ -88,7 +87,10 @@ export default function HomePage() {
           constraints.push(where("university", "==", selectedUniversity));
         }
 
-        // Pure pagination ordering
+        // Ranking: rankScore desc (tier + VIP + boost, computed server-side —
+        // see 07-ranking-unification.md), createdAt desc as a deterministic
+        // tiebreaker. Replaces the old client-side tier-sort-plus-shuffle.
+        constraints.push(orderBy("rankScore", "desc"));
         constraints.push(orderBy("createdAt", "desc"));
         constraints.push(limit(PAGE_SIZE));
 
@@ -121,19 +123,11 @@ export default function HomePage() {
           },
         }));
 
-        // 🔀 Premium/VIP sellers rank first; shuffle within each tier for fairness
-        const shuffled = docs
-          .map((d) => ({ d, r: Math.random() }))
-          .sort((a, b) => {
-            const tierDiff = getTierWeight(b.d.product.sellerTier) - getTierWeight(a.d.product.sellerTier);
-            return tierDiff !== 0 ? tierDiff : a.r - b.r;
-          })
-          .map((x) => x.d);
-
+        // Already ordered by rankScore/createdAt server-side — no client sort.
         if (loadMore) {
-          setProducts((prev) => [...prev, ...shuffled]);
+          setProducts((prev) => [...prev, ...docs]);
         } else {
-          setProducts(shuffled);
+          setProducts(docs);
         }
 
         // save cursor

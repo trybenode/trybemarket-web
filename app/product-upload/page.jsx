@@ -48,7 +48,6 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { canUserUploadProduct } from '../../hooks/UploadLimiter';
 import { useSubscription } from "@/hooks/useSubscription";
-import { computeSellerTier } from "@/lib/sellerTier";
 import { compressImage } from '@/utils/imageCompress';
 
 import Header from "@/components/Header";
@@ -56,7 +55,7 @@ export default function SellPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading } = useUser();
-  const { limits, subscriptions, loading: subLoading } = useSubscription(currentUser?.uid);
+  const { limits, loading: subLoading } = useSubscription(currentUser?.uid);
   const productId = searchParams.get("id");
   const isEditMode = Boolean(productId);
 
@@ -328,6 +327,11 @@ export default function SellPage() {
       const userData = userSnap.data();
       const university = userData.selectedUniversity || "Unknown";
 
+      // isVip/sellerTier/rankScore/searchKeywords are server-computed only
+      // (firestore.rules blocks them here) — /api/listing/set-vip-tag below
+      // both enforces the VIP-tag plan cap and recomputes rankScore from
+      // whatever this write actually saved, covering plain name/description
+      // edits too, not just VIP toggling. See 07-ranking-unification.md.
       const data = {
         name: productName.trim(),
         subcategory: selectedSubcategories,
@@ -343,16 +347,31 @@ export default function SellPage() {
         images,
         userId,
         university,
-        isVip: isVip,
-        sellerTier: computeSellerTier(subscriptions, "product"),
         ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
       };
-  
-      if (isEditMode) await updateDoc(doc(db, "products", productId), data);
-      else {
-        await addDoc(collection(db, "products"), data);
+
+      let savedProductId = productId;
+      if (isEditMode) {
+        await updateDoc(doc(db, "products", productId), data);
+      } else {
+        const newDocRef = await addDoc(collection(db, "products"), data);
+        savedProductId = newDocRef.id;
         // No need to increment count - we check actual count in Firestore
-      }    
+      }
+
+      // Best-effort — the listing still saved even if this fails; it'll
+      // self-correct on the next edit, boost, or subscription event.
+      auth.currentUser
+        ?.getIdToken()
+        .then((idToken) =>
+          fetch("/api/listing/set-vip-tag", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ itemId: savedProductId, itemType: "product", isVip }),
+          })
+        )
+        .catch((error) => console.error("Error syncing VIP tag/rank score:", error));
+
       toast.success(isEditMode ? "Updated" : "Uploaded");
       router.push("/my-shop");
     } catch (err) {

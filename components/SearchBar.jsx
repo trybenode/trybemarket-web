@@ -1,43 +1,58 @@
 "use client";
 
 import React,{ useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query as fsQuery, orderBy, limit, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getTierWeight } from "@/lib/sellerTier";
+import { tokenizeText } from "@/lib/rankScoreShared";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+
+const BROWSE_LIMIT = 60;
+const SEARCH_LIMIT = 60;
+
+// Ranked by rankScore desc, createdAt desc — same ordering every other
+// surface uses (07-ranking-unification.md §6), replacing the old full
+// unindexed collection scan.
+async function fetchRankedBrowse() {
+  const q = fsQuery(
+    collection(db, "products"),
+    orderBy("rankScore", "desc"),
+    orderBy("createdAt", "desc"),
+    limit(BROWSE_LIMIT)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((doc) => ({
+    id: doc.id,
+    product: { ...doc.data(), createdAt: doc.data().createdAt?.toDate(), updatedAt: doc.data().updatedAt?.toDate() },
+  }));
+}
+
+// Indexed on the FIRST query token via array-contains-any (Firestore's OR
+// match across up to 10 values, already ordered by rankScore), then a
+// client-side AND-filter over the remaining tokens on that bounded result
+// set — not the whole collection. "Good enough for now," per the spec, not
+// a real search engine.
+async function fetchRankedSearch(tokens) {
+  const q = fsQuery(
+    collection(db, "products"),
+    where("searchKeywords", "array-contains-any", tokens.slice(0, 10)),
+    orderBy("rankScore", "desc"),
+    orderBy("createdAt", "desc"),
+    limit(SEARCH_LIMIT)
+  );
+  const snap = await getDocs(q);
+  const docs = snap.docs.map((doc) => ({
+    id: doc.id,
+    product: { ...doc.data(), createdAt: doc.data().createdAt?.toDate(), updatedAt: doc.data().updatedAt?.toDate() },
+  }));
+  if (tokens.length <= 1) return docs;
+  return docs.filter((d) => tokens.every((t) => (d.product.searchKeywords || []).includes(t)));
+}
 
 export default React.memo(function SearchBar({ onResults }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // Fetch products on mount
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const data = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          product: {
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate(),
-            updatedAt: doc.data().updatedAt?.toDate(),
-          },
-        }));
-        setProducts(data);
-        onResults(data, false); // Load all by default
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
 
   // Debounce user input
   useEffect(() => {
@@ -48,58 +63,46 @@ export default React.memo(function SearchBar({ onResults }) {
     return () => clearTimeout(delaySearch);
   }, [searchQuery]);
 
-  // Search logic with VIP priority
   useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      onResults(products, false);
-      return;
-    }
+    const tokens = tokenizeText(debouncedQuery);
 
-    const filtered = products.filter((prod) => {
-      const item = prod.product;
-      const q = debouncedQuery.toLowerCase();
+    const run = async () => {
+      setLoading(true);
+      try {
+        if (tokens.length === 0) {
+          const browse = await fetchRankedBrowse();
+          onResults(browse, false);
+          return;
+        }
 
-      return (
-        item.name?.toLowerCase().includes(q) ||
-        item.categoryId?.toLowerCase().includes(q) ||
-        item.brand?.toLowerCase().includes(q) ||
-        (Array.isArray(item.subcategory)
-          ? item.subcategory.some((sub) => sub.toLowerCase().includes(q))
-          : item.subcategory?.toLowerCase().includes(q)) ||
-        item.description?.toLowerCase().includes(q)
-      );
-    });
+        const results = await fetchRankedSearch(tokens);
 
-    // Sort results: seller tier first (VIP > Premium > Free), then VIP-tagged items within a tier
-    const sortedFiltered = filtered.sort((a, b) => {
-      const tierDiff = getTierWeight(b.product.sellerTier) - getTierWeight(a.product.sellerTier);
-      if (tierDiff !== 0) return tierDiff;
-
-      const aIsVip = a.product.isVip === true;
-      const bIsVip = b.product.isVip === true;
-      if (aIsVip && !bIsVip) return -1;
-      if (!aIsVip && bIsVip) return 1;
-      return 0; // Keep original order for same type
-    });
-
-    // Track search event
-    import('@/utils/analytics').then(({ trackEvent, EVENT_TYPES }) => {
-      import('@/utils/session').then(({ getOrCreateSessionId }) => {
-        import('@/lib/userStore').then((module) => {
-          const useUserStore = module.default;
-          trackEvent(EVENT_TYPES.SEARCH_PERFORMED, null, 'search', {
-            query: debouncedQuery.trim().toLowerCase(),
-            results_count: sortedFiltered.length,
-            has_results: sortedFiltered.length > 0,
-            campus_id: useUserStore.getState().selectedUniversity,
-            session_id: getOrCreateSessionId(),
+        // Track search event
+        import('@/utils/analytics').then(({ trackEvent, EVENT_TYPES }) => {
+          import('@/utils/session').then(({ getOrCreateSessionId }) => {
+            import('@/lib/userStore').then((module) => {
+              const useUserStore = module.default;
+              trackEvent(EVENT_TYPES.SEARCH_PERFORMED, null, 'search', {
+                query: debouncedQuery.trim().toLowerCase(),
+                results_count: results.length,
+                has_results: results.length > 0,
+                campus_id: useUserStore.getState().selectedUniversity,
+                session_id: getOrCreateSessionId(),
+              });
+            });
           });
         });
-      });
-    });
 
-    onResults(sortedFiltered, true);
-  }, [debouncedQuery, products]);
+        onResults(results, true);
+      } catch (error) {
+        console.error("Error fetching search results:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    run();
+  }, [debouncedQuery]);
 
   const handleClearSearch = () => {
     setSearchQuery("");

@@ -6,8 +6,6 @@ import toast from "react-hot-toast";
 import { compressImage } from "@/utils/compressImage";
 import serviceCategories from "@/public/serviceCategories.json";
 import { canUserUploadService } from "@/hooks/UploadLimiter";
-import { getUserSubscriptions } from "@/lib/subscriptionStore";
-import { computeSellerTier } from "@/lib/sellerTier";
 
 export const useServiceForm = (currentUser) => {
   const router = useRouter();
@@ -148,8 +146,6 @@ export const useServiceForm = (currentUser) => {
       const userSnap = await getDoc(doc(db, "users", userId));
       const university = userSnap.data()?.selectedUniversity || "Unknown";
 
-      const subscriptions = await getUserSubscriptions(userId);
-
       // Prepare availability data
       const availability = {
         type: availabilityType,
@@ -159,6 +155,10 @@ export const useServiceForm = (currentUser) => {
         }),
       };
 
+      // isVip/sellerTier/rankScore/searchKeywords are server-computed only
+      // (firestore.rules blocks them here) — set below via
+      // /api/listing/set-vip-tag, which enforces the VIP-tag plan cap and
+      // recomputes rankScore. See 07-ranking-unification.md.
       const data = {
         name: serviceName.trim(),
         categoryId: selectedCategory,
@@ -168,12 +168,24 @@ export const useServiceForm = (currentUser) => {
         images,
         userId,
         university,
-        isVip: isVip || false,
-        sellerTier: computeSellerTier(subscriptions, "service"),
         createdAt: new Date(),
       };
 
-      await addDoc(collection(db, "services"), data);
+      const newDocRef = await addDoc(collection(db, "services"), data);
+
+      // Best-effort — the listing still saved even if this fails; it'll
+      // self-correct on the next edit, boost, or subscription event.
+      auth.currentUser
+        ?.getIdToken()
+        .then((idToken) =>
+          fetch("/api/listing/set-vip-tag", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ itemId: newDocRef.id, itemType: "service", isVip }),
+          })
+        )
+        .catch((error) => console.error("Error syncing VIP tag/rank score:", error));
+
       toast.success("Service Listed Successfully");
       router.push("/explore-services");
       // setTimeout(() => , 1000);
