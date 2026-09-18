@@ -41,7 +41,11 @@ export default function UserBadgesRow({ userId, className = "" }) {
     getDocs(collection(db, "users", userId, "badges"))
       .then((snap) => {
         if (cancelled) return;
-        setBadgeKeys(snap.docs.map((d) => d.id).filter((key) => BADGE_DISPLAY[key]));
+        // Keyed by the badgeKey FIELD, not the doc ID — a recurring badge
+        // like Top Seller has one doc per period (e.g. "top_seller_2026-08")
+        // but should only show once here, grouped by achievement type.
+        const keys = snap.docs.map((d) => d.data().badgeKey).filter((key) => BADGE_DISPLAY[key]);
+        setBadgeKeys([...new Set(keys)]);
       })
       .catch((error) => console.error("Error fetching badges:", error))
       .finally(() => !cancelled && setLoading(false));
