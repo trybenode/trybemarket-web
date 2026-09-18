@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { Check, Sparkles, Crown, Shield, Zap, AlertCircle, Coins } from "lucide-react";
 import Header from "@/components/Header";
 import { SUBSCRIPTION_PLANS, getPlansByCategory, checkPlanEligibility, isSubscriptionActive } from "@/lib/subscriptionStore";
+import { CREDIT_SPEND_CAPS } from "@/lib/creditConstants";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useCreditBalance } from "@/hooks/useCreditBalance";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,13 @@ export default function SubscriptionPage() {
   const [planEligibility, setPlanEligibility] = useState({});
   const [dbPlans, setDbPlans] = useState([]);
   const [loadingDbPlans, setLoadingDbPlans] = useState(true);
+
+  // Credit-assisted checkout — see credit-spending-security-checklist.md.
+  // applyCredit is the user's toggle (default on); creditReservation is null
+  // until handleContinueToCheckout resolves it via /api/credit/spend/reserve.
+  const [applyCredit, setApplyCredit] = useState(true);
+  const [creditReservation, setCreditReservation] = useState(null);
+  const [reserving, setReserving] = useState(false);
 
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
 
@@ -152,6 +160,23 @@ export default function SubscriptionPage() {
     }
     
     setSelectedPlan(plan);
+    setApplyCredit(true);
+    setCreditReservation(null);
+  };
+
+  const redirectAfterActivation = (plan) => {
+    setSelectedPlan(null);
+    setCreditReservation(null);
+    setReference(`${user.uid}-${Date.now()}`);
+
+    if (plan.category === "boost") {
+      toast.success("Now select an item to boost!", { duration: 3000 });
+      setTimeout(() => {
+        router.push("/select-boost-item");
+      }, 1500);
+    } else {
+      router.push("/thank-you");
+    }
   };
 
   const handlePaymentSuccess = async (response) => {
@@ -159,16 +184,19 @@ export default function SubscriptionPage() {
       setLoading(true);
       toast.loading("Verifying payment...", { id: "verify" });
 
-      const verifyRes = await fetch("/api/subscription/verify-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reference: response.reference,
-          userId: user.uid,
-          planId: selectedPlan.id,
-        }),
-      });
+      const isCreditAssisted = creditReservation?.applyCredit === true;
+      const verifyUrl = isCreditAssisted ? "/api/credit/spend/verify" : "/api/subscription/verify-payment";
+      const headers = { "Content-Type": "application/json" };
+      let body;
 
+      if (isCreditAssisted) {
+        headers.Authorization = `Bearer ${await user.getIdToken()}`;
+        body = { reference: response.reference };
+      } else {
+        body = { reference: response.reference, userId: user.uid, planId: selectedPlan.id };
+      }
+
+      const verifyRes = await fetch(verifyUrl, { method: "POST", headers, body: JSON.stringify(body) });
       const verifyData = await verifyRes.json();
 
       if (!verifyData.success) {
@@ -176,19 +204,7 @@ export default function SubscriptionPage() {
       }
 
       toast.success("Subscription activated! ", { id: "verify" });
-      
-      setSelectedPlan(null);
-      setReference(`${user.uid}-${Date.now()}`);
-      
-      // If it's a boost plan, redirect to item selection page
-      if (selectedPlan.category === "boost") {
-        toast.success("Now select an item to boost!", { duration: 3000 });
-        setTimeout(() => {
-          router.push("/select-boost-item");
-        }, 1500);
-      } else {
-        router.push("/thank-you");
-      }
+      redirectAfterActivation(selectedPlan);
     } catch (error) {
       console.error("Payment verification error:", error);
       toast.error(error.message || "Failed to activate subscription", {
@@ -202,23 +218,79 @@ export default function SubscriptionPage() {
   const handlePaymentClose = () => {
     toast.error("Payment cancelled");
     setSelectedPlan(null);
+    setCreditReservation(null);
   };
 
-  const createPaystackProps = (plan) => ({
-    email: user?.email,
-    amount: plan.price * 100,
-    reference: reference,
-    metadata: {
-      userId: user?.uid,
-      planId: plan.id,
-      planName: plan.name,
-      category: plan.category,
-    },
-    publicKey,
-    text: `Pay ${plan.price.toLocaleString()}`,
-    onSuccess: handlePaymentSuccess,
-    onClose: handlePaymentClose,
-  });
+  // Client-side ESTIMATE only, for display before the user commits — the
+  // server (lib/creditSpendServer.js) independently recomputes this from the
+  // real plan price/cap and is the only thing that actually decides the
+  // amount applied. Never trust this value for anything but showing a number.
+  const getCreditEligibility = (plan) => {
+    if (!plan || !plan.price || creditBalance <= 0) return null;
+    const capKey = plan.category === "boost" ? "boost" : plan.id;
+    const capPercent = CREDIT_SPEND_CAPS[capKey];
+    if (!capPercent) return null;
+    const maxCoverage = Math.floor(plan.price * capPercent);
+    const estimatedApply = Math.min(creditBalance, maxCoverage);
+    return estimatedApply > 0 ? { estimatedApply } : null;
+  };
+
+  const handleContinueToCheckout = async (plan) => {
+    const eligibility = getCreditEligibility(plan);
+    if (!eligibility) {
+      // Nothing to reserve — identical to the pre-credit flow.
+      setCreditReservation({ applyCredit: false });
+      return;
+    }
+
+    try {
+      setReserving(true);
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/credit/spend/reserve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ itemId: plan.id, applyCredit }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to apply credit");
+      }
+
+      if (data.applyCredit && data.fullyCovered) {
+        toast.success("Fully covered by your App Credit! 🎉");
+        redirectAfterActivation(plan);
+        return;
+      }
+
+      setCreditReservation(data);
+    } catch (error) {
+      toast.error(error.message || "Failed to apply credit");
+    } finally {
+      setReserving(false);
+    }
+  };
+
+  const createPaystackProps = (plan) => {
+    const isCreditAssisted = creditReservation?.applyCredit === true;
+    const amount = isCreditAssisted ? creditReservation.remainingAmount * 100 : plan.price * 100;
+    const payReference = isCreditAssisted ? creditReservation.reference : reference;
+
+    return {
+      email: user?.email,
+      amount,
+      reference: payReference,
+      metadata: {
+        userId: user?.uid,
+        planId: plan.id,
+        planName: plan.name,
+        category: plan.category,
+      },
+      publicKey,
+      text: `Pay ₦${(amount / 100).toLocaleString()}`,
+      onSuccess: handlePaymentSuccess,
+      onClose: handlePaymentClose,
+    };
+  };
 
   const isPlanActive = (planId, category) => {
     if (!subscriptions) return false;
@@ -229,6 +301,79 @@ export default function SubscriptionPage() {
       return true;
     }
     return false;
+  };
+
+  const renderCheckoutControls = (plan) => {
+    if (selectedPlan?.id !== plan.id) {
+      return (
+        <Button
+          className="w-full text-white"
+          style={{ backgroundColor: 'rgb(37,99,235)' }}
+          onClick={() => handlePlanSelect(plan)}
+          disabled={!isKycVerified}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
+        >
+          {!isKycVerified ? "KYC Required" : "Subscribe Now"}
+        </Button>
+      );
+    }
+
+    // Selected, credit decision not made yet — offer the toggle (skipped
+    // entirely, same as before, if there's no eligible credit to apply).
+    if (creditReservation === null) {
+      const eligibility = getCreditEligibility(plan);
+      if (!eligibility) {
+        return (
+          <Button className="w-full text-white" style={{ backgroundColor: 'rgb(37,99,235)' }} disabled={reserving} onClick={() => handleContinueToCheckout(plan)}>
+            {reserving ? "Loading..." : `Pay ₦${plan.price.toLocaleString()}`}
+          </Button>
+        );
+      }
+      return (
+        <div className="w-full space-y-3">
+          <label className="flex items-center gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={applyCredit}
+              onChange={(e) => setApplyCredit(e.target.checked)}
+              className="h-4 w-4 flex-shrink-0"
+            />
+            <span className="text-gray-800">
+              Apply {eligibility.estimatedApply.toLocaleString()} credits — covers ₦{eligibility.estimatedApply.toLocaleString()} of this ₦{plan.price.toLocaleString()} plan
+            </span>
+          </label>
+          <Button
+            className="w-full text-white"
+            style={{ backgroundColor: 'rgb(37,99,235)' }}
+            disabled={reserving}
+            onClick={() => handleContinueToCheckout(plan)}
+          >
+            {reserving ? "Applying..." : "Continue"}
+          </Button>
+        </div>
+      );
+    }
+
+    // Reservation resolved (with or without credit applied) — pay whatever's left via Paystack.
+    if (loadingUser || !user?.email || !publicKey || (!creditReservation.applyCredit && !reference)) {
+      return (
+        <Button className="w-full" disabled>
+          Loading...
+        </Button>
+      );
+    }
+
+    return (
+      <div className="w-full space-y-2">
+        {creditReservation.applyCredit && (
+          <p className="text-xs text-center text-gray-500">
+            {creditReservation.creditApplied.toLocaleString()} credits applied — pay the remaining ₦{creditReservation.remainingAmount.toLocaleString()}
+          </p>
+        )}
+        <PaystackWrapper props={createPaystackProps(plan)} loading={loading} />
+      </div>
+    );
   };
 
   const renderPlanCard = (plan) => {
@@ -340,31 +485,7 @@ export default function SubscriptionPage() {
               </p>
             </div>
           ) : (
-            <>
-              {selectedPlan?.id === plan.id ? (
-                loadingUser || !user?.email || !reference || !publicKey ? (
-                  <Button className="w-full" disabled>
-                    Loading...
-                  </Button>
-                ) : (
-                  <PaystackWrapper
-                    props={createPaystackProps(plan)}
-                    loading={loading}
-                  />
-                )
-              ) : (
-                <Button
-                  className="w-full text-white"
-                  style={{ backgroundColor: 'rgb(37,99,235)' }}
-                  onClick={() => handlePlanSelect(plan)}
-                  disabled={!isKycVerified}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
-                >
-                  {!isKycVerified ? "KYC Required" : "Subscribe Now"}
-                </Button>
-              )}
-            </>
+            renderCheckoutControls(plan)
           )}
         </CardFooter>
       </Card>
@@ -421,7 +542,7 @@ export default function SubscriptionPage() {
               </div>
             </div>
             <p className="text-xs text-gray-500 max-w-xs text-right">
-              Earned from KYC verification and confirmed sales. Redeemable at checkout soon.
+              Earned from KYC verification and confirmed sales. Applied automatically at checkout on eligible plans.
             </p>
           </div>
         )}
