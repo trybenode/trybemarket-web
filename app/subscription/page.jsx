@@ -37,11 +37,25 @@ export default function SubscriptionPage() {
   const [loadingDbPlans, setLoadingDbPlans] = useState(true);
 
   // Credit-assisted checkout — see credit-spending-security-checklist.md.
-  // applyCredit is the user's toggle (default on); creditReservation is null
-  // until handleContinueToCheckout resolves it via /api/credit/spend/reserve.
-  const [applyCredit, setApplyCredit] = useState(true);
+  // Credit is applied by DEFAULT (change-answers.md §2) with an opt-out
+  // toggle, shown up front on each card before it's selected — a plan's id
+  // in this set means the seller opted OUT of applying credit to it.
+  // creditReservation is null until reserveCredit resolves via
+  // /api/credit/spend/reserve, triggered directly by "Subscribe Now" so
+  // there's no separate confirmation click in between.
+  const [creditOptOutPlanIds, setCreditOptOutPlanIds] = useState(new Set());
   const [creditReservation, setCreditReservation] = useState(null);
   const [reserving, setReserving] = useState(false);
+
+  const isApplyingCreditFor = (planId) => !creditOptOutPlanIds.has(planId);
+  const toggleCreditOptOut = (planId) => {
+    setCreditOptOutPlanIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(planId)) next.delete(planId);
+      else next.add(planId);
+      return next;
+    });
+  };
 
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY;
 
@@ -147,23 +161,6 @@ export default function SubscriptionPage() {
     checkAllPlansEligibility();
   }, [user, dbPlans]);
 
-  const handlePlanSelect = (plan) => {
-    // Check if user is KYC verified before allowing subscription
-    if (!isKycVerified) {
-      toast.error("Please complete KYC verification before subscribing", {
-        duration: 4000,
-      });
-      setTimeout(() => {
-        router.push("/kyc");
-      }, 2000);
-      return;
-    }
-    
-    setSelectedPlan(plan);
-    setApplyCredit(true);
-    setCreditReservation(null);
-  };
-
   const redirectAfterActivation = (plan) => {
     setSelectedPlan(null);
     setCreditReservation(null);
@@ -217,6 +214,26 @@ export default function SubscriptionPage() {
 
   const handlePaymentClose = () => {
     toast.error("Payment cancelled");
+
+    // If credit was reserved for this attempt, release it immediately —
+    // otherwise the seller's balance stays locked and reserveCredit's
+    // "one active reservation" guard blocks any retry for up to
+    // PENDING_SPEND_TIMEOUT_MS (30 min), until the lazy-expiry/cron path
+    // eventually catches it.
+    const reference = creditReservation?.applyCredit ? creditReservation.reference : null;
+    if (reference) {
+      user
+        .getIdToken()
+        .then((idToken) =>
+          fetch("/api/credit/spend/void", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ reference }),
+          })
+        )
+        .catch((error) => console.error("Failed to release credit reservation:", error));
+    }
+
     setSelectedPlan(null);
     setCreditReservation(null);
   };
@@ -235,7 +252,24 @@ export default function SubscriptionPage() {
     return estimatedApply > 0 ? { estimatedApply } : null;
   };
 
-  const handleContinueToCheckout = async (plan) => {
+  // Single click handler for "Subscribe Now" — the credit opt-out toggle is
+  // decided up front (isApplyingCreditFor), so this goes straight to
+  // reserving credit (if eligible) with no separate "Continue" step in
+  // between. The Paystack button appears as soon as this resolves.
+  const handleSubscribeClick = async (plan) => {
+    if (!isKycVerified) {
+      toast.error("Please complete KYC verification before subscribing", {
+        duration: 4000,
+      });
+      setTimeout(() => {
+        router.push("/kyc");
+      }, 2000);
+      return;
+    }
+
+    setSelectedPlan(plan);
+    setCreditReservation(null);
+
     const eligibility = getCreditEligibility(plan);
     if (!eligibility) {
       // Nothing to reserve — identical to the pre-credit flow.
@@ -249,7 +283,7 @@ export default function SubscriptionPage() {
       const res = await fetch("/api/credit/spend/reserve", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ itemId: plan.id, applyCredit }),
+        body: JSON.stringify({ itemId: plan.id, applyCredit: isApplyingCreditFor(plan.id) }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -265,6 +299,7 @@ export default function SubscriptionPage() {
       setCreditReservation(data);
     } catch (error) {
       toast.error(error.message || "Failed to apply credit");
+      setSelectedPlan(null);
     } finally {
       setReserving(false);
     }
@@ -305,53 +340,45 @@ export default function SubscriptionPage() {
 
   const renderCheckoutControls = (plan) => {
     if (selectedPlan?.id !== plan.id) {
-      return (
-        <Button
-          className="w-full text-white"
-          style={{ backgroundColor: 'rgb(37,99,235)' }}
-          onClick={() => handlePlanSelect(plan)}
-          disabled={!isKycVerified}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
-        >
-          {!isKycVerified ? "KYC Required" : "Subscribe Now"}
-        </Button>
-      );
-    }
-
-    // Selected, credit decision not made yet — offer the toggle (skipped
-    // entirely, same as before, if there's no eligible credit to apply).
-    if (creditReservation === null) {
+      // Not selected yet — show the credit opt-out toggle inline (if this
+      // plan has eligible credit to apply) right above the single Subscribe
+      // button, so applying credit costs no extra click or confirmation.
       const eligibility = getCreditEligibility(plan);
-      if (!eligibility) {
-        return (
-          <Button className="w-full text-white" style={{ backgroundColor: 'rgb(37,99,235)' }} disabled={reserving} onClick={() => handleContinueToCheckout(plan)}>
-            {reserving ? "Loading..." : `Pay ₦${plan.price.toLocaleString()}`}
-          </Button>
-        );
-      }
       return (
         <div className="w-full space-y-3">
-          <label className="flex items-center gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={applyCredit}
-              onChange={(e) => setApplyCredit(e.target.checked)}
-              className="h-4 w-4 flex-shrink-0"
-            />
-            <span className="text-gray-800">
-              Apply {eligibility.estimatedApply.toLocaleString()} credits — covers ₦{eligibility.estimatedApply.toLocaleString()} of this ₦{plan.price.toLocaleString()} plan
-            </span>
-          </label>
+          {eligibility && (
+            <label className="flex items-center gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isApplyingCreditFor(plan.id)}
+                onChange={() => toggleCreditOptOut(plan.id)}
+                className="h-4 w-4 flex-shrink-0"
+              />
+              <span className="text-gray-800">
+                Apply {eligibility.estimatedApply.toLocaleString()} credits — covers ₦{eligibility.estimatedApply.toLocaleString()} of this ₦{plan.price.toLocaleString()} plan
+              </span>
+            </label>
+          )}
           <Button
             className="w-full text-white"
             style={{ backgroundColor: 'rgb(37,99,235)' }}
-            disabled={reserving}
-            onClick={() => handleContinueToCheckout(plan)}
+            onClick={() => handleSubscribeClick(plan)}
+            disabled={!isKycVerified}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
           >
-            {reserving ? "Applying..." : "Continue"}
+            {!isKycVerified ? "KYC Required" : "Subscribe Now"}
           </Button>
         </div>
+      );
+    }
+
+    // Selected, reserve call still in flight.
+    if (creditReservation === null) {
+      return (
+        <Button className="w-full" disabled>
+          {reserving ? "Applying credit..." : "Loading..."}
+        </Button>
       );
     }
 

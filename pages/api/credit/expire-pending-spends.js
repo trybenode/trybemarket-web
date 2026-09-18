@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     for (const doc of snap.docs) {
       const expiresAtMs = doc.data().expiresAt?.toMillis?.() ?? 0;
       if (expiresAtMs < now) {
-        const result = await voidPendingSpend(doc.id, "expired_cron");
+        const result = await voidPendingSpend(doc.id, { reason: "expired_cron" });
         if (result.voided) voidedCount++;
       }
     }
