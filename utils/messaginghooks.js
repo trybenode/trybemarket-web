@@ -15,6 +15,24 @@ import {
 } from 'firebase/firestore';
 // import { auth } from '../../firebaseConfig';
 
+// Fire-and-forget streak side-effect (streak-detection-mechanism.md) — must
+// never block or fail an actual message send, so callers don't await this.
+function recordMessageStreak(conversationID) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
+
+  currentUser
+    .getIdToken()
+    .then((idToken) =>
+      fetch('/api/credit/record-message-streak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ conversationId: conversationID }),
+      })
+    )
+    .catch((error) => console.error('Error recording streak activity:', error));
+}
+
 const getUserIdOfSeller = async(productID) => {
   try {
     if (!productID) {
@@ -57,6 +75,7 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
         updatedAt: serverTimestamp(),
         unreadBy: [receiverID],
       });
+      recordMessageStreak(convoID);
     } else {
       await setDoc(conversationRef, {
         participants: [senderID, receiverID],
@@ -137,6 +156,7 @@ const addMessageToConversation = async (messageObj, conversationID) => {
       updatedAt: serverTimestamp(),
       unreadBy: otherParticipants
     });
+    recordMessageStreak(conversationID);
   } catch (error) {
     console.error('Error adding message:', error);
     throw error;
