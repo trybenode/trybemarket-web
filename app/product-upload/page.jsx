@@ -46,7 +46,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { canUserUploadProduct } from '../../hooks/UploadLimiter';
+import { canUserUploadProduct, canUserMarkProductAsVip } from '../../hooks/UploadLimiter';
 import { useSubscription } from "@/hooks/useSubscription";
 import { compressImage } from '@/utils/imageCompress';
 
@@ -80,10 +80,26 @@ export default function SellPage() {
   const [availableSubcategories, setAvailableSubcategories] = useState([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState([]);
   const [isVip, setIsVip] = useState(false);
+  const [vipCapInfo, setVipCapInfo] = useState(null); // { canMarkVip, currentVipCount, limit }
 
-  // Check if user can use VIP tags
-  const canUseVipTag = limits?.vipTagsProduct > 0;
-  const vipTagsAvailable = limits?.vipTagsProduct || 0;
+  // How many VIP slots are actually LEFT — not the raw plan cap. This was
+  // previously just `limits?.vipTagsProduct` (the cap itself), which kept
+  // showing "2 VIP tags available" even after all 2 were already in use.
+  const canUseVipTag = vipCapInfo ? vipCapInfo.limit > 0 : limits?.vipTagsProduct > 0;
+  const vipTagsAvailable = vipCapInfo
+    ? Math.max(0, vipCapInfo.limit - vipCapInfo.currentVipCount)
+    : limits?.vipTagsProduct || 0;
+
+  const refreshVipCapInfo = useCallback(() => {
+    if (!currentUser?.uid) return;
+    canUserMarkProductAsVip()
+      .then(setVipCapInfo)
+      .catch((error) => console.error("Error checking VIP tag availability:", error));
+  }, [currentUser?.uid]);
+
+  useEffect(() => {
+    refreshVipCapInfo();
+  }, [refreshVipCapInfo]);
 
 
   // Handle authentication and KYC
