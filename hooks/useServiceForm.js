@@ -173,18 +173,25 @@ export const useServiceForm = (currentUser) => {
 
       const newDocRef = await addDoc(collection(db, "services"), data);
 
-      // Best-effort — the listing still saved even if this fails; it'll
-      // self-correct on the next edit, boost, or subscription event.
-      auth.currentUser
-        ?.getIdToken()
-        .then((idToken) =>
-          fetch("/api/listing/set-vip-tag", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-            body: JSON.stringify({ itemId: newDocRef.id, itemType: "service", isVip }),
-          })
-        )
-        .catch((error) => console.error("Error syncing VIP tag/rank score:", error));
+      // The listing itself always saves regardless of what happens here —
+      // this only syncs the VIP tag (cap-enforced server-side) and
+      // recomputes rankScore. If the seller asked for isVip and it was
+      // refused (cap reached), tell them why rather than letting it fail
+      // silently — a paid feature quietly not applying is worse than a toast.
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        const vipRes = await fetch("/api/listing/set-vip-tag", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ itemId: newDocRef.id, itemType: "service", isVip }),
+        });
+        if (!vipRes.ok && isVip) {
+          const vipData = await vipRes.json().catch(() => ({}));
+          toast.error(vipData.error || "Service saved, but the VIP tag couldn't be applied", { duration: 5000 });
+        }
+      } catch (error) {
+        console.error("Error syncing VIP tag/rank score:", error);
+      }
 
       toast.success("Service Listed Successfully");
       router.push("/explore-services");
