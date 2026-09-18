@@ -43,13 +43,15 @@ export default async function handler(req, res) {
 
       for (const doc of snap.docs) {
         const data = doc.data();
+        const rankShuffleSeed = typeof data.rankShuffleSeed === "number" ? data.rankShuffleSeed : Math.random();
         const rankScore = computeRankScore({
           sellerTier: data.sellerTier,
           isVip: data.isVip,
           isBoosted: false,
           boostEndDate: data.boostEndDate,
+          shuffleSeed: rankShuffleSeed,
         });
-        await doc.ref.update({ isBoosted: false, rankScore });
+        await doc.ref.update({ isBoosted: false, rankScore, rankShuffleSeed });
         expiredCount++;
       }
     }

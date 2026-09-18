@@ -21,6 +21,10 @@
       "schedule": "0 4 * * *"
     },
     {
+      "path": "/api/listing/reshuffle-rank-scores",
+      "schedule": "15 4 * * *"
+    },
+    {
       "path": "/api/badges/evaluate-top-seller",
       "schedule": "0 5 1 * *"
     }
