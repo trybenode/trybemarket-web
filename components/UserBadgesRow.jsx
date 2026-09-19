@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Award, Trophy } from "lucide-react";
+import { ShieldCheck, Award, Trophy, GraduationCap } from "lucide-react";
 
 // Distinct from the existing subscription-tier badge (Crown/Sparkles/Shield,
 // computed in ShopPageClient) — these are earned achievement badges from
@@ -24,6 +24,11 @@ const BADGE_DISPLAY = {
     label: "Top Seller",
     icon: Trophy,
     className: "bg-purple-50 text-purple-700 border-purple-200",
+  },
+  crsa_member: {
+    label: "CRSA Member",
+    icon: GraduationCap,
+    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
   },
 };
 

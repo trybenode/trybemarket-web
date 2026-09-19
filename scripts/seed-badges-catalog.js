@@ -1,9 +1,10 @@
 /**
  * Seeds the badges/{badgeId} catalog (static metadata used for display —
- * see 02-badge-system.md §2). Only the three unblocked Phase-1 badges per
- * change-answers.md §4: Verified Student, Founding Member, Top Seller.
- * Safe Trader and CRSA Member are intentionally omitted — both are blocked
- * on features that don't exist yet.
+ * see 02-badge-system.md §2). The unblocked Phase-1 badges per
+ * change-answers.md §4 (Verified Student, Founding Member, Top Seller) plus
+ * CRSA Member, now that CRSA membership tracking exists
+ * (04-crsa-affiliate-program.md). Safe Trader is intentionally omitted — it
+ * is still blocked on the "Pay with TrybeMarket" escrow feature.
  *
  * Won't overwrite an existing catalog doc. Defaults to a dry run; pass
  * --apply to actually write to Firestore.
@@ -48,6 +49,13 @@ const BADGES = {
     description: "Highest confirmed-sale count this month.",
     tier: "phase_1",
     refreshCadence: "monthly",
+  },
+  crsa_member: {
+    key: "crsa_member",
+    name: "CRSA Member",
+    description: "Course Rep Student Ambassador.",
+    tier: "phase_1",
+    refreshCadence: "one_time",
   },
 };
 
