@@ -1,4 +1,5 @@
 import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
+import { recomputeRankForItem } from "@/lib/rankScoreServer";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -106,6 +107,11 @@ export default async function handler(req, res) {
     });
 
     await batch.commit();
+
+    // rankScore's boostBonus depends on isBoosted/boostEndDate just written —
+    // recompute now so the listing's ranking reflects the boost immediately,
+    // not on some later unrelated trigger (07-ranking-unification.md §5).
+    await recomputeRankForItem(itemType, itemId);
 
     return res.status(200).json({
       success: true,

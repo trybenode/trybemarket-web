@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useParams } from 'next/navigation'
 import { collection, query, where, getDocs, doc, getDoc, orderBy, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { getTierWeight } from '@/lib/sellerTier'
 import ListingCards from '@/components/ListingCards'
 import UserProfile from '@/components/UserProfile'
 import { Loader } from 'lucide-react'
@@ -55,9 +54,13 @@ export default function CategoryProductList() {
       setLoading(true)
       setError(null)
 
+      // Ranking: rankScore desc (tier + VIP + boost, computed server-side —
+      // see 07-ranking-unification.md), createdAt desc as a deterministic
+      // tiebreaker. No client-side sort needed anymore.
       const q = query(
         collection(db, 'products'),
         where('categoryId', '==', categoryName),
+        orderBy('rankScore', 'desc'),
         orderBy('createdAt', 'desc'),
         limit(10)
       )
@@ -71,9 +74,6 @@ export default function CategoryProductList() {
           updatedAt: doc.data().updatedAt?.toDate() || new Date(),
         },
       }))
-
-      // Premium/VIP sellers rank first; createdAt order preserved within each tier
-      productsData.sort((a, b) => getTierWeight(b.product.sellerTier) - getTierWeight(a.product.sellerTier))
 
       setProducts(productsData)
     } catch (err) {

@@ -8,6 +8,7 @@ import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReviewForm from "@/components/ReviewForm";
+import SaleConfirmationPanel from "@/components/SaleConfirmationPanel";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, ChevronLeft, Send, Paperclip, X, ChevronRight } from "lucide-react";
@@ -430,6 +431,12 @@ export default function ChatPage() {
           </CardHeader>
         </Card>
       )}
+
+      <SaleConfirmationPanel
+        conversationId={conversationId}
+        conversation={conversation}
+        currentUserId={currentUserId}
+      />
 
       {/* Messages Container */}
       <div className="bg-gray-50 rounded-lg border border-gray-200 mb-4 flex-1 flex flex-col">

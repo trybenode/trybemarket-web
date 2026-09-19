@@ -15,6 +15,24 @@ import {
 } from 'firebase/firestore';
 // import { auth } from '../../firebaseConfig';
 
+// Fire-and-forget streak side-effect (streak-detection-mechanism.md) — must
+// never block or fail an actual message send, so callers don't await this.
+function recordMessageStreak(conversationID) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
+
+  currentUser
+    .getIdToken()
+    .then((idToken) =>
+      fetch('/api/credit/record-message-streak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ conversationId: conversationID }),
+      })
+    )
+    .catch((error) => console.error('Error recording streak activity:', error));
+}
+
 const getUserIdOfSeller = async(productID) => {
   try {
     if (!productID) {
@@ -57,6 +75,7 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
         updatedAt: serverTimestamp(),
         unreadBy: [receiverID],
       });
+      recordMessageStreak(convoID);
     } else {
       await setDoc(conversationRef, {
         participants: [senderID, receiverID],
@@ -72,7 +91,17 @@ const initiateConversation = async (message, senderID, receiverID, productDetail
           imageUrl: productDetails.imageUrl,
           id: productDetails.id,
           sellerId: productDetails.sellerID
-        }
+        },
+        // Explicit roles for the sale-confirmation flow (03-sale-confirmation.md) —
+        // whoever starts a conversation about a listing is always the buyer.
+        // Older conversations predate these fields; server code derives roles
+        // from product.sellerId + participants for those instead.
+        // buyerConfirmedAt/sellerConfirmedAt are deliberately omitted here —
+        // absence means "not confirmed" everywhere they're read, and
+        // firestore.rules flatly forbids either key at creation time.
+        buyerId: senderID,
+        sellerId: receiverID,
+        saleStatus: "none",
       });
     }
     return convoID;
@@ -127,6 +156,7 @@ const addMessageToConversation = async (messageObj, conversationID) => {
       updatedAt: serverTimestamp(),
       unreadBy: otherParticipants
     });
+    recordMessageStreak(conversationID);
   } catch (error) {
     console.error('Error adding message:', error);
     throw error;

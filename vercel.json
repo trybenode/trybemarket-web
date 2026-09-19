@@ -7,6 +7,30 @@
     {
       "path": "/api/subscription/send-renewal-reminders",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/credit/evaluate-weekly-streak",
+      "schedule": "0 1 * * 1"
+    },
+    {
+      "path": "/api/credit/expire-pending-spends",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/listing/expire-boosts",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/listing/reshuffle-rank-scores",
+      "schedule": "15 4 * * *"
+    },
+    {
+      "path": "/api/sale/expire-pending",
+      "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/badges/evaluate-top-seller",
+      "schedule": "0 5 1 * *"
     }
   ]
 }

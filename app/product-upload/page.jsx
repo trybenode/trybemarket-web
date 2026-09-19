@@ -46,9 +46,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { canUserUploadProduct } from '../../hooks/UploadLimiter';
+import { canUserUploadProduct, canUserMarkProductAsVip } from '../../hooks/UploadLimiter';
 import { useSubscription } from "@/hooks/useSubscription";
-import { computeSellerTier } from "@/lib/sellerTier";
 import { compressImage } from '@/utils/imageCompress';
 
 import Header from "@/components/Header";
@@ -56,7 +55,7 @@ export default function SellPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser, loading: authLoading } = useUser();
-  const { limits, subscriptions, loading: subLoading } = useSubscription(currentUser?.uid);
+  const { limits, loading: subLoading } = useSubscription(currentUser?.uid);
   const productId = searchParams.get("id");
   const isEditMode = Boolean(productId);
 
@@ -81,10 +80,26 @@ export default function SellPage() {
   const [availableSubcategories, setAvailableSubcategories] = useState([]);
   const [selectedSubcategories, setSelectedSubcategories] = useState([]);
   const [isVip, setIsVip] = useState(false);
+  const [vipCapInfo, setVipCapInfo] = useState(null); // { canMarkVip, currentVipCount, limit }
 
-  // Check if user can use VIP tags
-  const canUseVipTag = limits?.vipTagsProduct > 0;
-  const vipTagsAvailable = limits?.vipTagsProduct || 0;
+  // How many VIP slots are actually LEFT — not the raw plan cap. This was
+  // previously just `limits?.vipTagsProduct` (the cap itself), which kept
+  // showing "2 VIP tags available" even after all 2 were already in use.
+  const canUseVipTag = vipCapInfo ? vipCapInfo.limit > 0 : limits?.vipTagsProduct > 0;
+  const vipTagsAvailable = vipCapInfo
+    ? Math.max(0, vipCapInfo.limit - vipCapInfo.currentVipCount)
+    : limits?.vipTagsProduct || 0;
+
+  const refreshVipCapInfo = useCallback(() => {
+    if (!currentUser?.uid) return;
+    canUserMarkProductAsVip()
+      .then(setVipCapInfo)
+      .catch((error) => console.error("Error checking VIP tag availability:", error));
+  }, [currentUser?.uid]);
+
+  useEffect(() => {
+    refreshVipCapInfo();
+  }, [refreshVipCapInfo]);
 
 
   // Handle authentication and KYC
@@ -328,6 +343,11 @@ export default function SellPage() {
       const userData = userSnap.data();
       const university = userData.selectedUniversity || "Unknown";
 
+      // isVip/sellerTier/rankScore/searchKeywords are server-computed only
+      // (firestore.rules blocks them here) — /api/listing/set-vip-tag below
+      // both enforces the VIP-tag plan cap and recomputes rankScore from
+      // whatever this write actually saved, covering plain name/description
+      // edits too, not just VIP toggling. See 07-ranking-unification.md.
       const data = {
         name: productName.trim(),
         subcategory: selectedSubcategories,
@@ -343,16 +363,38 @@ export default function SellPage() {
         images,
         userId,
         university,
-        isVip: isVip,
-        sellerTier: computeSellerTier(subscriptions, "product"),
         ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
       };
-  
-      if (isEditMode) await updateDoc(doc(db, "products", productId), data);
-      else {
-        await addDoc(collection(db, "products"), data);
+
+      let savedProductId = productId;
+      if (isEditMode) {
+        await updateDoc(doc(db, "products", productId), data);
+      } else {
+        const newDocRef = await addDoc(collection(db, "products"), data);
+        savedProductId = newDocRef.id;
         // No need to increment count - we check actual count in Firestore
-      }    
+      }
+
+      // The listing itself always saves regardless of what happens here —
+      // this only syncs the VIP tag (cap-enforced server-side) and recomputes
+      // rankScore. If the seller asked for isVip and it was refused (cap
+      // reached), tell them why rather than letting it fail silently — a
+      // paid feature quietly not applying is worse than a toast.
+      try {
+        const idToken = await auth.currentUser.getIdToken();
+        const vipRes = await fetch("/api/listing/set-vip-tag", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ itemId: savedProductId, itemType: "product", isVip }),
+        });
+        if (!vipRes.ok && isVip) {
+          const vipData = await vipRes.json().catch(() => ({}));
+          toast.error(vipData.error || "Product saved, but the VIP tag couldn't be applied", { duration: 5000 });
+        }
+      } catch (error) {
+        console.error("Error syncing VIP tag/rank score:", error);
+      }
+
       toast.success(isEditMode ? "Updated" : "Uploaded");
       router.push("/my-shop");
     } catch (err) {
@@ -407,11 +449,20 @@ export default function SellPage() {
           <Alert className="mb-6 bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200">
             <Crown className="h-4 w-4 text-yellow-600" />
             <AlertDescription className="text-sm text-gray-700">
-              <strong className="text-gray-900">VIP Feature Available!</strong> You have{" "}
-              <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>
-                {vipTagsAvailable} VIP tag{vipTagsAvailable !== 1 ? "s" : ""}
-              </span>{" "}
-              remaining for products. VIP products get featured placement and priority visibility.
+              {vipTagsAvailable > 0 ? (
+                <>
+                  <strong className="text-gray-900">VIP Feature Available!</strong> You have{" "}
+                  <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>
+                    {vipTagsAvailable} VIP tag{vipTagsAvailable !== 1 ? "s" : ""}
+                  </span>{" "}
+                  remaining for products. VIP products get featured placement and priority visibility.
+                </>
+              ) : (
+                <>
+                  <strong className="text-gray-900">All VIP tags in use.</strong> You've used every VIP
+                  tag on your current plan — remove one from another product or upgrade to add more.
+                </>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -453,17 +504,29 @@ export default function SellPage() {
                   <h3 className="font-semibold text-gray-900">Mark as VIP Product</h3>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">
-                  VIP products receive featured placement, priority in search results, and a special badge.
-                  You have <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>{vipTagsAvailable}</span> VIP tag{vipTagsAvailable !== 1 ? "s" : ""} available.
+                  VIP products receive featured placement, priority in search results, and a special badge.{" "}
+                  {vipTagsAvailable > 0 ? (
+                    <>
+                      You have <span className="font-semibold" style={{ color: 'rgb(37,99,235)' }}>{vipTagsAvailable}</span> VIP tag{vipTagsAvailable !== 1 ? "s" : ""} available.
+                    </>
+                  ) : isVip ? (
+                    "You've used all your VIP tags on this plan — you can still remove it from this item."
+                  ) : (
+                    "You've used all your VIP tags on this plan. Remove one from another listing or upgrade to add more."
+                  )}
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setIsVip(!isVip)}
+                onClick={() => {
+                  if (vipTagsAvailable <= 0 && !isVip) return;
+                  setIsVip(!isVip);
+                }}
+                disabled={vipTagsAvailable <= 0 && !isVip}
+                title={vipTagsAvailable <= 0 && !isVip ? "No VIP tags left on your plan" : undefined}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                   isVip ? 'bg-yellow-500' : 'bg-gray-300'
-                }`}
-                style={isVip ? {} : {}}
+                } ${vipTagsAvailable <= 0 && !isVip ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${

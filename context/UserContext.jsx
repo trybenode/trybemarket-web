@@ -62,6 +62,17 @@ export const UserProvider = ({ children }) => {
             userData = { ...userData, ...docSnap.data() };
           } else {
             await setDoc(userRef, userData, { merge: true });
+            // Backstop for any signup path other than app/signup/page.jsx's
+            // two (which already call this) — best-effort, idempotent.
+            user
+              .getIdToken()
+              .then((idToken) =>
+                fetch("/api/user/on-signup", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+                })
+              )
+              .catch((error) => console.error("[UserContext] Error checking Founding Member badge:", error));
           }
 
           if (user.emailVerified && !userData.emailVerified) {
@@ -96,7 +107,10 @@ export const UserProvider = ({ children }) => {
                     kycData.status === "verified" &&
                     !currentUserData.isVerified
                   ) {
-                    await updateDoc(userRef, { isVerified: true });
+                    // isVerified is written server-side only (app/api/kyc-submit),
+                    // atomically with the one-time KYC credit award — never
+                    // client-written, so this just reflects it in local state
+                    // once the kycRequests status flip confirms it happened.
                     const updatedUser = {
                       ...currentUserData,
                       isVerified: true,

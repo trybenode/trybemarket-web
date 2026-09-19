@@ -36,10 +36,14 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
         else if (refresh) setRefreshing(true);
         else setInitialLoading(true);
 
+        // Ranking: rankScore desc (tier + VIP + boost, computed server-side —
+        // see 07-ranking-unification.md), createdAt desc as a deterministic
+        // tiebreaker. Same pattern as products; no more random shuffle.
         let q = query(
           collection(db, "services"),
           where("university", "==", selectedUniversity),
-          orderBy("createdAt", "desc") // 🔥 NEVER random order for Firestore pagination
+          orderBy("rankScore", "desc"),
+          orderBy("createdAt", "desc")
         );
 
         if (selectedCategory !== "All") {
@@ -60,9 +64,8 @@ export const useServices = (selectedCategory, itemsPerPage = 6) => {
           createdAt: d.data().createdAt?.toDate(),
         }));
 
-        // 🔥 Shuffle only during FIRST LOAD
         if (!loadMore) {
-          batch = batch.sort(() => Math.random() - 0.5).slice(0, itemsPerPage);
+          batch = batch.slice(0, itemsPerPage);
         }
 
         lastDocRef.current = snap.docs[snap.docs.length - 1] || null;

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,7 @@ import { Upload, X, Crown, Info } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useServiceForm } from "@/hooks/useServiceForm";
 import { useSubscription } from "@/hooks/useSubscription";
+import { canUserMarkServiceAsVip } from "@/hooks/UploadLimiter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -36,10 +37,22 @@ export default function ServiceUpload() {
   const [isVip, setIsVip] = useState(false);
   const [openVerificationDialog, setOpenVerificationDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [vipCapInfo, setVipCapInfo] = useState(null); // { canMarkVip, currentVipCount, limit }
 
-  // Check if user can use VIP tags
-  const canUseVipTag = limits?.vipTagsService > 0;
-  const vipTagsAvailable = limits?.vipTagsService || 0;
+  // How many VIP slots are actually LEFT — not the raw plan cap. This was
+  // previously just `limits?.vipTagsService` (the cap itself), which kept
+  // showing tags as "available" even after they were all already in use.
+  const canUseVipTag = vipCapInfo ? vipCapInfo.limit > 0 : limits?.vipTagsService > 0;
+  const vipTagsAvailable = vipCapInfo
+    ? Math.max(0, vipCapInfo.limit - vipCapInfo.currentVipCount)
+    : limits?.vipTagsService || 0;
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    canUserMarkServiceAsVip()
+      .then(setVipCapInfo)
+      .catch((error) => console.error("Error checking VIP tag availability:", error));
+  }, [currentUser?.uid]);
 
   // Handle authentication and KYC
   useEffect(() => {
@@ -81,7 +94,11 @@ export default function ServiceUpload() {
           <Alert className='mb-6 border-[rgb(37,99,235)] bg-blue-50'>
             <Crown className='h-4 w-4 text-[rgb(37,99,235)]' />
             <AlertDescription className='text-sm text-gray-700'>
-              You have <strong>{vipTagsAvailable} VIP tags</strong> available. Mark services as VIP for priority visibility.
+              {vipTagsAvailable > 0 ? (
+                <>You have <strong>{vipTagsAvailable} VIP tag{vipTagsAvailable !== 1 ? "s" : ""}</strong> available. Mark services as VIP for priority visibility.</>
+              ) : (
+                <><strong>All VIP tags in use.</strong> You've used every VIP tag on your current plan — remove one from another service or upgrade to add more.</>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -256,16 +273,25 @@ export default function ServiceUpload() {
                         Get priority placement in search results and featured sections
                       </p>
                       <p className='text-xs text-gray-500 mt-1'>
-                        {vipTagsAvailable} VIP {vipTagsAvailable === 1 ? 'tag' : 'tags'} available
+                        {vipTagsAvailable > 0
+                          ? `${vipTagsAvailable} VIP ${vipTagsAvailable === 1 ? 'tag' : 'tags'} available`
+                          : isVip
+                            ? "No tags left — you can still remove it from this service"
+                            : "No VIP tags left on your plan"}
                       </p>
                     </div>
                   </div>
                   <button
                     type='button'
-                    onClick={() => setIsVip(!isVip)}
+                    onClick={() => {
+                      if (vipTagsAvailable <= 0 && !isVip) return;
+                      setIsVip(!isVip);
+                    }}
+                    disabled={vipTagsAvailable <= 0 && !isVip}
+                    title={vipTagsAvailable <= 0 && !isVip ? "No VIP tags left on your plan" : undefined}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       isVip ? 'bg-[rgb(37,99,235)]' : 'bg-gray-300'
-                    }`}
+                    } ${vipTagsAvailable <= 0 && !isVip ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
