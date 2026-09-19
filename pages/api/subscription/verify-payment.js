@@ -1,5 +1,6 @@
 import { adminDB } from "@/lib/firebaseAdmin";
 import { fulfillPlanPurchase, logFailedSubscriptionPayment } from "@/lib/subscriptionFulfillment";
+import { assertPlanEligibilityAdmin, SubscriptionEligibilityError } from "@/lib/subscriptionEligibilityServer";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -65,6 +66,28 @@ export default async function handler(req, res) {
         expected: plan.price,
         received: paidAmount,
       });
+    }
+
+    // Never trust the client's own UI hiding an ineligible plan (e.g.
+    // maintenance plans requiring N consecutive paid months) — this is the
+    // one path that actually finalizes a purchase for such plans, since
+    // they aren't in CREDIT_SPEND_CAPS and can't reach the credit-assisted
+    // flow at all. Paystack has already captured payment by this point; an
+    // ineligible attempt here only happens if someone bypasses the client
+    // gate directly, so declining to grant the plan (while logging the
+    // attempt) is the safer outcome even though it doesn't refund on its own.
+    try {
+      await assertPlanEligibilityAdmin(userId, plan);
+    } catch (eligibilityError) {
+      if (eligibilityError instanceof SubscriptionEligibilityError) {
+        try {
+          await logFailedSubscriptionPayment({ userId, reference, planId, reason: "not_eligible" });
+        } catch (logError) {
+          console.error("Error logging ineligible payment:", logError);
+        }
+        return res.status(403).json({ error: eligibilityError.message });
+      }
+      throw eligibilityError;
     }
 
     // Activate subscription with Firebase Admin SDK to avoid client-rule permission checks.
