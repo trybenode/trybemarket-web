@@ -184,10 +184,12 @@ export default function KycPage() {
         }),
       });
 
-      // Send to background KYC verification
-      await fetch("/api/kyc-submit", {
+      // Send to background KYC verification — identity is proven by the ID
+      // token, not the userId in the body (see app/api/kyc-submit/route.js).
+      const idToken = await user.getIdToken();
+      const submitResponse = await fetch("/api/kyc-submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
           userId: user.uid,
           fullName,
@@ -197,6 +199,20 @@ export default function KycPage() {
           email,
         }),
       });
+
+      const submitData = await submitResponse.json().catch(() => ({}));
+      if (!submitResponse.ok) {
+        toast.error(submitData.error || "Failed to submit KYC, please try again.");
+        return;
+      }
+      if (submitData.rejectionReason === "matric_already_used") {
+        setModalMessage(
+          "This matric number is already linked to another verified account. If you believe this is a mistake, please contact support."
+        );
+        setModalIconType("caution");
+        setModalVisible(true);
+        return;
+      }
 
       setModalMessage(
         "Your KYC request has been submitted. Please wait for verification."
