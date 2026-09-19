@@ -17,6 +17,7 @@ import dynamic from "next/dynamic";
 import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 import SellerProfileSkeleton from "@/components/ui/SellerProfileSkeleton";
 import Header from "@/components/Header";
+import CrsaStatsCard from "@/components/CrsaStatsCard";
 const ListingCard = dynamic(() => import("@/components/ListingCard"), {
   loading: () => <ListingCardSkeleton />,
   ssr: false,
@@ -157,6 +158,11 @@ export default function MyShopPage() {
         {/* Profile Section */}
         <div className="mt-8 mb-8">
           <SellerProfileCard userProfile={currentUser} subscriptionBadge={badge} />
+
+          {/* Renders only for active CRSA members — see components/CrsaStatsCard.jsx */}
+          <div className="mt-6">
+            <CrsaStatsCard userId={currentUser?.uid} />
+          </div>
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-3 mt-6">
