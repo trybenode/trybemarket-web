@@ -16,6 +16,7 @@ import { doc, getDoc, setDoc, updateDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 import useUserStore from "../lib/userStore";
 import { useLastSeen } from "../hooks/useLastSeen";
+import { notifySignup } from "../lib/referralClient";
 
 const UserContext = createContext();
 
@@ -62,17 +63,9 @@ export const UserProvider = ({ children }) => {
             userData = { ...userData, ...docSnap.data() };
           } else {
             await setDoc(userRef, userData, { merge: true });
-            // Backstop for any signup path other than app/signup/page.jsx's
-            // two (which already call this) — best-effort, idempotent.
-            user
-              .getIdToken()
-              .then((idToken) =>
-                fetch("/api/user/on-signup", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-                })
-              )
-              .catch((error) => console.error("[UserContext] Error checking Founding Member badge:", error));
+            // Backstop for any signup path other than the ones that already
+            // call this — best-effort, idempotent.
+            notifySignup(user);
           }
 
           if (user.emailVerified && !userData.emailVerified) {

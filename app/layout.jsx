@@ -1,9 +1,11 @@
 import "./globals.css";
 import Script from "next/script";
+import { Suspense } from "react";
 import { UserProvider } from "@/context/UserContext";
 import ToastProvider from "@/components/ToastProvider";
 import UserActivityTracker from "@/components/UserActivityTracker";
 import PageViewTracker from "@/components/PageViewTracker";
+import ReferralCapture from "@/components/ReferralCapture";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -110,6 +112,9 @@ export default function RootLayout({ children }) {
         <ToastProvider />
         <UserActivityTracker />
         <PageViewTracker />
+        <Suspense fallback={null}>
+          <ReferralCapture />
+        </Suspense>
         <UserProvider>
           {children}
         </UserProvider>
