@@ -3,14 +3,10 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import vision from "@google-cloud/vision";
-import admin from "firebase-admin";
-import { adminDB } from "../../../lib/firebaseAdmin";
 import { Resend } from "resend";
 import { kycSuccessTemplate, kycRejectedTemplate } from "@/emails/kycEmailTemplates";
-import { CREDIT_EVENT_TYPES } from "@/lib/creditConstants";
-import { BADGE_KEYS } from "@/lib/badgeConstants";
-
-const KYC_CREDIT_AMOUNT = 150;
+import { requireAuth } from "@/lib/verifyRequestAuth";
+import { finalizeKyc, normalizeMatric, isValidNormalizedMatric } from "@/lib/kycServer";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -23,7 +19,7 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
   credentials = creds;
 }
 
-const client = credentials 
+const client = credentials
   ? new vision.ImageAnnotatorClient({ credentials })
   : new vision.ImageAnnotatorClient(); // Falls back to default credentials
 
@@ -31,10 +27,10 @@ const client = credentials
 async function sendKycEmail({ email, fullName, status }) {
   try {
     const isVerified = status === "verified";
-    const htmlTemplate = isVerified 
+    const htmlTemplate = isVerified
       ? kycSuccessTemplate({ name: fullName })
       : kycRejectedTemplate({ name: fullName });
-    
+
     const result = await resend.emails.send({
       from: "Trybe Market <contact@trybemarket.online>",
       to: email,
@@ -43,7 +39,7 @@ async function sendKycEmail({ email, fullName, status }) {
         : "⚠️ Your Trybe Market KYC Status - Action Required",
       html: htmlTemplate,
     });
-    
+
     console.log("KYC email sent via Resend:", result);
     return result;
   } catch (error) {
@@ -58,18 +54,43 @@ function normalize(str) {
 
 export async function POST(req) {
   try {
+    // Identity comes from the verified ID token, never the request body —
+    // this route flips isVerified, awards credit, and (CRSA program) counts
+    // toward a referrer's leaderboard, so it can't act on a client-claimed uid.
+    const auth = await requireAuth(req);
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+    const userId = auth.uid;
+
     const body = await req.json();
     const {
-      userId,
+      userId: bodyUserId,
       fullName,
       matricNumber,
       frontID,
       backID,
       email: emailFromBody,
     } = body;
-    if (!userId || !fullName || !matricNumber || !frontID || !backID) {
+    if (bodyUserId && bodyUserId !== userId) {
+      return NextResponse.json(
+        { error: "You can only submit KYC for your own account" },
+        { status: 403 }
+      );
+    }
+    if (!fullName || !matricNumber || !frontID || !backID) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Reject before any OCR work: an empty normalized matric would make the
+    // "includes" check below match anything.
+    const normalizedMatric = normalizeMatric(matricNumber);
+    if (!isValidNormalizedMatric(normalizedMatric)) {
+      return NextResponse.json(
+        { error: "Invalid matric number" },
         { status: 400 }
       );
     }
@@ -105,59 +126,18 @@ export async function POST(req) {
     // console.log("Front OCR Result:", frontResult);
     console.log("Normalized OCR Text:", normalizedText);
 
-    const matricMatch = normalizedText.includes(normalize(matricNumber));
-    // const nameMatch = normalizedText.includes(normalize(fullName));
-    const status = nameMatch && matricMatch ? "verified" : "rejected";
+    const matricMatch = normalizedText.includes(normalizedMatric);
+    const ocrStatus = nameMatch && matricMatch ? "verified" : "rejected";
 
-    // Update Firestore KYC status, flip isVerified, award the one-time KYC
-    // credit, and award the Verified Student badge — all in a single
-    // transaction. This is the only place isVerified is ever set to true
-    // (never client-side; see firestore.rules), and both awards are
-    // idempotent by construction: each doc's fixed ID IS the "already
-    // awarded" check, so re-submitting an already-verified user (or a
-    // concurrent duplicate call) can't double-pay or double-award.
-    const kycRef = adminDB.collection("kycRequests").doc(userId);
-    const userRef = adminDB.collection("users").doc(userId);
-    const ledgerRef = userRef.collection("creditLedger").doc("kyc_verification_complete");
-    const badgeRef = userRef.collection("badges").doc(BADGE_KEYS.VERIFIED_STUDENT);
-
-    await adminDB.runTransaction(async (tx) => {
-      // All reads must precede all writes in a Firestore transaction.
-      const ledgerSnap = status === "verified" ? await tx.get(ledgerRef) : null;
-      const badgeSnap = status === "verified" ? await tx.get(badgeRef) : null;
-
-      tx.update(kycRef, {
-        status,
-        reviewedAt: new Date(),
-        notificationSent: true,
-      });
-
-      if (status === "verified") {
-        const userUpdate = { isVerified: true };
-        if (!ledgerSnap.exists) {
-          tx.set(ledgerRef, {
-            amount: KYC_CREDIT_AMOUNT,
-            type: CREDIT_EVENT_TYPES.KYC_VERIFICATION_COMPLETE,
-            referenceId: null,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-          userUpdate.creditBalance = admin.firestore.FieldValue.increment(KYC_CREDIT_AMOUNT);
-        }
-        if (!badgeSnap.exists) {
-          tx.set(badgeRef, {
-            badgeKey: BADGE_KEYS.VERIFIED_STUDENT,
-            awardedAt: admin.firestore.FieldValue.serverTimestamp(),
-            periodKey: null,
-          });
-        }
-        tx.set(userRef, userUpdate, { merge: true });
-      }
-    });
+    // Flips isVerified, awards the KYC credit + Verified Student badge, and
+    // enforces one-matric-one-account, all in one transaction — see
+    // lib/kycServer.js.
+    const { status, rejectionReason } = await finalizeKyc(userId, { ocrStatus, matricNumber });
 
     // Send email
     await sendKycEmail({ email, fullName, status });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, status, rejectionReason });
   } catch (error) {
     console.error("KYC Submit Error:", error);
     return NextResponse.json(

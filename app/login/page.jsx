@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "react-hot-toast"; // Updated import
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import useUserStore from "@/lib/userStore";
+import { notifySignup } from "@/lib/referralClient";
 import useUniversitySelection from "@/hooks/useUniversitySelection";
 
 export default function LoginPage() {
@@ -180,6 +181,13 @@ export default function LoginPage() {
         },
         { merge: true }
       );
+
+      // A brand-new Google account can be created right here, without ever
+      // touching /signup — so Founding Member + CRSA referral attribution
+      // must run on this path too. Best-effort and idempotent: for a
+      // returning user the server just no-ops (a referral only attaches to
+      // an account created in the last few minutes).
+      notifySignup(user);
 
       await useUserStore.getState().setUser({
         id: user.uid,

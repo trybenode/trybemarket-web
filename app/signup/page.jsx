@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import useUserStore from "@/lib/userStore";
+import { notifySignup } from "@/lib/referralClient";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -109,17 +110,9 @@ export default function SignupPage() {
         createdAt: new Date().toISOString(),
       });
 
-      // Best-effort — Founding Member is a display badge, not worth failing
-      // signup over. See app/api/user/on-signup/route.js.
-      user
-        .getIdToken()
-        .then((idToken) =>
-          fetch("/api/user/on-signup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          })
-        )
-        .catch((error) => console.error("Error checking Founding Member badge:", error));
+      // Best-effort — Founding Member and CRSA referral attribution aren't
+      // worth failing signup over. See app/api/user/on-signup/route.js.
+      notifySignup(user);
 
       await useUserStore.getState().setUser({
         id: user.uid,
@@ -234,16 +227,9 @@ export default function SignupPage() {
         { merge: true }
       );
 
-      // Best-effort, idempotent — safe even on a returning Google user.
-      user
-        .getIdToken()
-        .then((idToken) =>
-          fetch("/api/user/on-signup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          })
-        )
-        .catch((error) => console.error("Error checking Founding Member badge:", error));
+      // Best-effort, idempotent — safe even on a returning Google user (the
+      // server only attaches a referral to a brand-new account).
+      notifySignup(user);
 
       await useUserStore.getState().setUser({
         id: user.uid,
