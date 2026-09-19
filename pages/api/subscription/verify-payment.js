@@ -1,5 +1,5 @@
 import { adminDB } from "@/lib/firebaseAdmin";
-import { fulfillPlanPurchase } from "@/lib/subscriptionFulfillment";
+import { fulfillPlanPurchase, logFailedSubscriptionPayment } from "@/lib/subscriptionFulfillment";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -33,6 +33,11 @@ export default async function handler(req, res) {
     const verifyData = await verifyResponse.json();
 
     if (!verifyData.status || verifyData.data.status !== "success") {
+      try {
+        await logFailedSubscriptionPayment({ userId, reference, planId, reason: "verification_failed" });
+      } catch (logError) {
+        console.error("Error logging failed payment:", logError);
+      }
       return res.status(400).json({
         error: "Payment verification failed",
         details: verifyData.message,
@@ -50,6 +55,11 @@ export default async function handler(req, res) {
 
     const paidAmount = verifyData.data.amount / 100; // Paystack returns amount in kobo
     if (paidAmount !== plan.price) {
+      try {
+        await logFailedSubscriptionPayment({ userId, reference, planId, reason: "amount_mismatch" });
+      } catch (logError) {
+        console.error("Error logging failed payment:", logError);
+      }
       return res.status(400).json({
         error: "Payment amount mismatch",
         expected: plan.price,

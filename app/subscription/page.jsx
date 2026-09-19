@@ -215,23 +215,38 @@ export default function SubscriptionPage() {
   const handlePaymentClose = () => {
     toast.error("Payment cancelled");
 
-    // If credit was reserved for this attempt, release it immediately —
-    // otherwise the seller's balance stays locked and reserveCredit's
-    // "one active reservation" guard blocks any retry for up to
-    // PENDING_SPEND_TIMEOUT_MS (30 min), until the lazy-expiry/cron path
-    // eventually catches it.
-    const reference = creditReservation?.applyCredit ? creditReservation.reference : null;
-    if (reference) {
+    if (creditReservation?.applyCredit) {
+      // Credit was reserved for this attempt — release it immediately,
+      // otherwise the seller's balance stays locked and reserveCredit's
+      // "one active reservation" guard blocks any retry for up to
+      // PENDING_SPEND_TIMEOUT_MS (30 min), until the lazy-expiry/cron path
+      // eventually catches it.
+      const creditVoidReference = creditReservation.reference;
       user
         .getIdToken()
         .then((idToken) =>
           fetch("/api/credit/spend/void", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-            body: JSON.stringify({ reference }),
+            body: JSON.stringify({ reference: creditVoidReference }),
           })
         )
         .catch((error) => console.error("Failed to release credit reservation:", error));
+    } else if (selectedPlan && reference) {
+      // The plain (non-credit) flow never calls the server at all on a
+      // cancelled/declined attempt otherwise — see
+      // app/api/subscription/log-failed-payment/route.js — so the
+      // transactions history page would have zero record of it.
+      user
+        .getIdToken()
+        .then((idToken) =>
+          fetch("/api/subscription/log-failed-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ reference, planId: selectedPlan.id }),
+          })
+        )
+        .catch((error) => console.error("Failed to log cancelled payment:", error));
     }
 
     setSelectedPlan(null);
