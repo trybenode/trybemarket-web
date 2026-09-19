@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { Check, Sparkles, Crown, Shield, Zap, AlertCircle, Coins } from "lucide-react";
 import Header from "@/components/Header";
 import { SUBSCRIPTION_PLANS, getPlansByCategory, checkPlanEligibility, isSubscriptionActive } from "@/lib/subscriptionStore";
+import { computeSellerTier, getTierWeight } from "@/lib/sellerTier";
 import { CREDIT_SPEND_CAPS } from "@/lib/creditConstants";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useCreditBalance } from "@/hooks/useCreditBalance";
@@ -353,6 +354,24 @@ export default function SubscriptionPage() {
     return false;
   };
 
+  // VIP is an upgrade over Premium within the same category (product/
+  // service), not a separate track — computeSellerTier is the same
+  // tier-hierarchy logic the ranking system already trusts server-side
+  // (lib/rankScoreServer.js), reused here client-side (it's pure, no
+  // Firestore imports) so this can't drift out of sync with what actually
+  // determines rankScore. Without this, a VIP subscriber could still click
+  // "Subscribe Now" on Premium for the same category — and since
+  // fulfillPlanPurchase writes subscriptions[category] wholesale, that would
+  // silently overwrite (and lose) their active VIP subscription with a
+  // lesser one they just paid for again.
+  const isPlanCoveredByCurrentTier = (plan) => {
+    if (!["product", "service"].includes(plan.category)) return false;
+    if (!["premium", "vip"].includes(plan.type)) return false;
+    if (!subscriptions) return false;
+    const currentTier = computeSellerTier(subscriptions, plan.category);
+    return currentTier !== "free" && getTierWeight(plan.type) <= getTierWeight(currentTier);
+  };
+
   const renderCheckoutControls = (plan) => {
     if (selectedPlan?.id !== plan.id) {
       // Not selected yet — show the credit opt-out toggle inline (if this
@@ -423,6 +442,7 @@ export default function SubscriptionPage() {
     const isFree = plan.price === 0;
     const eligibility = planEligibility[plan.id] || { eligible: true };
     const isEligible = eligibility.eligible;
+    const isCovered = !isActive && isPlanCoveredByCurrentTier(plan);
 
     return (
       <Card
@@ -432,7 +452,7 @@ export default function SubscriptionPage() {
             ? "border-2 shadow-lg" 
             : "border-gray-200 hover:border-gray-300 hover:shadow-md"
         } ${plan.type === "vip" ? "border-yellow-400" : ""} ${
-          !isEligible && !isFree ? "opacity-60" : ""
+          (!isEligible || isCovered) && !isFree ? "opacity-60" : ""
         } bg-white rounded-lg`}
         style={isActive ? { borderColor: 'rgb(37,99,235)' } : {}}
       >
@@ -517,6 +537,15 @@ export default function SubscriptionPage() {
             <Button className="w-full" variant="outline" disabled style={{ borderColor: 'rgb(37,99,235)', color: 'rgb(37,99,235)' }}>
               ✓ Subscribed
             </Button>
+          ) : isCovered ? (
+            <div className="w-full">
+              <Button className="w-full bg-gray-100 text-gray-500" variant="outline" disabled>
+                Included in Your Plan
+              </Button>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Your current {plan.category} plan already covers this
+              </p>
+            </div>
           ) : !isEligible ? (
             <div className="w-full">
               <Button className="w-full bg-gray-100 text-gray-500" variant="outline" disabled>
