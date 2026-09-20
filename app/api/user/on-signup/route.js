@@ -3,7 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/verifyRequestAuth";
 import { maybeAwardFoundingMember } from "@/lib/badgeServer";
-import { attachReferral } from "@/lib/crsaServer";
+import { attachReferral, recordReferralAttachOutcome } from "@/lib/crsaServer";
 
 /**
  * Called once right after a new user doc is created (both signup paths in
@@ -37,10 +37,11 @@ export async function POST(req) {
         const attachResult = await attachReferral(auth.uid, body.ref);
         referral = { attached: attachResult.attached };
         if (!attachResult.attached) {
-          // Reason is logged, not returned — no need to tell a client which
-          // codes exist or why one was refused.
+          // Reason is logged and persisted for admins, but not returned — no
+          // need to tell a client which codes exist or why one was refused.
           console.log("Referral not attached:", attachResult.reason);
         }
+        await recordReferralAttachOutcome(auth.uid, body.ref, attachResult);
       } catch (referralError) {
         console.error("Error attaching referral:", referralError);
       }

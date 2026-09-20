@@ -6,6 +6,11 @@ import ToastProvider from "@/components/ToastProvider";
 import UserActivityTracker from "@/components/UserActivityTracker";
 import PageViewTracker from "@/components/PageViewTracker";
 import ReferralCapture from "@/components/ReferralCapture";
+import ManifestRefLink from "@/components/ManifestRefLink";
+import PwaBootstrap from "@/components/PwaBootstrap";
+import InstallPrompt from "@/components/InstallPrompt";
+import RouteProgress from "@/components/RouteProgress";
+import { PwaProvider } from "@/context/PwaContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -81,7 +86,20 @@ export const metadata = {
     // google: "your-verification-code",
   },
 
-  icons: { icon: "/trybemarket.png" },
+  icons: {
+    icon: "/trybemarket.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+
+  appleWebApp: {
+    capable: true,
+    title: "TrybeMarket",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport = {
+  themeColor: "#2563eb",
 };
 
 const jsonLd = {
@@ -109,15 +127,31 @@ export default function RootLayout({ children }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {/* beforeinstallprompt fires once and can beat React hydration; stash it
+            so PwaProvider can adopt it (see context/PwaContext.jsx). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__trybeInstallPrompt=e;});",
+          }}
+        />
         <ToastProvider />
         <UserActivityTracker />
         <PageViewTracker />
         <Suspense fallback={null}>
           <ReferralCapture />
+          <ManifestRefLink />
         </Suspense>
-        <UserProvider>
-          {children}
-        </UserProvider>
+        <PwaProvider>
+          <UserProvider>
+            <PwaBootstrap />
+            <Suspense fallback={null}>
+              <RouteProgress />
+            </Suspense>
+            {children}
+            <InstallPrompt />
+          </UserProvider>
+        </PwaProvider>
         <SpeedInsights />
         <Analytics />
         {GA_ID && (

@@ -49,6 +49,10 @@ export default function CrsaLeaderboardPage() {
             <div className="flex items-center gap-2 px-4 sm:px-6 py-3 border-b border-gray-100 text-sm font-medium text-gray-900">
               <Trophy className="h-4 w-4 text-amber-500" /> Ranked by verified referrals
             </div>
+            <p className="px-4 sm:px-6 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
+              App installs are counted only for verified referrals, so each ambassador's installs are always at most
+              their verified count — a lower installs number is expected, not an error.
+            </p>
             {leaderboard.map((row, i) => (
               <div
                 key={row.uid || `${row.rank}-${i}`}
@@ -60,7 +64,9 @@ export default function CrsaLeaderboardPage() {
                     {row.fullName}
                     {row.isYou && <span className="ml-2 text-xs font-normal text-emerald-700">(you)</span>}
                   </p>
-                  <p className="text-xs text-gray-500">{row.installs} installs</p>
+                  <p className="text-xs text-gray-500">
+                    {row.installs} of {row.kycCompletions} verified {row.installs === 1 ? "has" : "have"} the app
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-bold text-gray-900">{row.kycCompletions}</p>

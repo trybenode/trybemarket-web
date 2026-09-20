@@ -25,7 +25,8 @@ import {
   Compass,
   DeleteIcon,
   Trash2Icon,
-  Receipt
+  Receipt,
+  Download
 } from "lucide-react";
 import { MdPeopleOutline, MdVerified } from "react-icons/md";
 import { signOut } from "firebase/auth";
@@ -33,6 +34,7 @@ import { auth } from "@/lib/firebase";
 import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { usePwa } from "@/context/PwaContext";
 
 // Skeleton Avatar Component
 const SkeletonAvatar = () => (
@@ -70,6 +72,7 @@ export default React.memo(function UserProfile() {
   const isLoggedIn = !!currentUser;
   const router = useRouter();
   const hasUnreadMessages = useUnreadMessages();
+  const { ready: pwaReady, installed: pwaInstalled } = usePwa();
 
   const handleLogout = async () => {
     try {
@@ -196,6 +199,18 @@ export default React.memo(function UserProfile() {
                   </DropdownMenuItem>
                 );
               })}
+
+              {pwaReady && !pwaInstalled && (
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/install"
+                    className="flex items-center px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors duration-150 text-sm font-medium"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Install App
+                  </Link>
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuSeparator className="bg-gray-200" />
 

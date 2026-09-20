@@ -3,6 +3,8 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePwa } from "@/context/PwaContext";
 
 const UserProfile = dynamic(() => import("@/components/UserProfile"), {
   ssr: false,
@@ -10,6 +12,7 @@ const UserProfile = dynamic(() => import("@/components/UserProfile"), {
 
 export default React.memo(function ToolBar() {
   const router = useRouter();
+  const { ready, installed } = usePwa();
 
   return (
     <header className="w-full px-4 py-4 mb-6 border-b border-gray-100 bg-white shadow-sm">
@@ -31,15 +34,17 @@ export default React.memo(function ToolBar() {
         {/* Right Section: Download + Profile */}
         <div className="flex items-center gap-3 flex-shrink-0">
 
-          {/* Download Button */}
-          <a
-            href="https://play.google.com/store/apps/details?id=com.markettrybe.myexpoapp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-800 transition"
-          >
-            Download App
-          </a>
+          {/* Install the app (PWA). Replaces the old Play Store "Download App"
+              button — downloads now go through /install for every platform.
+              Hidden once the app is installed or we're running inside it. */}
+          {ready && !installed && (
+            <Link
+              href="/install"
+              className="px-4 py-2 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-800 transition"
+            >
+              Install App
+            </Link>
+          )}
 
           {/* User Profile */}
           <UserProfile />
