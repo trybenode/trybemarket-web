@@ -112,29 +112,12 @@ export const UserProvider = ({ children }) => {
                     setCurrentUser(updatedUser); // Sync UserContext
                   }
 
-                  if (
-                    (kycData.status === "verified" ||
-                      kycData.status === "rejected") &&
-                    !kycData.notificationSent
-                  ) {
-                    try {
-                      await fetch("/api/send-kyc-status", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          email: userData.email,
-                          fullName: userData.fullName,
-                          status: kycData.status,
-                        }),
-                      });
-                      await updateDoc(kycDocRef, { notificationSent: true });
-                    } catch (err) {
-                      console.error(
-                        "[UserContext] Error sending notification:",
-                        err.message
-                      );
-                    }
-                  }
+                  // KYC result emails are sent by the server at decision time
+                  // (app/api/kyc-submit for OCR results, app/api/admin/kyc/decision
+                  // for manual ones). This used to POST the recipient's email and
+                  // name to an unauthenticated /api/send-kyc-status from here — an
+                  // open mail relay that let anyone send branded KYC emails to any
+                  // address — and it is gone.
                 }
               } catch (error) {
                 console.error(

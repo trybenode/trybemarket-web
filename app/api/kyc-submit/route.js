@@ -3,12 +3,9 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import vision from "@google-cloud/vision";
-import { Resend } from "resend";
-import { kycSuccessTemplate, kycRejectedTemplate } from "@/emails/kycEmailTemplates";
 import { requireAuth } from "@/lib/verifyRequestAuth";
 import { finalizeKyc, normalizeMatric, isValidNormalizedMatric } from "@/lib/kycServer";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendKycEmail, resolveKycRecipient } from "@/lib/kycEmail";
 
 // Use environment variable for service account credentials
 let credentials;
@@ -22,31 +19,6 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
 const client = credentials
   ? new vision.ImageAnnotatorClient({ credentials })
   : new vision.ImageAnnotatorClient(); // Falls back to default credentials
-
-// Helper to send KYC email using Resend
-async function sendKycEmail({ email, fullName, status }) {
-  try {
-    const isVerified = status === "verified";
-    const htmlTemplate = isVerified
-      ? kycSuccessTemplate({ name: fullName })
-      : kycRejectedTemplate({ name: fullName });
-
-    const result = await resend.emails.send({
-      from: "Trybe Market <contact@trybemarket.online>",
-      to: email,
-      subject: isVerified
-        ? "✅ Your Trybe Market KYC Status - Verified!"
-        : "⚠️ Your Trybe Market KYC Status - Action Required",
-      html: htmlTemplate,
-    });
-
-    console.log("KYC email sent via Resend:", result);
-    return result;
-  } catch (error) {
-    console.error("Error sending KYC email via Resend:", error);
-    throw error;
-  }
-}
 
 function normalize(str) {
   return str.toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
@@ -70,7 +42,6 @@ export async function POST(req) {
       matricNumber,
       frontID,
       backID,
-      email: emailFromBody,
     } = body;
     if (bodyUserId && bodyUserId !== userId) {
       return NextResponse.json(
@@ -91,14 +62,6 @@ export async function POST(req) {
     if (!isValidNormalizedMatric(normalizedMatric)) {
       return NextResponse.json(
         { error: "Invalid matric number" },
-        { status: 400 }
-      );
-    }
-
-    const email = emailFromBody;
-    if (!email) {
-      return NextResponse.json(
-        { error: "User email not found" },
         { status: 400 }
       );
     }
@@ -134,10 +97,22 @@ export async function POST(req) {
     // lib/kycServer.js.
     const { status, rejectionReason } = await finalizeKyc(userId, { ocrStatus, matricNumber });
 
-    // Send email
-    await sendKycEmail({ email, fullName, status });
+    // The recipient is the account's OWN email, resolved server-side — never a
+    // body field, which would let any signed-in user aim this KYC-branded email
+    // (with an attacker-chosen name) at any address. The verification above is
+    // already committed, so an email problem must not turn it into an error.
+    let emailSent = false;
+    try {
+      const email = await resolveKycRecipient(userId);
+      if (email) {
+        await sendKycEmail({ email, fullName, status });
+        emailSent = true;
+      }
+    } catch (emailError) {
+      console.error("Error sending KYC email:", emailError);
+    }
 
-    return NextResponse.json({ success: true, status, rejectionReason });
+    return NextResponse.json({ success: true, status, rejectionReason, emailSent });
   } catch (error) {
     console.error("KYC Submit Error:", error);
     return NextResponse.json(
