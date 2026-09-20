@@ -45,8 +45,11 @@ export default function CrsaStatsCard({ userId }) {
         </div>
         <div className="h-8 w-px bg-emerald-200" />
         <div>
-          <div className="text-2xl font-bold text-gray-900">{stats?.installs ?? 0}</div>
-          <div className="text-xs text-gray-600">App installs</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {stats?.installs ?? 0}
+            <span className="text-base font-medium text-gray-500"> of {stats?.kycCompletions ?? 0}</span>
+          </div>
+          <div className="text-xs text-gray-600">Verified referrals with the app</div>
         </div>
       </div>
 
@@ -64,6 +67,10 @@ export default function CrsaStatsCard({ userId }) {
       </div>
       <p className="text-xs text-gray-500 mt-2">
         A referral counts once the person you invite completes KYC verification.
+      </p>
+      <p className="text-xs text-gray-500 mt-1">
+        App installs are counted only for verified referrals, so this number can never be higher than your verified
+        referrals — a smaller number here is normal.
       </p>
 
       <Link
