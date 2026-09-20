@@ -2,6 +2,7 @@ import { adminDB, adminAuth } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
 import { subscriptionReminderTemplate } from "@/emails/subscriptionReminderTemplate";
+import { SITE_URL } from "@/lib/siteUrl";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -195,7 +196,7 @@ export default async function handler(req, res) {
               daysLeft,
               formattedExpiry,
               losses,
-              renewUrl: "https://trybemarket.online/subscription",
+              renewUrl: `${SITE_URL}/subscription`,
             }),
           });
 
