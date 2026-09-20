@@ -20,10 +20,12 @@ import {
   getDocs,
 } from "firebase/firestore";
 import Image from "next/image";
+import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 
 export default function SellerDetailsAndRelatedProducts({
   productId,
   product,
+  showSeller = true,
 }) {
   const router = useRouter();
   const [sellerInfo, setSellerInfo] = useState(null);
@@ -124,13 +126,24 @@ export default function SellerDetailsAndRelatedProducts({
     fetchData();
   }, [productId]);
 
-  if (loading) return <div className="p-4 text-center">Loading...</div>;
-  if (error) return <div className="p-4 text-red-500">{error}</div>;
+  if (loading) {
+    return (
+      <div className="my-6" aria-busy="true">
+        <div className="mb-4 h-6 w-40 animate-pulse rounded-lg bg-slate-200/70" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <ListingCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (error) return <div className="p-4 text-sm text-red-500">{error}</div>;
 
   return (
     <div>
       {/* Seller Info Section */}
-      {sellerInfo && (
+      {showSeller && sellerInfo && (
         <div className="mt-5 rounded-lg border border-blue-500 bg-gray-100 p-4">
           <h2 className="mb-2 text-lg font-bold">Seller Information</h2>
           <div className="flex items-start justify-between">
@@ -163,14 +176,14 @@ export default function SellerDetailsAndRelatedProducts({
 
       {/* Related Products */}
       <div className="my-8">
-        <h2 className="mb-4 text-center text-lg font-bold">Related Products</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-900">You might also like</h2>
         {relatedProducts.length > 0 ? (
-          <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 ">
-            {relatedProducts.slice(0, 10).map((item) => (
-              <div key={item.id} className="w-[100%] lg:w-[22%]">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {relatedProducts.slice(0, 8).map((item) => (
+              <div key={item.id}>
                 <div
                   onClick={() => router.push(`/listing/${item.id}`)}
-                  className="cursor-pointer"
+                  className="h-full cursor-pointer"
                 >
                   <ListingCard product={item.product} btnName="View" />
                 </div>
@@ -178,8 +191,8 @@ export default function SellerDetailsAndRelatedProducts({
             ))}
           </div>
         ) : (
-          <p className="text-center text-gray-500">
-            No related products available
+          <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            Nothing similar yet — check back soon.
           </p>
         )}
       </div>

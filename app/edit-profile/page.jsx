@@ -262,7 +262,7 @@ export default function EditProfilePage() {
   // The profile couldn't be loaded (network) — say so and let them retry.
   if (!authLoading && !currentUser && profileError) {
     return (
-      <div className='min-h-screen bg-white flex items-center justify-center px-6'>
+      <div className='min-h-screen bg-slate-50 flex items-center justify-center px-6'>
         <div className='flex flex-col items-center text-center max-w-sm'>
           <p className='text-gray-800 font-medium'>{profileError}</p>
           <Button className='mt-4' onClick={refreshProfile}>
@@ -276,7 +276,7 @@ export default function EditProfilePage() {
   // Loading state — wait for the auth/profile load itself, not just the form.
   if (authLoading || isFetching) {
     return (
-      <div className='min-h-screen bg-white flex items-center justify-center'>
+      <div className='min-h-screen bg-slate-50 flex items-center justify-center'>
         <div className='flex flex-col items-center'>
           <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
           <p className='mt-4 text-gray-600'>Loading profile...</p>
@@ -286,15 +286,16 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className='container mx-auto px-4 py-6 mb-4 max-w-6xl'>
-     <Header title={"Profile & Settings"}/>
+    <div className='min-h-screen bg-slate-50 pb-12'>
+     <Header title="Profile & Settings" />
 
-      <Card className='border border-gray-200'>
+     <div className='container mx-auto px-4 py-5 max-w-3xl'>
+      <Card className='rounded-3xl border border-slate-200/80 shadow-sm'>
         
         <CardContent className='space-y-4 mt-8 mb-4'>
           {/* Profile Image Picker */}
           <div className='flex flex-col items-center mb-6 relative'>
-            <div className='w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center'>
+            <div className='w-24 h-24 rounded-full overflow-hidden bg-brand-yellow-soft ring-4 ring-white shadow-md flex items-center justify-center'>
               {previewImage ? (
                 <img
                   src={previewImage}
@@ -302,7 +303,9 @@ export default function EditProfilePage() {
                   className='w-full h-full object-cover'
                 />
               ) : (
-                <span className='text-gray-500'>No Image</span>
+                <span className='text-3xl font-bold text-slate-700'>
+                  {(name || "?").trim().charAt(0).toUpperCase()}
+                </span>
               )}
             </div>
             <label className='absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full cursor-pointer hover:bg-blue-600 transition'>
@@ -515,6 +518,7 @@ export default function EditProfilePage() {
           </div>
         </CardContent>
       </Card>
+     </div>
     </div>
   );
 }

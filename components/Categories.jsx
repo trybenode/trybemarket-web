@@ -54,10 +54,11 @@ export default React.memo(function Categories() {
             <Button
               key={category.id}
               variant={selectedCategory === category.id ? "default" : "outline"}
-              className={`rounded-full border-yellow-500 ${
+              size="sm"
+              className={`rounded-full ${
                 selectedCategory === category.id
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700"
+                  ? ""
+                  : "border-slate-200 bg-white text-slate-700 hover:border-brand-yellow-deep hover:bg-brand-yellow-soft hover:text-slate-900"
               }`}
               onClick={() => handleCategoryClick(category.id, category.name)}
             >

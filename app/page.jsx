@@ -190,10 +190,10 @@ export default function HomePage() {
    * ------------------------------------------
    */
   return (
-    <div className="flex flex-col min-h-screen max-w-6xl bg-white mx-auto">
+    <div className="min-h-screen bg-slate-50">
       <ToolBar />
 
-      <div className="flex-1 px-3">
+      <div className="mx-auto max-w-6xl flex-1 px-3 pb-10 pt-4 sm:px-4">
         <SearchBar
           onResults={(res, active) => {
             setFiltered(res);
@@ -204,12 +204,10 @@ export default function HomePage() {
         <Categories />
 
         <BoostedProductsCarousel />
-        <div className="my-4 border-t border-gray-200" />
-
-        <p className="text-gray-700 font-medium mb-3">All products</p>
+        <h2 className="mb-1 mt-6 text-lg font-bold text-slate-900">All products</h2>
 
         {initialLoading ? (
-          <div className="grid grid-cols-2 mt-5 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <ListingCardSkeleton key={i} />
             ))}

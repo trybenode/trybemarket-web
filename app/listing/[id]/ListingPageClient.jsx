@@ -10,16 +10,22 @@ import { useInView } from "react-intersection-observer";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { PriceTag, discountPercent } from "@/components/ui/price-tag";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Heart, MessageCircle, ChevronLeft, Loader, ChevronRight, X } from "lucide-react";
+import { MessageCircle, ChevronLeft, ChevronRight, X, ShieldCheck } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatNumber } from "@/lib/utils";
 import { getUserInfo } from "@/utils/userInfo";
@@ -28,7 +34,7 @@ import useUserStore from "@/lib/userStore";
 const LazyComponent = dynamic(
   () => import("@/components/SellerDetailsAndRelatedProducts"),
   {
-    loading: () => <Loader />,
+    loading: () => null,
     ssr: false,
   }
 );
@@ -40,6 +46,11 @@ import {
 import { isUserRecentlyActive } from "@/hooks/useLastSeen";
 
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
+import ImageGallery from "@/components/listing/ImageGallery";
+import SellerCard from "@/components/listing/SellerCard";
+import ContactComposer from "@/components/listing/ContactComposer";
+import ListingSkeleton from "@/components/listing/ListingSkeleton";
+import { cn } from "@/lib/utils";
 import { sendMessageNotification } from "@/lib/notificationClient";
 
 export default function ListingDetailsPage({ params }) {
@@ -60,6 +71,8 @@ export default function ListingDetailsPage({ params }) {
   const [AllUserInfo, setAllUserInfo] = useState({});
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const effectiveProductId = itemId || currentProduct?.id;
 
   //product fetch
@@ -173,7 +186,13 @@ export default function ListingDetailsPage({ params }) {
 
   const handleSendMessage = async () => {
     try {
-      if (!message.trim() || !currentUserId || !sellerID) {
+      if (!currentUserId) {
+        toast("Please log in to message the seller", { duration: 3000 });
+        router.push("/login");
+        return;
+      }
+
+      if (!message.trim() || !sellerID) {
         toast.error("Message and user information required", {
           duration: 4000,
           position: "top-right",
@@ -282,8 +301,9 @@ export default function ListingDetailsPage({ params }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      <div className="min-h-screen bg-slate-50">
+        <ProductDetailsHeader id={id} currentUserId={currentUserId} title="Listing" />
+        <ListingSkeleton />
       </div>
     );
   }
@@ -307,195 +327,182 @@ export default function ListingDetailsPage({ params }) {
     year = "",
   } = product;
 
-  const details = [
-    { label: "Category", value: categoryId },
-    { label: "Sub Categories", value: subcategory },
-    { label: "Brand", value: brand },
-    { label: "Condition", value: condition },
-    { label: "Color", value: color },
-    { label: "Year", value: year },
-    // console.log("DETAILS ITEM:", item.label, item.value);
-  ];
+  const urls = images.map((img) => img?.url || img).filter(Boolean);
+  const activeIndex = Math.max(0, urls.indexOf(selectedImage));
+  const off = discountPercent(price, originalPrice);
+  const subs = Array.isArray(subcategory) ? subcategory : subcategory ? [subcategory] : [];
+  const detailRows = [
+    ["Category", categoryId],
+    ["Subcategory", subs.join(", ")],
+    ["Brand", brand],
+    ["Condition", condition],
+    ["Color", color],
+    ["Year", year],
+  ].filter(([, value]) => value);
+
+  const sellerLoaded = Object.keys(AllUserInfo).length > 0 ? AllUserInfo : null;
+  const isOwner = !!currentUserId && !!sellerID && currentUserId === sellerID;
+  const sellerFirstName = (AllUserInfo.fullName || "the seller").split(" ")[0];
+
+  const openMessage = () => {
+    if (!currentUserId) {
+      toast("Please log in to message the seller", { duration: 3000 });
+      router.push("/login");
+      return;
+    }
+    setSheetOpen(true);
+  };
+
+  const composer = (
+    <ContactComposer
+      message={message}
+      setMessage={setMessage}
+      onSend={handleSendMessage}
+      sending={sendingMessage}
+      negotiable={negotiable}
+    />
+  );
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <ProductDetailsHeader id={id} currentUserId={currentUserId} category={categoryId} />
+    <div className="min-h-screen bg-slate-50 pb-28 md:pb-12">
+      <ProductDetailsHeader id={id} currentUserId={currentUserId} category={categoryId} title="Listing" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Images */}
-        <div className="space-y-4">
-          <div 
-            className="relative rounded-lg overflow-hidden bg-gray-100 aspect-square cursor-pointer hover:opacity-95 transition-opacity"
-            onClick={handleImageClick}
-          >
-            {selectedImage ? (
-              <Image
-                src={selectedImage}
-                alt={name}
-                // fill
-                width={600}
-                height={600}
-                priority
-                className="object-contain"
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
+      <main className="mx-auto max-w-6xl md:grid md:grid-cols-[1.1fr_1fr] md:items-start md:gap-8 md:px-4 md:py-6">
+        <div className="md:sticky md:top-20">
+          <ImageGallery
+            images={images}
+            name={name}
+            activeIndex={activeIndex}
+            onChange={(index) => setSelectedImage(urls[index])}
+            onOpen={handleImageClick}
+          />
+        </div>
+
+        <div className="space-y-4 px-4 pt-5 md:px-0 md:pt-0">
+          {/* Title & price */}
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <h1 className="text-xl font-bold leading-snug text-slate-900 md:text-2xl">{name}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <PriceTag price={price} originalPrice={originalPrice} size="lg" />
+              {off !== null && <Badge variant="success">Save {off}%</Badge>}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {negotiable && <Badge variant="brand">Negotiable</Badge>}
+              {condition && (
+                <Badge variant="muted" className="capitalize">
+                  {condition}
+                </Badge>
+              )}
+              {brand && <Badge variant="muted">{brand}</Badge>}
+            </div>
+          </section>
+
+          <SellerCard seller={sellerLoaded} sellerId={sellerID} />
+
+          {/* Description */}
+          {description && (
+            <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900">About this item</h2>
+              <p
+                className={cn(
+                  "whitespace-pre-line text-sm leading-relaxed text-slate-600",
+                  !descOpen && "line-clamp-4"
+                )}
+              >
+                {description}
+              </p>
+              {description.length > 200 && (
+                <button
+                  type="button"
+                  onClick={() => setDescOpen((open) => !open)}
+                  className="mt-2 text-sm font-semibold text-primary hover:underline"
+                >
+                  {descOpen ? "Show less" : "Read more"}
+                </button>
+              )}
+            </section>
+          )}
+
+          {/* Details */}
+          {detailRows.length > 0 && (
+            <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">Details</h2>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {detailRows.map(([label, value]) => (
+                  <div key={label} className="min-w-0">
+                    <dt className="text-xs text-slate-500">{label}</dt>
+                    <dd className="truncate text-sm font-medium capitalize text-slate-900">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          {/* Contact (desktop; phones use the bottom bar + sheet) */}
+          <section className="hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm md:block">
+            {isOwner ? (
+              <p className="text-sm text-slate-600">This is your listing. Buyers will message you from here.</p>
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">No image available</p>
-              </div>
-            )}
-            {images && images.length > 1 && (
               <>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePrevImage();
-                  }}
-                  aria-label='Previous image'
-                >
-                  <ChevronLeft className='h-5 w-5' />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNextImage();
-                  }}
-                  aria-label='Next image'
-                >
-                  <ChevronRight className='h-5 w-5' />
-                </Button>
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <MessageCircle className="h-4 w-4 text-primary" /> Message {sellerFirstName}
+                </h2>
+                {composer}
               </>
             )}
-          </div>
+          </section>
 
-          <div className="flex space-x-2 overflow-x-auto pb-2">
-            {images.map((image, index) => {
-              const imgSrc = image.url || image;
-              return (
-                <div
-                  key={index}
-                  className={`relative w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2 ${
-                    selectedImage === imgSrc
-                      ? "border-blue-500"
-                      : "border-transparent"
-                  }`}
-                  onClick={() => setSelectedImage(imgSrc)}
-                >
-                  <Image
-                    src={imgSrc}
-                    alt={`Product image ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                  />
-                </div>
-              );
-            })}
-          </div>
+          {/* Safety */}
+          <section className="rounded-2xl border border-brand-yellow/60 bg-brand-yellow-soft p-4">
+            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <ShieldCheck className="h-4 w-4 text-amber-600" /> Stay safe on campus
+            </h2>
+            <ul className="list-disc space-y-1 pl-5 text-xs leading-relaxed text-slate-600">
+              <li>Meet in a busy, public spot on campus.</li>
+              <li>Check the item before you pay.</li>
+              <li>Keep chatting inside TrybeMarket.</li>
+            </ul>
+          </section>
         </div>
+      </main>
 
-        {/* Details & Actions */}
-        <div className="space-y-6">
-          {/* Price Card */}
-          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{name}</h1>
-            <div className="flex items-center mt-2">
-              <p className="text-2xl font-extrabold text-green-600">
-                ₦{formatNumber(price)}
-              </p>
-              {originalPrice > 0 && (
-                <p className="ml-2 text-sm text-gray-500 line-through">
-                  ₦{formatNumber(originalPrice)}
-                </p>
-              )}
-            </div>
-            {negotiable && (
-              <span className="inline-block bg-green-600 text-white text-xs px-3 py-1 rounded-full mt-2">
-                Negotiable
-              </span>
-            )}
-          </div>
-
-          {/* Tabs for Details & Description */}
-          <Tabs defaultValue="details">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="description">Description</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="details" className="mt-4">
-              <Card className="p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {details.map((item, idx) => (
-                    <div key={idx} className="space-y-1">
-                      <p className="font-bold text-gray-800">{item.label}</p>
-                      <p className="text-gray-600">
-                        {Array.isArray(item.value)
-                          ? item.value.join(", ") || "N/A"
-                          : item.value || "N/A"}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="description" className="mt-4">
-              <Card className="p-4">
-                <p className="text-gray-700 whitespace-pre-line">
-                  {description || "No description available"}
-                </p>
-              </Card>
-            </TabsContent>
-          </Tabs>
-
-          {/* Offer Box */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h2 className="text-lg font-semibold mb-2">Contact Seller:</h2>
-            <div className="flex">
-              <input
-                type="text"
-                placeholder="Type your message..."
-                className="flex-1 rounded-l-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-              <Button
-                onClick={handleSendMessage}
-                className="rounded-l-none"
-                disabled={sendingMessage}
-              >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Send
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Separator className="my-8" />
-
-      {/* Seller Info */}
-      {/* <SellerDetailsAndRelatedProducts
-        key={effectiveProductId}
-        productId={effectiveProductId}
-        product={currentProduct}
-      /> */}
-      <div ref={ref}>
+      {/* Related items */}
+      <div ref={ref} className="mx-auto mt-8 max-w-6xl px-4">
         {inView && (
           <LazyComponent
             key={effectiveProductId}
             productId={effectiveProductId}
             product={currentProduct}
+            showSeller={false}
           />
         )}
       </div>
+
+      {/* Phone: sticky action bar */}
+      {!isOwner && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+          <div className="mx-auto flex max-w-6xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <PriceTag price={price} originalPrice={originalPrice} size="md" />
+            </div>
+            <Button size="lg" onClick={openMessage} className="shrink-0">
+              <MessageCircle />
+              Message seller
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Phone: message sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <SheetHeader className="text-left">
+            <SheetTitle>Message {sellerFirstName}</SheetTitle>
+            <SheetDescription>Ask about “{name}”. Tap a quick question or write your own.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">{composer}</div>
+        </SheetContent>
+      </Sheet>
 
       {/* Image Modal */}
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>

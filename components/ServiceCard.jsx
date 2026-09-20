@@ -1,54 +1,54 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
 
+/**
+ * A service in a grid (explore, shop, favorites). Matches ListingCard so the
+ * two read as one family; services have no price, so the description leads.
+ */
 export default function ServiceCard({ service }) {
   const router = useRouter();
 
-  // Handle card click to navigate to service details
   const handleClick = () => {
     router.push(`/view-service/${service.id}`);
   };
 
+  const image = service.images?.[0]?.url || service.images?.[0] || null;
+
   return (
-    <Card
-      className='bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer border border-gray-100 hover:border-gray-200'
+    <div
+      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
       onClick={handleClick}
-      role='button'
+      role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && handleClick()}
     >
-      <CardContent className='p-0'>
-        {/* Image Section */}
-        <div className='w-full h-40 bg-gray-100 flex items-center justify-center overflow-hidden'>
-          {service.images && service.images[0] ? (
-            <img
-              src={service.images[0]}
-              alt={service.name}
-              className='object-cover h-32 w-full transition-transform duration-300 hover:scale-105'
-            />
-          ) : (
-            <span className='text-gray-400 text-sm font-medium'>No Image</span>
-          )}
-        </div>
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+        {image ? (
+          <Image
+            src={image}
+            alt={service.name || "Service"}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">No image</div>
+        )}
+        <Badge variant="brand" className="absolute left-2 top-2 shadow-sm">
+          {service.categoryId || "Service"}
+        </Badge>
+      </div>
 
-        {/* Content Section */}
-        <div className='p-4'>
-          <h3 className='font-semibold text-gray-900 mb-2 line-clamp-1'>
-            {service.name}
-          </h3>
-          <p className='text-gray-600 text-sm mb-2 line-clamp-2 min-h-[40px]'>
-            {service.description || "No description available"}
-          </p>
-          <p className='text-gray-500 text-sm mb-2'>
-            {service.categoryId || "Service"}
-          </p>
-          {/* <p className='text-green-600 font-bold text-lg'>
-            ₦{service.price?.toLocaleString() || 0}
-          </p> */}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex flex-1 flex-col gap-1 p-3">
+        <h3 className="line-clamp-1 text-sm font-semibold text-slate-900">{service.name}</h3>
+        <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">
+          {service.description || "No description available"}
+        </p>
+      </div>
+    </div>
   );
 }

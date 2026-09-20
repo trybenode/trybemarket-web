@@ -1,14 +1,8 @@
 'use client'
-import BackBtn from '../components/BackButton'
-import UserProfile from './UserProfile'
+import AppHeader from './AppHeader'
 
-export default function Header({title}){
-    return(
-        <div className='p-2 mb-3 flex justify-between items-center border-b-[0.5] border-yellow-300'>
-            <BackBtn />
-             <h3 className="text-lg font-semibold text-gray-800 truncate">{title}</h3>
-
-            <UserProfile />
-        </div>
-    )
+// Inner-page header (back button + title). Kept as the import every existing
+// page already uses; the implementation lives in AppHeader.
+export default function Header({ title }) {
+  return <AppHeader back title={title} />
 }

@@ -45,87 +45,41 @@ export default function NotificationCounter({ userId }) {
 
   if (loading || !userId) return null
 
-  const percentage = status.limit > 0 ? (status.remaining / status.limit) * 100 : 0
-  const isLow = percentage < 30 && percentage > 0
   const isEmpty = status.remaining === 0
+  const isLow = status.limit > 0 && status.remaining / status.limit < 0.3 && !isEmpty
+  const needsUpgrade = isEmpty || isLow
 
-  // Color variants
-  const containerClass = isEmpty
-    ? "bg-red-50/95 border-red-200 hover:border-red-300"
+  const tone = isEmpty
+    ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
     : isLow
-    ? "bg-amber-50/95 border-amber-200 hover:border-amber-300"
-    : "bg-blue-50/95 border-blue-200 hover:border-blue-300"
+    ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+    : "border-slate-200 bg-slate-50 text-slate-700"
 
-  const iconClass = isEmpty
-    ? "text-red-600"
-    : isLow
-    ? "text-amber-600"
-    : "text-blue-600"
+  const label = `Daily email notifications: ${status.remaining} of ${status.limit} left today`
+  const content = (
+    <>
+      <Bell className="h-3.5 w-3.5 shrink-0" />
+      <span className="tabular-nums text-sm font-bold">{status.remaining}</span>
+      <span className="text-xs font-medium opacity-60">/{status.limit}</span>
+      <span className="hidden text-xs font-medium sm:inline">{needsUpgrade ? (isEmpty ? "Upgrade" : "Running low") : "emails left"}</span>
+    </>
+  )
 
-  const textClass = isEmpty
-    ? "text-red-700"
-    : isLow
-    ? "text-amber-700"
-    : "text-blue-700"
-
-  const barClass = isEmpty
-    ? "bg-red-600"
-    : isLow
-    ? "bg-amber-600"
-    : "bg-blue-600"
-
-  return (
-    <div
-      title={`Daily email notifications • ${status.remaining} of ${status.limit} remaining today`}
-      className={`group flex-shrink-0 rounded-2xl border p-2 sm:p-2.5 shadow-sm backdrop-blur-md transition-all hover:shadow-md ${containerClass}`}
+  // Compact pill; when the quota is low or gone the whole pill takes you to the plans.
+  return needsUpgrade ? (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={() => router.push("/subscription")}
+      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 transition active:scale-95 ${tone}`}
     >
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        {/* Icon */}
-        <Bell className={`h-4 w-4 shrink-0 transition-colors ${iconClass}`} />
-
-        {/* Quota display */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-baseline gap-px">
-            <span
-              className={`tabular-nums text-base font-semibold tracking-tighter transition-colors ${textClass}`}
-            >
-              {status.remaining}
-            </span>
-            <span className="text-xs font-medium text-gray-400">/{status.limit}</span>
-          </div>
-
-          {/* Subtitle - hidden on mobile, visible on sm+ */}
-          <span className="hidden text-[10px] font-medium text-gray-500 sm:block">
-            emails left today
-          </span>
-        </div>
-
-        {/* Upgrade CTA - icon-only on mobile, full button on sm+ */}
-        {(isEmpty || isLow) && (
-          <button
-            onClick={() => router.push("/subscription")}
-            className={`ml-auto flex items-center gap-1 rounded-xl px-2 py-1 text-xs font-semibold transition-all active:scale-95 ${
-              isEmpty
-                ? "bg-red-600 text-white hover:bg-red-700"
-                : "bg-amber-600 text-white hover:bg-amber-700"
-            }`}
-          >
-            <Zap className="h-3 w-3" />
-            {/* Text hidden on mobile */}
-            <span className="hidden sm:inline">
-              {isEmpty ? "Upgrade" : "Premium"}
-            </span>
-          </button>
-        )}
-      </div>
-
-      {/* Progress bar - always visible, ultra-thin */}
-      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-200">
-        <div
-          className={`h-1 rounded-full transition-all duration-500 ${barClass}`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
+      {content}
+      <Zap className="h-3 w-3" />
+    </button>
+  ) : (
+    <div title={label} aria-label={label} className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 ${tone}`}>
+      {content}
     </div>
   )
 }

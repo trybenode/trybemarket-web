@@ -45,7 +45,7 @@ export default function ReviewForm({ sellerId }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost">Rate Seller</Button>
+        <Button variant="soft" size="xs">Rate seller</Button>
       </DialogTrigger>
       <DialogContent ar className="sm:max-w-md">
         <form onSubmit={handleSubmit} className="space-y-4">

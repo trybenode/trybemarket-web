@@ -120,8 +120,7 @@ export default React.memo(function UserProfile() {
                   <Avatar className="h-10 w-10 cursor-pointer border-2 border-blue-500 hover:border-blue-600 transition-colors duration-200 aspect-square">
                     <AvatarImage
                       src={
-                        currentUser?.profilePicture ||
-                        "/images/default-avatar.png"
+                        currentUser?.profilePicture || undefined
                       }
                       alt={currentUser?.fullName || "User"}
                       className="object-cover w-full h-full"
@@ -146,8 +145,7 @@ export default React.memo(function UserProfile() {
                 <Avatar className="h-10 w-10 aspect-square">
                   <AvatarImage
                     src={
-                      currentUser?.profilePicture ||
-                      "/images/default-avatar.png"
+                      currentUser?.profilePicture || undefined
                     }
                     alt={currentUser?.fullName || "User"}
                     className="object-cover w-full h-full"

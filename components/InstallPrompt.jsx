@@ -101,11 +101,16 @@ export default function InstallPrompt() {
 
   if (!visible) return null;
 
+  // Detail pages have their own sticky action bar along the bottom; sit above it.
+  const hasStickyBar = /^\/(listing|view-service)\//.test(pathname || "");
+
   return (
     <div
       role="dialog"
       aria-label="Install TrybeMarket"
-      className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-300"
+      className={`fixed inset-x-0 z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom duration-300 ${
+        hasStickyBar ? "bottom-[4.5rem]" : "bottom-0"
+      }`}
     >
       <div className="mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-xl">
         <img src="/icons/icon-192.png" alt="" width={44} height={44} className="h-11 w-11 shrink-0 rounded-xl" />

@@ -10,7 +10,18 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
+  		},
   		colors: {
+  			brand: {
+  				DEFAULT: '#2563eb',
+  				dark: '#1d4ed8',
+  				soft: '#eff6ff',
+  				yellow: '#FBEB78',
+  				'yellow-deep': '#F5C542',
+  				'yellow-soft': '#FEF9E1'
+  			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

@@ -33,9 +33,10 @@ export default function page() {
     }
   };
   return (
-    <div className="min-h-screen  items-center justify-center bg-gray-100 p-6">
-      <Header title={"Delete Data"} />
-      <div className="w-full justify-center items-center flex flex-col  bg-white rounded-2xl shadow-md p-8">
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <Header title="Delete Data" />
+      <div className="mx-auto max-w-2xl px-4 py-5">
+      <div className="w-full justify-center items-center flex flex-col bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
         <p className="text-gray-600 mb-6">
           You have the right to permanently delete your TrybeMarket account and
           all associated data. Fill in your details below to request deletion.
@@ -79,6 +80,7 @@ export default function page() {
           ⚠️ Once verified, all your account data, listings, and transactions
           will be deleted within 30 days.
         </p>
+      </div>
       </div>
     </div>
   );

@@ -67,7 +67,7 @@ useEffect(() => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-6 transition-opacity duration-300 ease-in-out opacity-100">
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <ListingCardSkeleton key={i} />
         ))}
@@ -86,9 +86,9 @@ useEffect(() => {
 
 const productCards = useMemo(() => {
   return products.map((item) => (
-    <div key={item.id} className="mb-4">
+    <div key={item.id}>
       <div
-        className="cursor-pointer"
+        className="h-full cursor-pointer"
         onClick={() => router.push(`/listing/${item.id}`)}
       >
         <ListingCard product={item.product} btnName="View" />
@@ -100,7 +100,7 @@ const productCards = useMemo(() => {
   return (
     <div className="flex flex-col">
      
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mt-6">
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
         {productCards}
       </div>
 

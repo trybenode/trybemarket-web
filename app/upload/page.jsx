@@ -1,148 +1,108 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
-import { Package, Briefcase, Sparkles, ArrowRight } from "lucide-react";
-import ToolBarSkeleton from "@/components/ui/ToolBarSkeleton";
+import Link from "next/link";
+import { Package, Briefcase, ArrowRight, Users, LayoutList, TrendingUp, Store } from "lucide-react";
 import Header from "@/components/Header";
-
-const ToolBar = dynamic(() => import("@/components/ToolBar"), {
-  ssr: false,
-  loading: () => <ToolBarSkeleton />,
-});
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const options = [
   {
     id: 1,
-    name: "List a Product",
-    description: "Sell physical items, gadgets, or goods",
-    icon: <Package size={40} strokeWidth={1.5} />,
+    name: "List a product",
+    description: "Sell physical items, gadgets or goods to students on your campus.",
+    icon: Package,
+    tone: "bg-blue-50 text-primary",
     route: "/product-upload",
   },
   {
     id: 2,
-    name: "List a Service",
-    description: "Offer skills, expertise, or services",
-    icon: <Briefcase size={40} strokeWidth={1.5} />,
+    name: "List a service",
+    description: "Offer your skills — tutoring, design, writing, repairs and more.",
+    icon: Briefcase,
+    tone: "bg-brand-yellow text-slate-900",
     route: "/service-upload",
     badge: "Beta",
   },
 ];
 
+const benefits = [
+  { icon: Users, title: "Reach students", text: "Connect with campus communities nationwide." },
+  { icon: LayoutList, title: "Easy management", text: "Simple tools to upload and track your listings." },
+  { icon: TrendingUp, title: "Grow your business", text: "Premium features to boost visibility and sales." },
+];
+
 export default function Upload() {
-  const router = useRouter();
-
   return (
-    <div className="flex flex-col px-4 py-6 max-w-6xl min-h-screen mx-auto bg-white">
-      <Header title={"List Your Hustle"} />
+    <div className="min-h-screen bg-slate-50 pb-16">
+      <Header title="List your hustle" />
 
-      {/* Hero Section */}
-      <div className="text-center mt-12 mb-12 max-w-2xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4">
-          What would you like to list?
-        </h1>
-        <p className="text-gray-600 text-base">
-          Choose how you want to showcase your business
-        </p>
-      </div>
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        {/* Hero */}
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
+            What would you like to list?
+          </h1>
+          <p className="mt-2 text-slate-600">Choose how you want to showcase your business.</p>
+        </div>
 
-      {/* Options Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full mb-16">
-        {options.map((opt) => (
-          <button
-            key={opt.id}
-            onClick={() => router.push(opt.route)}
-            className="group relative flex flex-col items-start p-8 bg-white border border-gray-200 rounded-xl hover:border-[rgb(37,99,235)] hover:shadow-lg transition-all duration-300"
-          >
-            {/* Beta Badge */}
-            {opt.badge && (
-              <div className="absolute top-4 right-4 bg-[rgb(37,99,235)] text-white text-xs font-medium px-3 py-1 rounded-full">
-                {opt.badge}
+        {/* Options */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {options.map(({ id, name, description, icon: Icon, tone, route, badge }) => (
+            <Link
+              key={id}
+              href={route}
+              className="group relative flex items-start gap-4 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md active:scale-[0.99] md:flex-col md:gap-0 md:p-6"
+            >
+              {badge && (
+                <Badge variant="brand" className="absolute right-3 top-3 md:right-4 md:top-4">
+                  {badge}
+                </Badge>
+              )}
+              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl md:mb-4 md:h-14 md:w-14 ${tone}`}>
+                <Icon className="h-6 w-6 md:h-7 md:w-7" strokeWidth={1.75} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-bold text-slate-900 md:text-xl">{name}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-slate-600">{description}</p>
+                <span className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-primary md:mt-5">
+                  Get started
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </span>
               </div>
-            )}
+            </Link>
+          ))}
+        </div>
 
-            {/* Icon */}
-            <div className="p-3 bg-gray-50 rounded-lg mb-4 text-gray-700 group-hover:bg-blue-50 group-hover:text-[rgb(37,99,235)] transition-colors duration-300">
-              {opt.icon}
-            </div>
-
-            {/* Content */}
-            <div className="text-left flex-1">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                {opt.name}
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                {opt.description}
-              </p>
-            </div>
-
-            {/* Arrow */}
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-600 group-hover:text-[rgb(37,99,235)] transition-colors">
-              <span>Get started</span>
-              <ArrowRight size={16} strokeWidth={2} />
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Benefits Section */}
-      <div className="max-w-3xl mx-auto w-full mb-12">
-        <div className="bg-gray-50 rounded-xl p-8 border border-gray-200">
-          <div className="flex items-center gap-2 mb-6">
-            <Sparkles className="w-5 h-5 text-[rgb(37,99,235)]" strokeWidth={2} />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Why list on TrybeMarket?
-            </h3>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
-              <div>
-                <p className="font-medium text-gray-900 text-sm mb-1">
-                  Reach students
-                </p>
-                <p className="text-sm text-gray-600">
-                  Connect with campus communities nationwide
-                </p>
+        {/* Why list */}
+        <div className="mt-10">
+          <h3 className="mb-3 text-center text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Why list on TrybeMarket?
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {benefits.map(({ icon: Icon, title, text }) => (
+              <div key={title} className="flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:block">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-yellow-soft text-amber-700 sm:mb-3">
+                  <Icon className="h-[18px] w-[18px]" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{text}</p>
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
-              <div>
-                <p className="font-medium text-gray-900 text-sm mb-1">
-                  Easy management
-                </p>
-                <p className="text-sm text-gray-600">
-                  Simple tools to upload and track your listings
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
-              <div>
-                <p className="font-medium text-gray-900 text-sm mb-1">
-                  Grow your business
-                </p>
-                <p className="text-sm text-gray-600">
-                  Premium features to boost visibility and sales
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
 
-      {/* Help Text */}
-      <div className="text-center text-sm text-gray-500">
-        <p>
-          Need help?{" "}
-          <a href="/help" className="text-[rgb(37,99,235)] hover:underline font-medium">
-            View our listing guide
-          </a>
-        </p>
+        {/* Already listed something */}
+        <div className="mt-10 flex flex-col items-center gap-2 text-center">
+          <p className="text-sm text-slate-500">Already have listings?</p>
+          <Button asChild variant="soft">
+            <Link href="/my-shop">
+              <Store /> Manage them in My Shop
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
