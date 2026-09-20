@@ -32,9 +32,9 @@ const ThankYouPage = () => {
   }, [countdown, router]);
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6 max-w-3xl">
-        <Header title={"Payment Successful"} />
+    <div className="min-h-screen bg-slate-50">
+      <Header title="Payment Successful" />
+      <div className="container mx-auto px-4 py-5 max-w-3xl">
         
         <div className="flex items-center justify-center min-h-[80vh]">
           <div className="w-full max-w-md">

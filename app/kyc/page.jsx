@@ -223,9 +223,9 @@ export default function KycPage() {
   };
 
   return (
-    <div className='min-h-screen bg-white'>
-      <div className='container mx-auto px-4 py-4 max-w-6xl'>
-        <Header title={"KYC Registration"}/>
+    <div className='min-h-screen bg-slate-50'>
+      <Header title="KYC Registration" />
+      <div className='container mx-auto px-4 py-5 max-w-6xl'>
 
         <Card className='border border-gray-200'>
           <CardContent className='space-y-4 pt-6'>

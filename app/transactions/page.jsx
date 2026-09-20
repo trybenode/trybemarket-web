@@ -71,17 +71,17 @@ function TransactionRow({ entry }) {
     const isPositive = entry.ledgerAmount > 0;
 
     return (
-      <div className="flex items-center gap-4 py-4 px-4 sm:px-6 border-b border-gray-100 last:border-b-0">
-        <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${isPositive ? "bg-green-50" : "bg-red-50"}`}>
-          <Icon className={`h-5 w-5 ${isPositive ? "text-green-600" : "text-red-600"}`} />
+      <div className="flex items-center gap-4 py-4 px-4 sm:px-6 border-b border-slate-100 last:border-b-0">
+        <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isPositive ? "bg-emerald-50" : "bg-rose-50"}`}>
+          <Icon className={`h-5 w-5 ${isPositive ? "text-emerald-600" : "text-rose-600"}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{meta.label}</p>
-          {entry.reason && <p className="text-xs text-gray-500 truncate">{entry.reason}</p>}
-          <p className="text-xs text-gray-400">{formatDate(entry.createdAtISO)}</p>
+          <p className="text-sm font-medium text-slate-900 truncate">{meta.label}</p>
+          {entry.reason && <p className="text-xs text-slate-500 truncate">{entry.reason}</p>}
+          <p className="text-xs text-slate-400">{formatDate(entry.createdAtISO)}</p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className={`text-sm font-semibold ${isPositive ? "text-green-600" : "text-red-600"}`}>
+          <p className={`text-sm font-semibold tabular-nums ${isPositive ? "text-emerald-600" : "text-rose-600"}`}>
             {isPositive ? "+" : ""}
             {entry.ledgerAmount.toLocaleString()} credits
           </p>
@@ -95,25 +95,25 @@ function TransactionRow({ entry }) {
   const fullyCredited = entry.nairaAmount === 0 && entry.creditApplied > 0;
 
   return (
-    <div className="flex items-center gap-4 py-4 px-4 sm:px-6 border-b border-gray-100 last:border-b-0">
-      <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-        <CategoryIcon className="h-5 w-5 text-blue-600" />
+    <div className="flex items-center gap-4 py-4 px-4 sm:px-6 border-b border-slate-100 last:border-b-0">
+      <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+        <CategoryIcon className="h-5 w-5 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-gray-900 truncate">{entry.title}</p>
+          <p className="text-sm font-medium text-slate-900 truncate">{entry.title}</p>
           <Badge variant={statusMeta.variant} className={statusMeta.className}>
             {entry.status}
           </Badge>
         </div>
         {entry.creditApplied > 0 && (
-          <p className="text-xs text-gray-500">{entry.creditApplied.toLocaleString()} credits applied</p>
+          <p className="text-xs text-slate-500">{entry.creditApplied.toLocaleString()} credits applied</p>
         )}
-        {entry.boostStatus && <p className="text-xs text-gray-400 capitalize">Boost: {entry.boostStatus}</p>}
-        <p className="text-xs text-gray-400">{formatDate(entry.createdAtISO)}</p>
+        {entry.boostStatus && <p className="text-xs text-slate-400 capitalize">Boost: {entry.boostStatus}</p>}
+        <p className="text-xs text-slate-400">{formatDate(entry.createdAtISO)}</p>
       </div>
       <div className="text-right flex-shrink-0">
-        <p className="text-sm font-semibold text-gray-900">
+        <p className="text-sm font-semibold text-slate-900">
           {fullyCredited ? "Covered by credit" : `₦${entry.nairaAmount.toLocaleString()}`}
         </p>
       </div>
@@ -123,8 +123,8 @@ function TransactionRow({ entry }) {
 
 function TransactionRowSkeleton() {
   return (
-    <div className="flex items-center gap-4 py-4 px-4 sm:px-6 border-b border-gray-100 last:border-b-0">
-      <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+    <div className="flex items-center gap-4 py-4 px-4 sm:px-6 border-b border-slate-100 last:border-b-0">
+      <Skeleton className="h-10 w-10 rounded-xl flex-shrink-0" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-4 w-1/3" />
         <Skeleton className="h-3 w-1/4" />
@@ -176,58 +176,56 @@ export default function TransactionsPage() {
     };
   }, [loadMore, isFetchingMore]);
 
-  return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <Header title="Transactions" />
+  const listCard = "overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm";
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="flex items-center gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {balanceLoading ? <Skeleton className="h-8 w-16 mx-auto" /> : balance.toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-600">App Credit Balance</div>
+  return (
+    <div className="min-h-screen bg-slate-50 pb-16">
+      <Header title="Transactions" />
+
+      <div className="container mx-auto max-w-3xl px-4 py-5">
+        {/* Summary */}
+        <div className="mb-5 grid grid-cols-2 gap-3">
+          <div className="rounded-3xl border border-brand-yellow-deep/40 bg-gradient-to-br from-brand-yellow-soft to-white p-4 shadow-sm">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <Coins className="h-3.5 w-3.5 text-amber-600" /> App credit
+            </p>
+            <div className="mt-1 text-2xl font-extrabold tabular-nums text-slate-900">
+              {balanceLoading ? <Skeleton className="h-8 w-16" /> : balance.toLocaleString()}
             </div>
-            <div className="h-8 w-px bg-gray-200" />
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{entries.length}</div>
-              <div className="text-sm text-gray-600">Transactions Loaded</div>
-            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <Receipt className="h-3.5 w-3.5" /> Transactions
+            </p>
+            <div className="mt-1 text-2xl font-extrabold tabular-nums text-slate-900">{entries.length}</div>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-4 mb-6">{error}</div>
+          <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
         )}
 
         {initialLoading ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className={listCard}>
             {Array.from({ length: 5 }).map((_, i) => (
               <TransactionRowSkeleton key={i} />
             ))}
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 px-4">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-12 max-w-md w-full text-center">
-              <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Receipt className="h-10 w-10 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No transactions yet</h3>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                Your App Credit earnings, subscription payments, and boosts will show up here once you have some activity.
-              </p>
-              <Button
-                onClick={() => router.push("/")}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200"
-              >
-                <ShoppingBag className="h-4 w-4 mr-2" />
-                Browse Marketplace
-              </Button>
+          <div className="mx-auto mt-4 flex max-w-md flex-col items-center rounded-3xl border border-slate-200/80 bg-white px-6 py-14 text-center shadow-sm">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-primary">
+              <Receipt className="h-8 w-8" />
             </div>
+            <h3 className="text-lg font-bold text-slate-900">No transactions yet</h3>
+            <p className="mt-1 text-sm leading-relaxed text-slate-500">
+              Your App Credit earnings, subscription payments and boosts will show up here once you have some activity.
+            </p>
+            <Button size="lg" className="mt-6" onClick={() => router.push("/")}>
+              <ShoppingBag /> Browse marketplace
+            </Button>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className={listCard}>
             {entries.map((entry) => (
               <TransactionRow key={entry.id} entry={entry} />
             ))}

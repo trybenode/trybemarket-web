@@ -75,9 +75,9 @@ export default function ServiceUpload() {
   }
 
   return (
-    <div className='flex flex-col min-h-screen bg-white'>
-      <div className='container mx-auto px-4 py-6 max-w-6xl w-full'>
-        <Header title={"List a Service"} />
+    <div className='flex flex-col min-h-screen bg-slate-50'>
+      <Header title="List a Service" />
+      <div className='container mx-auto px-4 py-5 max-w-6xl w-full'>
 
         {/* Hero Section */}
         <div className='mt-8 mb-8'>

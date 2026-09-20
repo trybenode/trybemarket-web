@@ -325,9 +325,9 @@ export default function SelectBoostItemPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <Header title="Select Item to Boost" />
+    <div className="min-h-screen bg-slate-50">
+      <Header title="Select Item to Boost" />
+      <div className="container mx-auto px-4 py-5 max-w-6xl">
 
         {/* Hero Section */}
         <div className="mt-6 mb-8 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border border-yellow-200">
