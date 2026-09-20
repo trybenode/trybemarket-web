@@ -24,11 +24,13 @@ export const useServiceForm = (currentUser) => {
   const [images, setImages] = useState([]);
   const [isAgreed, setIsAgreed] = useState(false);
 
-  // Check user authentication and verification
+  // Verification prompt. Redirecting signed-out visitors is the PAGE's job
+  // (app/service-upload/page.jsx waits for auth to finish first). This hook used
+  // to redirect to /login whenever currentUser was empty, which it is for the
+  // first moments of every page load — so a signed-in user who refreshed the
+  // page, or opened it directly, was sent to the login screen.
   useEffect(() => {
-    if (!currentUser) {
-      router.push("/login");
-    } else if (!currentUser.isVerified) {
+    if (currentUser && !currentUser.isVerified) {
       setOpenVerificationDialog(true);
     }
     setIsLoading(false);
