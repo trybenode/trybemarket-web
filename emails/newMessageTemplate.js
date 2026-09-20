@@ -1,3 +1,7 @@
+import { escapeHtml } from "../lib/escapeHtml.js";
+
+// Every value is escaped: senderName/productName are user-controlled profile
+// and listing text, and this HTML is emailed to someone else.
 export const newMessageTemplate = ({ senderName, productName, chatLink }) => `
 <!DOCTYPE html>
 <html>
@@ -48,15 +52,15 @@ export const newMessageTemplate = ({ senderName, productName, chatLink }) => `
       <p>You have received a new message regarding your listing on TrybeMarket!</p>
 
       <div class="product-details">
-        <p><strong>Product:</strong> ${productName}</p>
-        <p><strong>From:</strong> ${senderName}</p>
+        <p><strong>Product:</strong> ${escapeHtml(productName)}</p>
+        <p><strong>From:</strong> ${escapeHtml(senderName)}</p>
       </div>
 
       <p>
         To respond to this message and continue the conversation, click the button below:
       </p>
 
-      <a href="${chatLink}" class="cta-button">View Message</a>
+      <a href="${escapeHtml(chatLink)}" class="cta-button">View Message</a>
 
       <p>
         Quick tips:

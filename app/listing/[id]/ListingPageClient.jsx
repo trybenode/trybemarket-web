@@ -40,6 +40,7 @@ import {
 import { isUserRecentlyActive } from "@/hooks/useLastSeen";
 
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
+import { sendMessageNotification } from "@/lib/notificationClient";
 
 export default function ListingDetailsPage({ params }) {
   const router = useRouter();
@@ -242,22 +243,7 @@ export default function ListingDetailsPage({ params }) {
           }
 
           if (channels.length > 0) {
-            fetch("/api/notifications/send", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: currentUserId, // Sender's ID - for email quota check
-              recipientId: sellerID, // Recipient's ID - for WhatsApp quota check
-              recipientPhone: AllUserInfo.phone,
-              recipientEmail: AllUserInfo.email,
-              recipientName: AllUserInfo.fullName || "User",
-              senderName: instigatorName,
-              productName: productDetails.name,
-              chatLink: `https://trybemarket.online/chat/${conversationId}`,
-              conversationId,
-              channels,
-            }),
-          })
+            sendMessageNotification({ conversationId, channels, productName: productDetails.name })
             .then(async (response) => {
               const data = await response.json();
               

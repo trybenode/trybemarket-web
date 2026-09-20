@@ -23,6 +23,7 @@ import useUserStore from "@/lib/userStore";
 import NotificationCounter from "@/components/NotificationCounter";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { useSubscription } from "@/hooks/useSubscription";
+import { sendMessageNotification } from "@/lib/notificationClient";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -175,22 +176,7 @@ export default function ChatPage() {
             if (channels.length > 0) {
               console.log("Sending notifications via:", channels);
 
-              fetch("/api/notifications/send", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  userId: currentUserId, // Sender's ID - for email quota check
-                  recipientId: otherUser.id, // Recipient's ID - for WhatsApp quota check
-                  recipientPhone: otherUserDetails.phone,
-                  recipientEmail: otherUserDetails.email,
-                  recipientName: otherUserDetails.fullName || "User",
-                  senderName: currentUserName || "Someone",
-                  productName: product?.name || "a product",
-                  chatLink: `https://trybemarket.online/chat/${conversationId}`,
-                  conversationId,
-                  channels,
-                }),
-              })
+              sendMessageNotification({ conversationId, channels, productName: product?.name || "a product" })
                 .then(async (response) => {
                   const data = await response.json();
 
