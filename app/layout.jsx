@@ -7,6 +7,7 @@ import UserActivityTracker from "@/components/UserActivityTracker";
 import PageViewTracker from "@/components/PageViewTracker";
 import ReferralCapture from "@/components/ReferralCapture";
 import ManifestRefLink from "@/components/ManifestRefLink";
+import PwaBootstrap from "@/components/PwaBootstrap";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -130,6 +131,7 @@ export default function RootLayout({ children }) {
           <ReferralCapture />
           <ManifestRefLink />
         </Suspense>
+        <PwaBootstrap />
         <UserProvider>
           {children}
         </UserProvider>
