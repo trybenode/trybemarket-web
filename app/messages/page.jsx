@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 import { getAllConversations } from "@/utils/messaginghooks";
 
 import Header from "@/components/Header";
-import { ArrowLeft } from "lucide-react";
-import UserProfile from "@/components/UserProfile";
+import { MessageCircle } from "lucide-react";
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -19,6 +19,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
 
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [filter, setFilter] = useState("all"); // "all" | "unread"
   // Check if user is authenticated
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -85,137 +86,148 @@ export default function MessagesPage() {
       : text;
   };
 
+  const sorted = [...conversations].sort((a, b) => {
+    const timeA = a.updatedAt?.seconds || a.lastMessage?.timestamp || 0;
+    const timeB = b.updatedAt?.seconds || b.lastMessage?.timestamp || 0;
+    return timeB - timeA; // newest first
+  });
+  const isUnread = (c) => Array.isArray(c.unreadBy) && c.unreadBy.includes(currentUserId || "");
+  const unreadCount = sorted.filter(isUnread).length;
+  const visible = filter === "unread" ? sorted.filter(isUnread) : sorted;
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-slate-50">
+        <Header title="Messages" />
+        <div className="mx-auto max-w-3xl space-y-2 px-4 py-4" aria-busy="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-3">
+              <Skeleton className="h-14 w-14 shrink-0 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-3 w-4/5" />
+              </div>
+              <Skeleton className="h-3 w-10" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <div className="flex justify-between items-center mb-6">
-        <Button
-          variant="ghost"
-          className="p-0 mr-2"
-          onClick={() => router.push("/")}
-        >
-          <ArrowLeft
-            size={20}
-            className="text-yellow-600 hover:text-yellow-800"
-          />
-        </Button>
-        <h1 className="text-2xl font-bold">Messages</h1>
-        <UserProfile />
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <Header title="Messages" />
 
-      {conversations.length > 0 ? (
-        <div className="space-y-4">
-          {[...conversations]
-            .sort((a, b) => {
-              // Sort by updatedAt timestamp or lastMessage timestamp
-              const timeA =
-                a.updatedAt?.seconds || a.lastMessage?.timestamp || 0;
-              const timeB =
-                b.updatedAt?.seconds || b.lastMessage?.timestamp || 0;
-              return timeB - timeA; // Descending order
-            })
-            .map((conversation) => {
-              const hasUnread =
-                Array.isArray(conversation.unreadBy) &&
-                conversation.unreadBy.includes(currentUserId || "");
-              // console.log("Conversation ID", conversation.id);
+      <div className="mx-auto max-w-3xl px-4 py-4">
+        {sorted.length > 0 && (
+          <div className="mb-3 flex gap-2">
+            {[
+              ["all", "All", sorted.length],
+              ["unread", "Unread", unreadCount],
+            ].map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilter(key)}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-sm font-semibold transition active:scale-95",
+                  filter === key
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                {label}
+                <span className={cn("ml-1.5 text-xs tabular-nums", filter === key ? "text-white/80" : "text-slate-400")}>
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {visible.length > 0 ? (
+          <ul className="space-y-2">
+            {visible.map((conversation) => {
+              const hasUnread = isUnread(conversation);
+              const buyerName =
+                conversation.instigatorInfo?.id === currentUserId
+                  ? null
+                  : conversation.instigatorInfo?.name || "Unknown buyer";
 
               return (
-                <Card
-                  key={conversation.id}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardContent
-                    className="p-4"
-                    onClick={() => {
-                      router.push(`/chat/${conversation.id}`);
-                    }}
+                <li key={conversation.id}>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/chat/${conversation.id}`)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.99]",
+                      hasUnread
+                        ? "border-primary/25 bg-blue-50/60 hover:bg-blue-50"
+                        : "border-slate-200/80 bg-white hover:bg-slate-50"
+                    )}
                   >
-                    <div className="flex items-center">
-                      <div className="relative h-12 w-12 rounded-lg overflow-hidden">
-                        <Image
-                          src={
-                            conversation.product.imageUrl || "/placeholder.svg"
-                          }
-                          alt={conversation.product.name}
-                          fill
-                          className="object-cover"
-                          sizes="48px"
-                        />
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                      <Image
+                        src={conversation.product?.imageUrl || "/placeholder.svg"}
+                        alt={conversation.product?.name || "Listing"}
+                        fill
+                        className="object-cover"
+                        sizes="56px"
+                      />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h3 className={cn("truncate text-sm", hasUnread ? "font-bold text-slate-900" : "font-semibold text-slate-800")}>
+                          {conversation.product?.name}
+                        </h3>
+                        <span className={cn("shrink-0 text-xs tabular-nums", hasUnread ? "font-semibold text-primary" : "text-slate-400")}>
+                          {formatTimestamp(conversation.lastMessage?.timestamp || 0)}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <p className={cn("min-w-0 flex-1 truncate text-sm", hasUnread ? "font-medium text-slate-900" : "text-slate-500")}>
+                          {conversation.lastMessage?.imageUrl && !conversation.lastMessage?.text
+                            ? "📷 Photo"
+                            : truncateText(conversation.lastMessage?.text, 60)}
+                        </p>
                         {hasUnread && (
-                          <div className="absolute right-1 top-1 h-3 w-3 rounded-full bg-blue-500" />
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary" aria-label="Unread" />
                         )}
                       </div>
-
-                      <div className="ml-4 flex-1">
-                        <h3 className={hasUnread ? "font-bold" : "font-normal"}>
-                          {conversation.product.name}
-                        </h3>
-                        <p
-                          className={`${
-                            hasUnread ? "text-gray-900" : "text-gray-500"
-                          } text-sm truncate`}
-                        >
-                          {truncateText(conversation.lastMessage?.text)}
-                        </p>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="text-xs text-gray-400">
-                          {formatTimestamp(
-                            conversation.lastMessage?.timestamp || 0,
-                          )}
-                        </p>
-                        <p className="text-xs text-blue-500 mt-1">
-                          {conversation.instigatorInfo?.id === currentUserId
-                            ? " "
-                            : conversation.instigatorInfo?.name ||
-                              "Unknown Buyer"}
-                        </p>
-                      </div>
+                      {buyerName && <p className="mt-0.5 truncate text-xs text-slate-400">from {buyerName}</p>}
                     </div>
-                  </CardContent>
-                </Card>
+                  </button>
+                </li>
               );
             })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-          <div className="mb-4 text-gray-400">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-16 w-16 mx-auto"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-              />
-            </svg>
+          </ul>
+        ) : (
+          <div className="flex flex-col items-center px-4 py-20 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-primary">
+              <MessageCircle className="h-8 w-8" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900">
+              {filter === "unread" ? "You're all caught up" : "No messages yet"}
+            </h2>
+            <p className="mt-1 max-w-sm text-sm text-slate-500">
+              {filter === "unread"
+                ? "No unread conversations right now."
+                : "When you start a conversation with a seller or a buyer, it will show up here."}
+            </p>
+            {filter === "unread" ? (
+              <Button variant="soft" className="mt-6" onClick={() => setFilter("all")}>
+                Show all conversations
+              </Button>
+            ) : (
+              <Button size="lg" className="mt-6" onClick={() => router.push("/")}>
+                Browse products
+              </Button>
+            )}
           </div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">
-            No Messages Yet
-          </h2>
-          <p className="text-gray-500 max-w-md">
-            When you start conversations with sellers or buyers, they'll appear
-            here
-          </p>
-          <Button className="mt-6" onClick={() => router.push("/")}>
-            Browse Products
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
