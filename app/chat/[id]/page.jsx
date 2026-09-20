@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReviewForm from "@/components/ReviewForm";
 import SaleConfirmationPanel from "@/components/SaleConfirmationPanel";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { ArrowLeft, ChevronLeft, Send, Paperclip, X, ChevronRight } from "lucide-react";
 import { compressImage } from "@/utils/compressImage";
 import {
@@ -333,205 +333,215 @@ export default function ChatPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      <div className="flex h-[100dvh] flex-col bg-slate-50 md:mx-auto md:my-4 md:h-[calc(100dvh-2rem)] md:max-w-3xl md:overflow-hidden md:rounded-3xl md:border md:border-slate-200 md:bg-white" aria-busy="true">
+        <div className="flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-3">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="flex-1 space-y-3 p-4">
+          <Skeleton className="h-10 w-2/3 rounded-2xl" />
+          <Skeleton className="ml-auto h-10 w-1/2 rounded-2xl" />
+          <Skeleton className="h-10 w-3/5 rounded-2xl" />
+        </div>
       </div>
     );
   }
 
   if (!conversation) {
     return (
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="flex items-center mb-6">
-          <Button
-            variant="ghost"
-            className="p-0 mr-2"
+      <div className="min-h-screen bg-slate-50">
+        <div className="flex h-14 items-center gap-2 border-b border-slate-200 bg-white px-3">
+          <button
             onClick={() => router.push("/messages")}
+            aria-label="Back to messages"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100"
           >
-            <ChevronLeft className="h-6 w-6" />
-          </Button>
-          <h1 className="text-2xl font-bold">Chat</h1>
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-base font-semibold text-slate-900">Chat</h1>
         </div>
-        <div className="text-center py-8">
-          <p className="text-gray-500">Conversation not found</p>
+        <div className="px-4 py-20 text-center">
+          <p className="text-slate-500">This conversation couldn't be found.</p>
+          <Button className="mt-4" variant="soft" onClick={() => router.push("/messages")}>
+            Back to messages
+          </Button>
         </div>
       </div>
     );
   }
 
+  const otherOnline = otherUserDetails?.lastSeen ? isUserRecentlyActive(otherUserDetails.lastSeen) : false;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl min-h-screen flex flex-col">
-      <div className="flex justify-between items-center mb-2">
-        <Button
-          variant="ghost"
-          className="p-0 mr-2"
+    <div className="flex h-[100dvh] flex-col bg-slate-50 md:mx-auto md:my-4 md:h-[calc(100dvh-2rem)] md:max-w-3xl md:overflow-hidden md:rounded-3xl md:border md:border-slate-200 md:bg-white md:shadow-sm">
+      {/* Header */}
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-2 sm:px-3">
+        <button
           onClick={() => router.push("/messages")}
+          aria-label="Back to messages"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-700 transition hover:bg-slate-100 active:scale-95"
         >
-          <ArrowLeft
-            size={20}
-            className="text-yellow-600 hover:text-yellow-800"
-          />
-        </Button>
-        <h1 className="text-2xl font-bold">Chat</h1>
-        <NotificationCounter userId={currentUserId} />
-      </div>
+          <ArrowLeft size={20} />
+        </button>
 
-      {/* Product Card */}
+        <button
+          type="button"
+          onClick={() => setShowUserModal(true)}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
+          <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-brand-yellow-soft">
+            {otherUser?.avatar && !otherUser.avatar.startsWith("/placeholder") ? (
+              <Image src={otherUser.avatar} alt={otherUser?.name || "User"} fill className="object-cover" sizes="36px" />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-700">
+                {(otherUser?.name || "?").charAt(0).toUpperCase()}
+              </span>
+            )}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold text-slate-900">{otherUser?.name || "Chat"}</span>
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              {otherOnline && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              {otherOnline ? "Online now" : "Tap for profile"}
+            </span>
+          </span>
+        </button>
+
+        <NotificationCounter userId={currentUserId} />
+      </header>
+
+      {/* Listing context */}
       {product && (
-        <Card className="mb-4">
-          <CardHeader className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="relative h-16 w-16 rounded-lg overflow-hidden">
-                <Image
-                  src={
-                    product.imageUrl || "/placeholder.svg?height=64&width=64"
-                  }
-                  alt={product.name || "Product"}
-                  fill
-                  className="object-cover"
-                  sizes="64px"
-                />
-              </div>
-              <div className="ml-4">
-                <CardTitle className="text-lg">
-                  {product.name || "Product"}
-                </CardTitle>
-                <Button
-                  variant="link"
-                  className="p-0 h-auto text-sm text-blue-600"
-                  onClick={handleProcuctClick}
-                >
-                  View Product
-                </Button>
-              </div>
-              <div>
-                {/* <Button variant="ghost" onClick={() => setShowReviewForm(true)}>
-                  Rate Seller
-                </Button> */}
-                {product?.sellerId && (
-                  <ReviewForm sellerId={product.sellerId} />
-                )}
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+        <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-3 py-2">
+          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+            <Image
+              src={product.imageUrl || "/placeholder.svg?height=44&width=44"}
+              alt={product.name || "Listing"}
+              fill
+              className="object-cover"
+              sizes="44px"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-slate-900">{product.name || "Listing"}</p>
+            <button type="button" onClick={handleProcuctClick} className="text-xs font-semibold text-primary hover:underline">
+              View listing
+            </button>
+          </div>
+          {product?.sellerId && <ReviewForm sellerId={product.sellerId} />}
+        </div>
       )}
 
-      <SaleConfirmationPanel
-        conversationId={conversationId}
-        conversation={conversation}
-        currentUserId={currentUserId}
-      />
+      <div className="empty:hidden shrink-0 px-3 pt-2">
+        <SaleConfirmationPanel
+          conversationId={conversationId}
+          conversation={conversation}
+          currentUserId={currentUserId}
+        />
+      </div>
 
-      {/* Messages Container */}
-      <div className="bg-gray-50 rounded-lg border border-gray-200 mb-4 flex-1 flex flex-col">
-        <div className="flex-1 overflow-y-auto p-4 min-h-[400px]">
-          {Object.keys(groupedMessages).length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">
-                No messages yet. Start the conversation!
-              </p>
-            </div>
-          ) : (
-            Object.entries(groupedMessages).map(([date, msgs]) => (
-              <div key={date}>
-                {/* Date separator */}
-                <div className="flex justify-center my-4">
-                  <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
-                    {date}
-                  </span>
-                </div>
-
-                {/* Messages for this date */}
-                {msgs.map((msg, index) => {
-                  const isMe = msg.senderID === currentUserId;
-                  return (
-                    <div
-                      key={`${msg.timestamp}-${index}`}
-                      className={`flex mb-4 ${isMe ? "justify-end" : "justify-start"}`}
-                    >
-                      {!isMe && (
-                        <div
-                          className="relative h-8 w-8 rounded-full overflow-hidden mr-2 flex-shrink-0 cursor-pointer ring-2 ring-transparent hover:ring-blue-400 transition-all"
-                          onClick={() => setShowUserModal(true)}
-                        >
-                          <Image
-                            src={
-                              otherUser?.avatar ||
-                              "/placeholder.svg?height=32&width=32"
-                            }
-                            alt={otherUser?.name || "User"}
-                            fill
-                            className="object-cover"
-                            sizes="32px"
-                          />
-                        </div>
-                      )}
-                      <div className="max-w-[70%]">
-                        <div
-                          className={`rounded-lg overflow-hidden ${
-                            isMe
-                              ? "bg-blue-600 text-white rounded-br-none"
-                              : "bg-white border border-gray-200 rounded-bl-none"
-                          } ${msg.imageUrl ? "p-1" : "p-3"}`}
-                        >
-                          {msg.imageUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={msg.imageUrl}
-                              alt="Shared image"
-                              className="max-w-[220px] rounded-md cursor-pointer block"
-                              onClick={() => setLightboxIndex(imageUrls.indexOf(msg.imageUrl))}
-                            />
-                          )}
-                          {msg.text && (
-                            <p className={`text-sm ${msg.imageUrl ? "mt-1 px-2 pb-1" : ""}`}>
-                              {msg.text}
-                            </p>
-                          )}
-                        </div>
-                        <p
-                          className={`text-xs text-gray-500 mt-1 ${isMe ? "text-right" : "text-left"}`}
-                        >
-                          {formatTimestamp(msg.timestamp)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+      {/* Conversation */}
+      <div className="flex-1 overflow-y-auto px-3 py-4">
+        {Object.keys(groupedMessages).length === 0 ? (
+          <div className="flex h-full items-center justify-center px-6 text-center">
+            <p className="text-sm text-slate-500">No messages yet. Say hello and start the conversation!</p>
+          </div>
+        ) : (
+          Object.entries(groupedMessages).map(([date, msgs]) => (
+            <div key={date}>
+              <div className="my-4 flex justify-center">
+                <span className="rounded-full bg-slate-200/70 px-3 py-1 text-xs font-medium text-slate-600">{date}</span>
               </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
 
-        <Separator />
+              {msgs.map((msg, index) => {
+                const isMe = msg.senderID === currentUserId;
+                const next = msgs[index + 1];
+                const prev = msgs[index - 1];
+                const endsGroup = !next || next.senderID !== msg.senderID;
+                const startsGroup = !prev || prev.senderID !== msg.senderID;
+                return (
+                  <div
+                    key={`${msg.timestamp}-${index}`}
+                    className={cn("flex items-end gap-2", isMe ? "justify-end" : "justify-start", startsGroup ? "mt-3" : "mt-0.5")}
+                  >
+                    {!isMe && (
+                      <span className="w-7 shrink-0">
+                        {endsGroup && (
+                          <button
+                            type="button"
+                            onClick={() => setShowUserModal(true)}
+                            className="relative block h-7 w-7 overflow-hidden rounded-full bg-brand-yellow-soft"
+                            aria-label={`${otherUser?.name || "User"}'s profile`}
+                          >
+                            {otherUser?.avatar && !otherUser.avatar.startsWith("/placeholder") ? (
+                              <Image src={otherUser.avatar} alt="" fill className="object-cover" sizes="28px" />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center text-xs font-bold text-slate-700">
+                                {(otherUser?.name || "?").charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                          </button>
+                        )}
+                      </span>
+                    )}
+                    <div className={cn("flex max-w-[78%] flex-col", isMe ? "items-end" : "items-start")}>
+                      <div
+                        className={cn(
+                          "overflow-hidden text-sm leading-relaxed shadow-sm",
+                          isMe
+                            ? "rounded-2xl rounded-br-md bg-primary text-primary-foreground"
+                            : "rounded-2xl rounded-bl-md border border-slate-200 bg-white text-slate-900",
+                          msg.imageUrl ? "p-1" : "px-3.5 py-2"
+                        )}
+                      >
+                        {msg.imageUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={msg.imageUrl}
+                            alt="Shared image"
+                            className="block max-w-[220px] cursor-pointer rounded-xl"
+                            onClick={() => setLightboxIndex(imageUrls.indexOf(msg.imageUrl))}
+                          />
+                        )}
+                        {msg.text && (
+                          <p className={cn("whitespace-pre-wrap break-words", msg.imageUrl && "px-2.5 pb-1.5 pt-1.5")}>{msg.text}</p>
+                        )}
+                      </div>
+                      {endsGroup && (
+                        <p className="mt-1 px-1 text-[11px] tabular-nums text-slate-400">{formatTimestamp(msg.timestamp)}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
 
-        {/* Image preview */}
+      {/* Composer */}
+      <div className="shrink-0 border-t border-slate-200 bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
         {imagePreview && (
-          <div className="px-4 pt-3 flex items-start gap-2">
+          <div className="mb-2 flex items-start gap-2">
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="h-20 w-20 object-cover rounded-lg border border-gray-200"
-              />
+              <img src={imagePreview} alt="Preview" className="h-20 w-20 rounded-xl border border-slate-200 object-cover" />
               <button
                 type="button"
                 onClick={removeSelectedImage}
-                className="absolute -top-1.5 -right-1.5 bg-gray-700 text-white rounded-full h-5 w-5 flex items-center justify-center"
+                aria-label="Remove photo"
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-white"
               >
                 <X className="h-3 w-3" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Image ready to send</p>
+            <p className="mt-1 text-xs text-slate-500">Photo ready to send</p>
           </div>
         )}
 
-        {/* Message Input */}
-        <form onSubmit={handleSendMessage} className="p-4 flex gap-2 items-center">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
           <input
             ref={imageInputRef}
             type="file"
@@ -543,18 +553,18 @@ export default function ChatPage() {
             type="button"
             variant="ghost"
             size="icon"
-            className="flex-shrink-0 text-gray-500 hover:text-blue-600"
+            className="shrink-0 text-slate-500 hover:text-primary"
             onClick={() => imageInputRef.current?.click()}
             disabled={sending}
-            title="Attach image"
+            aria-label="Attach a photo"
           >
             <Paperclip className="h-5 w-5" />
           </Button>
           <Input
-            placeholder="Type your message..."
+            placeholder="Type a message…"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1"
+            className="h-11 flex-1 rounded-full border-slate-200 bg-slate-50 px-4"
             disabled={sending}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -565,14 +575,13 @@ export default function ChatPage() {
           />
           <Button
             type="submit"
-            disabled={sending || (!newMessage.trim() && !selectedImage)}
-            className="px-3"
+            size="icon"
+            className="h-11 w-11 shrink-0 rounded-full"
+            loading={sending || uploadingImage}
+            disabled={!newMessage.trim() && !selectedImage}
+            aria-label="Send message"
           >
-            {sending || uploadingImage ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+            {!(sending || uploadingImage) && <Send />}
           </Button>
         </form>
       </div>
@@ -651,7 +660,7 @@ export default function ChatPage() {
           onClick={() => setShowUserModal(false)}
         >
           <div
-            className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center gap-4 shadow-xl"
+            className="relative bg-white rounded-3xl w-full max-w-sm p-6 flex flex-col items-center gap-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -677,7 +686,7 @@ export default function ChatPage() {
               <p className="text-lg font-semibold text-gray-900">{otherUser.name || "Unknown User"}</p>
               {otherUserDetails?.lastSeen && (
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {isUserRecentlyActive(otherUserDetails.lastSeen) ? "🟢 Online" : "Recently active"}
+                  {isUserRecentlyActive(otherUserDetails.lastSeen) ? "Online now" : "Recently active"}
                 </p>
               )}
             </div>
