@@ -6,6 +6,7 @@ import ToastProvider from "@/components/ToastProvider";
 import UserActivityTracker from "@/components/UserActivityTracker";
 import PageViewTracker from "@/components/PageViewTracker";
 import ReferralCapture from "@/components/ReferralCapture";
+import ManifestRefLink from "@/components/ManifestRefLink";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -81,7 +82,20 @@ export const metadata = {
     // google: "your-verification-code",
   },
 
-  icons: { icon: "/trybemarket.png" },
+  icons: {
+    icon: "/trybemarket.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+
+  appleWebApp: {
+    capable: true,
+    title: "TrybeMarket",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport = {
+  themeColor: "#2563eb",
 };
 
 const jsonLd = {
@@ -114,6 +128,7 @@ export default function RootLayout({ children }) {
         <PageViewTracker />
         <Suspense fallback={null}>
           <ReferralCapture />
+          <ManifestRefLink />
         </Suspense>
         <UserProvider>
           {children}
