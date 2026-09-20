@@ -3,6 +3,8 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePwa } from "@/context/PwaContext";
 
 const UserProfile = dynamic(() => import("@/components/UserProfile"), {
   ssr: false,
@@ -10,6 +12,7 @@ const UserProfile = dynamic(() => import("@/components/UserProfile"), {
 
 export default React.memo(function ToolBar() {
   const router = useRouter();
+  const { ready, installed } = usePwa();
 
   return (
     <header className="w-full px-4 py-4 mb-6 border-b border-gray-100 bg-white shadow-sm">
@@ -40,6 +43,16 @@ export default React.memo(function ToolBar() {
           >
             Download App
           </a>
+
+          {/* Install as an app (the PWA) — hidden once installed */}
+          {ready && !installed && (
+            <Link
+              href="/install"
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 text-sm font-medium hover:bg-gray-50 transition"
+            >
+              Install App
+            </Link>
+          )}
 
           {/* User Profile */}
           <UserProfile />

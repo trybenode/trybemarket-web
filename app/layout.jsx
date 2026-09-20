@@ -8,6 +8,8 @@ import PageViewTracker from "@/components/PageViewTracker";
 import ReferralCapture from "@/components/ReferralCapture";
 import ManifestRefLink from "@/components/ManifestRefLink";
 import PwaBootstrap from "@/components/PwaBootstrap";
+import InstallPrompt from "@/components/InstallPrompt";
+import { PwaProvider } from "@/context/PwaContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
@@ -124,6 +126,14 @@ export default function RootLayout({ children }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        {/* beforeinstallprompt fires once and can beat React hydration; stash it
+            so PwaProvider can adopt it (see context/PwaContext.jsx). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__trybeInstallPrompt=e;});",
+          }}
+        />
         <ToastProvider />
         <UserActivityTracker />
         <PageViewTracker />
@@ -131,10 +141,13 @@ export default function RootLayout({ children }) {
           <ReferralCapture />
           <ManifestRefLink />
         </Suspense>
-        <PwaBootstrap />
-        <UserProvider>
-          {children}
-        </UserProvider>
+        <PwaProvider>
+          <UserProvider>
+            <PwaBootstrap />
+            {children}
+            <InstallPrompt />
+          </UserProvider>
+        </PwaProvider>
         <SpeedInsights />
         <Analytics />
         {GA_ID && (
