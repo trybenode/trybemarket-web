@@ -40,7 +40,7 @@ export async function POST(req) {
       success: true,
       uid: member.uid,
       referralCode: member.referralCode,
-      referralLink: buildReferralLink(member.referralCode),
+      referralLink: buildReferralLink(member.referralCode, new URL(req.url).origin),
       created: member.created,
       reactivated: member.reactivated,
     });

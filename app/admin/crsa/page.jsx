@@ -92,7 +92,7 @@ export default function AdminCrsaPage() {
 
   const copyLink = async (code) => {
     try {
-      await navigator.clipboard.writeText(buildReferralLink(code));
+      await navigator.clipboard.writeText(buildReferralLink(code, window.location.origin));
       toast.success("Referral link copied");
     } catch {
       toast.error("Couldn't copy — select and copy manually");

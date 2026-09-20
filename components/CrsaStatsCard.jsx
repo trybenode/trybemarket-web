@@ -20,7 +20,8 @@ export default function CrsaStatsCard({ userId }) {
   if (loading) return <Skeleton className="h-36 w-full rounded-xl mb-6" />;
   if (!member?.active) return null;
 
-  const link = buildReferralLink(member.referralCode);
+  // The link must point at the site this ambassador is actually using — see buildReferralLink.
+  const link = buildReferralLink(member.referralCode, window.location.origin);
 
   const copy = async () => {
     try {
