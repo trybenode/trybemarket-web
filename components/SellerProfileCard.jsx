@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, Loader } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,17 +18,11 @@ import {
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Facebook, Instagram, MessageCircleCode, Share, Crown, Sparkles, Shield } from "lucide-react";
+import { Share } from "lucide-react";
 import { Eye } from "lucide-react";
 import SellerProfileSkeleton from "./ui/SellerProfileSkeleton";
 import UserBadgesRow from "./UserBadgesRow";
 
-const icons = [
-  { name: "Facebook", component: Facebook },
-  { name: "Instagram", component: Instagram },
-  { name: "MessageCircleCode", component: MessageCircleCode },
-  { name: "Share", component: Share, isLink: true },
-];
 
 export default function SellerProfileCard({ sellerInfo, subscriptionBadge }) {
   const router = useRouter();
@@ -106,47 +99,62 @@ export default function SellerProfileCard({ sellerInfo, subscriptionBadge }) {
   }
 
   const { uid, profilePicture, fullName, createdAt, address } = selectedUser;
-  const yearCreated = createdAt ? new Date(createdAt).getFullYear() : "Unknown";
+  // createdAt may be a Firestore Timestamp, an ISO string, a number or a Date depending on how the account was created.
+  const createdDate = createdAt?.toDate ? createdAt.toDate() : createdAt ? new Date(createdAt) : null;
+  const yearCreated = createdDate && !Number.isNaN(createdDate.getTime()) ? createdDate.getFullYear() : "—";
 
   const shopUrl =
     !sellerInfo && typeof window !== "undefined"
       ? `${window.location.origin}/shop/${auth.currentUser?.uid}`
       : "";
 
+  const ring =
+    subscriptionBadge?.label === "VIP"
+      ? "bg-gradient-to-br from-yellow-300 to-amber-500"
+      : subscriptionBadge?.label === "Premium"
+      ? "bg-gradient-to-br from-blue-400 to-blue-600"
+      : subscriptionBadge?.label === "Bundle"
+      ? "bg-gradient-to-br from-purple-400 to-indigo-500"
+      : "bg-white";
+
+  const copyShopLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shopUrl);
+      toast.success("Shop link copied — share it anywhere");
+    } catch {
+      toast.error("Couldn't copy the link");
+    }
+  };
+
   return (
-    <Card className="mb-2">
-      <CardContent className="p-4">
-        <div className="flex flex-col items-center gap-4">
-          {/* Profile Image with Badge Ring */}
-          <div className="relative">
-            <div 
-              className={`w-24 h-24 rounded-full p-1 ${
-                subscriptionBadge 
-                  ? subscriptionBadge.label === 'VIP' 
-                    ? 'bg-gradient-to-r from-yellow-400 to-amber-500'
-                    : subscriptionBadge.label === 'Premium'
-                    ? 'bg-blue-500'
-                    : subscriptionBadge.label === 'Bundle'
-                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500'
-                    : 'bg-gray-200'
-                  : 'bg-gray-200'
-              }`}
-            >
-              <div className="relative w-full h-full rounded-full overflow-hidden bg-white">
-                <Image
-                  src={profilePicture || "/placeholder.svg?height=96&width=96"}
-                  alt="Profile"
-                  fill
-                  className="object-cover"
-                  sizes="88px"
-                />
+    <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+      {/* soft brand cover */}
+      <div className="h-20 bg-gradient-to-r from-brand-yellow via-brand-yellow-soft to-blue-50 sm:h-24" />
+
+      <div className="px-4 pb-5 sm:px-6">
+        <div className="-mt-12 flex flex-col items-center gap-4 sm:-mt-10 sm:flex-row sm:items-start">
+          {/* Avatar with plan ring */}
+          <div className="relative shrink-0">
+            <div className={`h-24 w-24 rounded-full p-1 shadow-md ring-4 ring-white ${ring}`}>
+              <div className="relative h-full w-full overflow-hidden rounded-full bg-brand-yellow-soft">
+                {profilePicture ? (
+                  <Image
+                    src={profilePicture}
+                    alt={fullName ? `${fullName}'s photo` : "Profile"}
+                    fill
+                    className="object-cover"
+                    sizes="96px"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-3xl font-bold text-slate-700">
+                    {(fullName || "S").trim().charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
             </div>
-            
-            {/* Badge Icon Overlay */}
-            {subscriptionBadge && subscriptionBadge.icon && (
-              <div 
-                className={`absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${subscriptionBadge.className}`}
+            {subscriptionBadge?.icon && (
+              <div
+                className={`absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full shadow-lg ring-2 ring-white ${subscriptionBadge.className}`}
                 style={subscriptionBadge.style}
               >
                 <subscriptionBadge.icon className="h-4 w-4" />
@@ -154,78 +162,55 @@ export default function SellerProfileCard({ sellerInfo, subscriptionBadge }) {
             )}
           </div>
 
-          {/* User Info - Always Centered */}
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-gray-900">{fullName || "Seller"}</h2>
-            <p className="text-sm text-gray-500 mt-1">Member since {yearCreated}</p>
-            <p className="text-sm text-gray-500">{address || "No address provided"}</p>
-            <p className="text-sm text-gray-500 flex items-center justify-center gap-1 mt-1">
-              <Eye className="h-3.5 w-3.5" />
-              {selectedUser.shopViewCount || 0} shop {selectedUser.shopViewCount === 1 ? "view" : "views"}
+          <div className="min-w-0 flex-1 text-center sm:mt-11 sm:text-left">
+            <h2 className="truncate text-xl font-bold text-slate-900">{fullName || "Seller"}</h2>
+            <p className="mt-0.5 truncate text-sm text-slate-500">
+              {address || "No address provided"} · Member since {yearCreated}
             </p>
-            
-            {/* Subscription Badge Label */}
-            {subscriptionBadge && (
-              <Badge 
-                className={`mt-2 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold ${subscriptionBadge.className}`}
-                style={subscriptionBadge.style}
-              >
-                {subscriptionBadge.icon && <subscriptionBadge.icon className="h-3 w-3" />}
-                {subscriptionBadge.label}
-              </Badge>
-            )}
-
-            {/* Earned achievement badges (Verified Student, Founding Member, Top Seller) */}
-            <UserBadgesRow userId={uid} className="mt-2" />
-          </div>
-
-          {/* Social Icons */}
-          <div className="flex gap-4">
-            {icons.map(({ name, component: Icon, isLink }) => {
-              if (sellerInfo && isLink) return null;
-
-              return isLink ? (
-                <button
-                  key={name}
-                  onClick={() => {
-                    navigator.clipboard.writeText(shopUrl);
-                    toast.success("Your shop link has been copied!");
-                  }}
-                  title="Copy your shop link"
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
+              {subscriptionBadge && (
+                <Badge
+                  className={`gap-1.5 border-0 px-3 py-1 text-xs font-semibold ${subscriptionBadge.className}`}
+                  style={subscriptionBadge.style}
                 >
-                  <Icon className="cursor-pointer hover:text-blue-600" />
-                </button>
-              ) : (
-                <Icon
-                  key={name}
-                  className="cursor-pointer hover:text-blue-600"
-                />
-              );
-            })}
+                  {subscriptionBadge.icon && <subscriptionBadge.icon className="h-3 w-3" />}
+                  {subscriptionBadge.label}
+                </Badge>
+              )}
+              {/* Earned achievement badges (Verified Student, Founding Member, Top Seller) */}
+              <UserBadgesRow userId={uid} />
+            </div>
           </div>
 
-          {/* Only show Edit Profile button if it's the user's own profile */}
+          {/* Only the owner sees these */}
           {!sellerInfo && (
-            <Button
-              variant="outline"
-              onClick={() => router.push("/edit-profile")}
-              className="w-full sm:w-auto"
-            >
-              Edit Profile
-            </Button>
+            <div className="flex w-full gap-2 sm:mt-11 sm:w-auto">
+              <Button variant="soft" onClick={copyShopLink} className="flex-1 sm:flex-none" title="Copy your shop link">
+                <Share /> Share shop
+              </Button>
+              <Button variant="outline" onClick={() => router.push("/edit-profile")} className="flex-1 sm:flex-none">
+                Edit profile
+              </Button>
+            </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Quick stats */}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <p className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Eye className="h-3.5 w-3.5" /> Shop views
+            </p>
+            <p className="mt-0.5 text-xl font-bold tabular-nums text-slate-900">
+              {selectedUser.shopViewCount || 0}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 px-4 py-3">
+            <p className="text-xs text-slate-500">Member since</p>
+            <p className="mt-0.5 text-xl font-bold tabular-nums text-slate-900">{yearCreated}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
-
-// {!sellerInfo && shopUrl && (
-//   <Button
-//     variant="secondary"
-//     onClick={() => router.push(shopUrl)}
-//     className="ml-4"
-//   >
-//     View My Shop
-//   </Button>
-// )}

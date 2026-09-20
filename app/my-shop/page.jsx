@@ -10,7 +10,7 @@ import { isSubscriptionActive } from "@/lib/subscriptionStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Crown, Sparkles, Shield } from "lucide-react";
+import { Plus, Crown, Sparkles, Shield, PackageOpen } from "lucide-react";
 import toast from "react-hot-toast";
 import { getServices} from "@/hooks/servicesHooks";
 import dynamic from "next/dynamic";
@@ -137,179 +137,123 @@ export default function MyShopPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="p-4 bg-white min-h-screen">
-        <div className="mb-4">
+      <div className="min-h-screen bg-slate-50">
+        <Header title="My Shop" />
+        <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
           <SellerProfileSkeleton />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <ListingCardSkeleton key={i} />
-          ))}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ListingCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <Header title={"My Shop"} />
-
-        {/* Profile Section */}
-        <div className="mt-8 mb-8">
-          <SellerProfileCard userProfile={currentUser} subscriptionBadge={badge} />
-
-          {/* Renders only for active CRSA members — see components/CrsaStatsCard.jsx */}
-          <div className="mt-6">
-            <CrsaStatsCard userId={currentUser?.uid} />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3 mt-6">
-            <Button 
-              onClick={() => router.push("/product-upload")} 
-              className="text-white shadow-sm"
-              style={{ backgroundColor: 'rgb(37,99,235)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-            
-            <Button 
-              onClick={() => router.push("/service-upload")} 
-              variant="outline"
-              className="border-gray-300 hover:bg-gray-50"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Service
-            </Button>
-          </div>
+  const renderGrid = (items, getProduct, editRoute, kind) => (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="h-full cursor-pointer"
+          onClick={() => router.push(`${editRoute}?id=${item.id}`)}
+          role="link"
+          aria-label={`Edit ${kind}`}
+        >
+          <ListingCard product={getProduct(item)} btnName="Edit" />
         </div>
-        {/* Tabs Section */}
-      <Tabs
-        defaultValue="products"
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="w-full"
-      >
-        <TabsList className="w-full md:w-auto mb-8 bg-gray-100 p-1 rounded-lg grid grid-cols-2 md:inline-flex">
-          <TabsTrigger 
-            value="products"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
-          >
-            Products
-          </TabsTrigger>
-          <TabsTrigger 
-            value="services"
-            className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
-          >
-            Services
-          </TabsTrigger>
-        </TabsList>
+      ))}
+    </div>
+  );
 
-        <TabsContent value="products" className="mt-0">
-          {loading || refreshing ? (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <ListingCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : userProducts.length > 0 ? (
-            <>
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-gray-900">{userProducts.length}</span> product{userProducts.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                {userProducts.map((item) => (
-                  <div
-                    key={item.id}
-                    className="cursor-pointer"
-                    onClick={() => router.push(`/product-upload?id=${item.id}`)}
-                  >
-                    <ListingCard product={item.product} btnName="Edit" />
-                  </div>
+  const renderEmpty = ({ icon: Icon, title, text, cta, route }) => (
+    <div className="flex flex-col items-center rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-primary">
+        <Icon className="h-8 w-8" />
+      </div>
+      <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+      <p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p>
+      <Button size="lg" className="mt-6" onClick={() => router.push(route)}>
+        <Plus /> {cta}
+      </Button>
+    </div>
+  );
+
+  const tabCount = (n) => (
+    <span className="ml-1.5 rounded-full bg-slate-200/70 px-1.5 text-xs font-bold tabular-nums text-slate-600">{n}</span>
+  );
+
+  return (
+    <div className="min-h-screen bg-slate-50 pb-16">
+      <Header title="My Shop" />
+
+      <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
+        <SellerProfileCard userProfile={currentUser} subscriptionBadge={badge} />
+
+        {/* Renders only for active CRSA members — see components/CrsaStatsCard.jsx */}
+        <CrsaStatsCard userId={currentUser?.uid} />
+
+        {/* Primary actions */}
+        <div className="grid grid-cols-2 gap-3 sm:flex">
+          <Button size="lg" onClick={() => router.push("/product-upload")} className="sm:min-w-44">
+            <Plus /> Add product
+          </Button>
+          <Button size="lg" variant="soft" onClick={() => router.push("/service-upload")} className="sm:min-w-44">
+            <Plus /> Add service
+          </Button>
+        </div>
+
+        <Tabs defaultValue="products" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-5 grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
+            <TabsTrigger value="products" className="sm:min-w-36">
+              Products {tabCount(userProducts.length)}
+            </TabsTrigger>
+            <TabsTrigger value="services" className="sm:min-w-36">
+              Services {tabCount(userServices.length)}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="products" className="mt-0">
+            {refreshing ? (
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ListingCardSkeleton key={i} />
                 ))}
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-              <div className="w-16 h-16 mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                <Plus className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No products yet</h3>
-              <p className="text-sm text-gray-500 mb-6 text-center max-w-sm">
-                Start selling by adding your first product. It only takes a few minutes!
-              </p>
-              <Button
-                onClick={() => router.push("/product-upload")}
-                title="Add new product"
-                className="text-white shadow-sm"
-                style={{ backgroundColor: 'rgb(37,99,235)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Product
-              </Button>
-            </div>
-          )}
-        </TabsContent>
+            ) : userProducts.length > 0 ? (
+              renderGrid(userProducts, (item) => item.product, "/product-upload", "product")
+            ) : (
+              renderEmpty({
+                icon: PackageOpen,
+                title: "No products yet",
+                text: "Start selling by adding your first product. It only takes a few minutes!",
+                cta: "Add your first product",
+                route: "/product-upload",
+              })
+            )}
+          </TabsContent>
 
-{/* Services Tab */}
-        <TabsContent value="services" className="mt-0">
-          {loading || refreshing ? (
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <ListingCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : userServices.length > 0 ? (
-            <>
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-gray-900">{userServices.length}</span> service{userServices.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                {userServices.map((service) => (
-                  <div
-                    key={service.id}
-                    className="cursor-pointer"
-                    onClick={() => router.push(`/service-upload?id=${service.id}`)}
-                  >
-                    <ListingCard product={service} btnName="Edit" />
-                  </div>
+          <TabsContent value="services" className="mt-0">
+            {refreshing ? (
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ListingCardSkeleton key={i} />
                 ))}
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-              <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-                <Sparkles className="h-8 w-8" style={{ color: 'rgb(37,99,235)' }} />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No services yet</h3>
-              <p className="text-sm text-gray-500 mb-6 text-center max-w-sm">
-                Start offering services by adding your first one. It only takes a few minutes!
-              </p>
-              <Button
-                onClick={() => router.push("/service-upload")}
-                title="Add new service"
-                className="text-white shadow-sm"
-                style={{ backgroundColor: 'rgb(37,99,235)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Add Your First Service
-              </Button>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            ) : userServices.length > 0 ? (
+              renderGrid(userServices, (service) => service, "/service-upload", "service")
+            ) : (
+              renderEmpty({
+                icon: Sparkles,
+                title: "No services yet",
+                text: "Start offering services by adding your first one. It only takes a few minutes!",
+                cta: "Add your first service",
+                route: "/service-upload",
+              })
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

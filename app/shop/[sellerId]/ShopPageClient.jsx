@@ -190,25 +190,25 @@ export default function SellerShopPage() {
 
   if (loading) {
     return (
-      <div className="p-4 min-h-screen mx-auto max-w-6xl">
-        <div className="mb-4">
+      <div className="min-h-screen bg-slate-50">
+        <Header title="Seller's Shop" />
+        <div className="mx-auto max-w-6xl space-y-5 px-4 py-5">
           <SellerProfileSkeleton />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <ListingCardSkeleton key={i} />
-          ))}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ListingCardSkeleton key={i} />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <Header title={"Seller's Shop"}/>
-        
+    <div className="min-h-screen bg-slate-50 pb-16">
+      <Header title="Seller's Shop" />
+      <div className="mx-auto max-w-6xl px-4 py-5">
         {/* Profile Section */}
-        <div className="mt-8 mb-8">
+        <div className="mb-5">
           {sellerInfo ? (
             <SellerProfileCard sellerInfo={sellerInfo} subscriptionBadge={subscriptionBadge} />
           ) : (
@@ -223,22 +223,22 @@ export default function SellerShopPage() {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="w-full md:w-auto mb-8 bg-gray-100 p-1 rounded-lg grid grid-cols-3 md:inline-flex">
+          <TabsList className="mb-5 grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
             <TabsTrigger 
               value="products"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
+              className="sm:min-w-32"
             >
               Products
             </TabsTrigger>
             <TabsTrigger 
               value="services"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
+              className="sm:min-w-32"
             >
               Services
             </TabsTrigger>
             <TabsTrigger 
               value="review"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all text-sm"
+              className="sm:min-w-32"
             >
               Reviews
             </TabsTrigger>
@@ -246,22 +246,22 @@ export default function SellerShopPage() {
 
           <TabsContent value="products" className="mt-0">
             {products.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-                <div className="w-16 h-16 mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-                  <svg className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white px-4 py-16">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
+                  <svg className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No products yet</h3>
-                <p className="text-sm text-gray-500 text-center max-w-sm">
+                <h3 className="mb-1 text-lg font-bold text-slate-900">No products yet</h3>
+                <p className="max-w-sm text-center text-sm text-slate-500">
                   This seller hasn't listed any products yet.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
                 {products.map((product) => (
-                  <Link key={product.id} href={`/listing/${product.id}`}>
-                    <div className="cursor-pointer">
+                  <Link key={product.id} href={`/listing/${product.id}`} className="block h-full">
+                    <div className="h-full cursor-pointer">
                       <ListingCard product={product} btnName="View" />
                     </div>
                   </Link>
@@ -272,20 +272,20 @@ export default function SellerShopPage() {
           
           <TabsContent value="services" className="mt-0">
             {services.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 px-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
-                <div className="w-16 h-16 mb-4 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-                  <Sparkles className="h-8 w-8" style={{ color: 'rgb(37,99,235)' }} />
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white px-4 py-16">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
+                  <Sparkles className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No services yet</h3>
-                <p className="text-sm text-gray-500 text-center max-w-sm">
+                <h3 className="mb-1 text-lg font-bold text-slate-900">No services yet</h3>
+                <p className="max-w-sm text-center text-sm text-slate-500">
                   This seller hasn't listed any services yet.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
                 {services.map((service) => (
-                  <Link key={service.id} href={`/view-service/${service.id}`}>
-                    <div className="cursor-pointer">
+                  <Link key={service.id} href={`/view-service/${service.id}`} className="block h-full">
+                    <div className="h-full cursor-pointer">
                       <ServiceCard key={service.id} service={service} />
                     </div>
                   </Link>
