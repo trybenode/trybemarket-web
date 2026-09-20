@@ -67,7 +67,9 @@ const menuItems = [
 ];
 
 export default React.memo(function UserProfile() {
-  const { currentUser, setCurrentUser, isLoading } = useUser(); // Assume useUser provides isLoading
+  // The context exposes `loading` (this used to read a non-existent `isLoading`,
+  // so the header never knew the profile was still loading).
+  const { currentUser, setCurrentUser, loading: isLoading } = useUser();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isLoggedIn = !!currentUser;
   const router = useRouter();
