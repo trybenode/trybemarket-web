@@ -6,7 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import dynamic from "next/dynamic";
 import toast from "react-hot-toast";
-import { Check, Sparkles, Crown, Shield, Zap, AlertCircle, Coins } from "lucide-react";
+import { Check, Sparkles, Crown, Shield, Zap, AlertCircle, Coins, Lock } from "lucide-react";
 import Header from "@/components/Header";
 import { SUBSCRIPTION_PLANS, getPlansByCategory, checkPlanEligibility, isSubscriptionActive } from "@/lib/subscriptionStore";
 import { computeSellerTier, getTierWeight } from "@/lib/sellerTier";
@@ -18,6 +18,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 const PaystackWrapper = dynamic(() => import("@/components/PaystackWrapper"), {
   ssr: false,
@@ -381,27 +384,25 @@ export default function SubscriptionPage() {
       return (
         <div className="w-full space-y-3">
           {eligibility && (
-            <label className="flex items-center gap-2 text-sm bg-amber-50 border border-amber-200 rounded-lg p-3 cursor-pointer">
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-brand-yellow-deep/50 bg-brand-yellow-soft p-3 text-sm">
               <input
                 type="checkbox"
                 checked={isApplyingCreditFor(plan.id)}
                 onChange={() => toggleCreditOptOut(plan.id)}
-                className="h-4 w-4 flex-shrink-0"
+                className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
               />
-              <span className="text-gray-800">
+              <span className="text-slate-800">
                 Apply {eligibility.estimatedApply.toLocaleString()} credits — covers ₦{eligibility.estimatedApply.toLocaleString()} of this ₦{plan.price.toLocaleString()} plan
               </span>
             </label>
           )}
           <Button
-            className="w-full text-white"
-            style={{ backgroundColor: 'rgb(37,99,235)' }}
+            size="lg"
+            className="w-full"
             onClick={() => handleSubscribeClick(plan)}
             disabled={!isKycVerified}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
           >
-            {!isKycVerified ? "KYC Required" : "Subscribe Now"}
+            {!isKycVerified ? "KYC required" : "Subscribe now"}
           </Button>
         </div>
       );
@@ -410,8 +411,8 @@ export default function SubscriptionPage() {
     // Selected, reserve call still in flight.
     if (creditReservation === null) {
       return (
-        <Button className="w-full" disabled>
-          {reserving ? "Applying credit..." : "Loading..."}
+        <Button size="lg" className="w-full" loading>
+          {reserving ? "Applying credit…" : "Loading…"}
         </Button>
       );
     }
@@ -419,8 +420,8 @@ export default function SubscriptionPage() {
     // Reservation resolved (with or without credit applied) — pay whatever's left via Paystack.
     if (loadingUser || !user?.email || !publicKey || (!creditReservation.applyCredit && !reference)) {
       return (
-        <Button className="w-full" disabled>
-          Loading...
+        <Button size="lg" className="w-full" loading>
+          Loading…
         </Button>
       );
     }
@@ -428,7 +429,7 @@ export default function SubscriptionPage() {
     return (
       <div className="w-full space-y-2">
         {creditReservation.applyCredit && (
-          <p className="text-xs text-center text-gray-500">
+          <p className="text-center text-xs text-slate-500">
             {creditReservation.creditApplied.toLocaleString()} credits applied — pay the remaining ₦{creditReservation.remainingAmount.toLocaleString()}
           </p>
         )}
@@ -443,386 +444,298 @@ export default function SubscriptionPage() {
     const eligibility = planEligibility[plan.id] || { eligible: true };
     const isEligible = eligibility.eligible;
     const isCovered = !isActive && isPlanCoveredByCurrentTier(plan);
+    const isVip = plan.type === "vip";
+    const cycle =
+      plan.cycle === "one-time" ? "7 days" : plan.cycle === "quarterly" ? "3 months" : plan.cycle === "yearly" ? "year" : "month";
+
+    const TypeIcon = isVip ? Crown : plan.type === "premium" ? Sparkles : plan.type === "maintenance" ? Shield : Zap;
+    const iconTone = isVip
+      ? "bg-brand-yellow text-slate-900"
+      : plan.type === "premium"
+      ? "bg-blue-50 text-primary"
+      : "bg-slate-100 text-slate-600";
 
     return (
-      <Card
+      <div
         key={plan.id}
-        className={`relative overflow-hidden transition-all border ${
-          isActive 
-            ? "border-2 shadow-lg" 
-            : "border-gray-200 hover:border-gray-300 hover:shadow-md"
-        } ${plan.type === "vip" ? "border-yellow-400" : ""} ${
-          (!isEligible || isCovered) && !isFree ? "opacity-60" : ""
-        } bg-white rounded-lg`}
-        style={isActive ? { borderColor: 'rgb(37,99,235)' } : {}}
+        className={cn(
+          "relative flex flex-col rounded-3xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md",
+          isActive
+            ? "border-primary ring-2 ring-primary/20"
+            : isVip
+            ? "border-brand-yellow-deep ring-2 ring-brand-yellow/50"
+            : "border-slate-200",
+          (!isEligible || isCovered) && !isFree && "opacity-75"
+        )}
       >
-        {plan.type === "vip" && (
-          <div className="absolute top-0 right-0 bg-gradient-to-l from-yellow-400 to-yellow-500 text-white px-4 py-1 text-xs font-bold rounded-bl-lg">
-            POPULAR
-          </div>
+        {isVip && (
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand-yellow px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-slate-900 shadow-sm">
+            Most popular
+          </span>
         )}
 
-        <CardHeader>
-          <div className="flex items-center justify-between mb-2">
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              {plan.name}
-              {plan.type === "vip" && <Crown className="inline ml-2 h-5 w-5 text-yellow-500" />}
-              {plan.type === "premium" && <Sparkles className="inline ml-2 h-5 w-5" style={{ color: 'rgb(37,99,235)' }} />}
-              {plan.type === "maintenance" && <Shield className="inline ml-2 h-5 w-5 text-gray-500" />}
-            </CardTitle>
-            {isActive && (
-              <Badge className="text-white text-xs" style={{ backgroundColor: 'rgb(37,99,235)' }}>
-                Active
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", iconTone)}>
+              <TypeIcon className="h-[18px] w-[18px]" />
+            </span>
+            <h3 className="text-base font-bold text-slate-900">{plan.name}</h3>
+          </div>
+          {isActive && <Badge variant="default">Active</Badge>}
+        </div>
+
+        <p className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900">
+          {isFree ? (
+            "Free"
+          ) : (
+            <>
+              ₦{plan.price.toLocaleString()}
+              <span className="ml-1 text-sm font-medium text-slate-500">/{cycle}</span>
+            </>
+          )}
+        </p>
+
+        {(plan.eligibility?.requiresPaidMonths > 0 || (!isEligible && plan.eligibility?.requiresPaidMonths > 0)) && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {plan.eligibility?.requiresPaidMonths > 0 && (
+              <Badge variant="outline">Requires {plan.eligibility.requiresPaidMonths} paid months</Badge>
+            )}
+            {!isEligible && (
+              <Badge variant="warning">
+                <Lock className="h-3 w-3" /> Locked
               </Badge>
             )}
           </div>
+        )}
 
-          <CardDescription className="text-2xl font-bold text-gray-900">
-            {isFree ? (
-              "Free"
-            ) : (
-              <>
-                ₦{plan.price.toLocaleString()}
-                <span className="text-sm font-normal text-gray-500">
-                  /{plan.cycle === "one-time" ? "7 days" : plan.cycle === "quarterly" ? "3 months" : plan.cycle === "yearly" ? "year" : "month"}
-                </span>
-              </>
+        <ul className="mt-4 space-y-2.5">
+          {plan.features?.map((feature, idx) => (
+            <li key={idx} className="flex items-start gap-2 text-sm text-slate-700">
+              <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <Check className="h-3 w-3" strokeWidth={3} />
+              </span>
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+
+        {plan.limits && (
+          <div className="mt-4 space-y-1 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+            <p className="font-semibold text-slate-900">Limits</p>
+            {plan.limits.maxProducts && (
+              <p>Products: {plan.limits.maxProducts === 9999 ? "Unlimited" : plan.limits.maxProducts}</p>
             )}
-          </CardDescription>
+            {plan.limits.maxServices && (
+              <p>Services: {plan.limits.maxServices === 9999 ? "Unlimited" : plan.limits.maxServices}</p>
+            )}
+            {plan.limits.vipTags > 0 && <p>VIP tags: {plan.limits.vipTags}</p>}
+            {plan.limits.durationDays && <p>Duration: {plan.limits.durationDays} days</p>}
+          </div>
+        )}
 
-          {plan.eligibility?.requiresPaidMonths > 0 && (
-            <Badge variant="outline" className="mt-2 w-fit text-xs border-gray-300">
-              Requires {plan.eligibility.requiresPaidMonths} paid months
-            </Badge>
-          )}
-
-          {!isEligible && plan.eligibility?.requiresPaidMonths > 0 && (
-            <Badge variant="destructive" className="mt-2 w-fit text-xs">
-              🔒 Locked
-            </Badge>
-          )}
-        </CardHeader>
-
-        <CardContent>
-          <ul className="space-y-2.5">
-            {plan.features?.map((feature, idx) => (
-              <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                <Check className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgb(37,99,235)' }} />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
-
-          {plan.limits && (
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600 border border-gray-100">
-              <strong className="text-gray-900">Limits:</strong>
-              {plan.limits.maxProducts && (
-                <div className="mt-1">✓ Products: {plan.limits.maxProducts === 9999 ? "Unlimited" : plan.limits.maxProducts}</div>
-              )}
-              {plan.limits.maxServices && (
-                <div className="mt-1">✓ Services: {plan.limits.maxServices === 9999 ? "Unlimited" : plan.limits.maxServices}</div>
-              )}
-              {plan.limits.vipTags > 0 && <div className="mt-1">✓ VIP Tags: {plan.limits.vipTags}</div>}
-              {plan.limits.durationDays && <div className="mt-1">✓ Duration: {plan.limits.durationDays} days</div>}
-            </div>
-          )}
-        </CardContent>
-
-        <CardFooter>
+        <div className="mt-auto pt-5">
           {isFree ? (
-            <Button className="w-full bg-gray-100 text-gray-600" variant="outline" disabled>
-              {isActive ? "Current Plan" : "Default Plan"}
+            <Button className="w-full" size="lg" variant="secondary" disabled>
+              {isActive ? "Current plan" : "Default plan"}
             </Button>
           ) : isActive ? (
-            <Button className="w-full" variant="outline" disabled style={{ borderColor: 'rgb(37,99,235)', color: 'rgb(37,99,235)' }}>
-              ✓ Subscribed
+            <Button className="w-full" size="lg" variant="soft" disabled>
+              <Check /> Subscribed
             </Button>
           ) : isCovered ? (
             <div className="w-full">
-              <Button className="w-full bg-gray-100 text-gray-500" variant="outline" disabled>
-                Included in Your Plan
+              <Button className="w-full" size="lg" variant="secondary" disabled>
+                Included in your plan
               </Button>
-              <p className="text-xs text-gray-500 mt-2 text-center">
+              <p className="mt-2 text-center text-xs text-slate-500">
                 Your current {plan.category} plan already covers this
               </p>
             </div>
           ) : !isEligible ? (
             <div className="w-full">
-              <Button className="w-full bg-gray-100 text-gray-500" variant="outline" disabled>
-                Not Eligible
+              <Button className="w-full" size="lg" variant="secondary" disabled>
+                Not eligible
               </Button>
-              <p className="text-xs text-red-600 mt-2 text-center">
-                {eligibility.reason}
-              </p>
+              <p className="mt-2 text-center text-xs text-red-600">{eligibility.reason}</p>
             </div>
           ) : (
             renderCheckoutControls(plan)
           )}
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     );
   };
 
-  return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        <Header title="Subscription Plans" />
+  // Free first, maintenance last, the rest by price — same order as before.
+  const sortPlans = (list) =>
+    [...list].sort((a, b) => {
+      if (a.type === "maintenance") return 1;
+      if (b.type === "maintenance") return -1;
+      if (a.price === 0) return -1;
+      if (b.price === 0) return 1;
+      return a.price - b.price;
+    });
 
-        {/* Hero Section */}
-        <div className="mt-8 mb-8 text-center">
-          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2">
-            Choose Your Plan
-          </h1>
-          <p className="text-gray-600 text-sm">
-            Unlock exclusive features to grow your store faster
-          </p>
+  const renderPlans = (category, { sort = false, cols = "lg:grid-cols-4" } = {}) => {
+    if (loadingDbPlans) {
+      return (
+        <div className={cn("grid gap-4 pt-3 sm:grid-cols-2", cols)} aria-busy="true">
+          {Array.from({ length: cols.includes("3") ? 3 : 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-96 rounded-3xl" />
+          ))}
+        </div>
+      );
+    }
+    const list = dbPlans.filter((plan) => plan.category === category);
+    return (
+      <div className={cn("grid gap-4 pt-3 sm:grid-cols-2", cols)}>
+        {(sort ? sortPlans(list) : list).map((plan) => renderPlanCard(plan))}
+      </div>
+    );
+  };
+
+  const limitTiles = limits
+    ? [
+        ["Products", limits.maxProducts === 9999 ? "∞" : limits.maxProducts, false],
+        ["Services", limits.maxServices === 9999 ? "∞" : limits.maxServices, false],
+        ["Product VIP tags", limits.vipTagsProduct || 0, true],
+        ["Service VIP tags", limits.vipTagsService || 0, true],
+      ]
+    : [];
+
+  const faqs = [
+    ["Can I upgrade my plan anytime?", "Yes! You can upgrade at any time. Your new benefits will be active immediately."],
+    [
+      "What happens when my subscription expires?",
+      "You'll automatically return to the free plan. Your listings will remain but with limited features.",
+    ],
+    [
+      "What is a Maintenance plan?",
+      "After 3 paid months, you can switch to a maintenance plan at ₦700/month to keep your content active without premium features.",
+    ],
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50 pb-16">
+      <Header title="Subscription plans" />
+
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        {/* Hero */}
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Choose your plan</h1>
+          <p className="mt-1 text-sm text-slate-600">Unlock features to grow your store faster</p>
         </div>
 
-        {/* KYC Verification Alert */}
+        {/* KYC required */}
         {!checkingKyc && !isKycVerified && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-red-900 mb-1">
-                  KYC Verification Required
-                </h3>
-                <p className="text-sm text-red-700 mb-3">
-                  You must complete KYC verification before subscribing to any plan.
-                </p>
-                <button
-                  onClick={() => router.push("/kyc")}
-                  className="text-sm font-medium text-red-900 underline hover:text-red-700"
-                >
-                  Complete KYC now →
-                </button>
-              </div>
+          <div className="mb-5 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-900">KYC verification required</h3>
+              <p className="mt-0.5 text-sm text-red-700">You must complete KYC verification before subscribing to any plan.</p>
+              <Button size="sm" variant="destructive" className="mt-3" onClick={() => router.push("/kyc")}>
+                Complete KYC now
+              </Button>
             </div>
           </div>
         )}
 
-        {!creditLoading && (
-          <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-200 rounded-lg p-6 mb-8 shadow-sm flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <Coins className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">App Credit</p>
-                <p className="text-2xl font-bold text-gray-900">{creditBalance.toLocaleString()} credits</p>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 max-w-xs text-right">
-              Earned from KYC verification and confirmed sales. Applied automatically at checkout on eligible plans.
-            </p>
-          </div>
-        )}
-
-        {!subLoading && limits && (
-          <div className="bg-gradient-to-br from-blue-50 to-white border border-gray-200 rounded-lg p-6 mb-8 shadow-sm">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Zap className="h-5 w-5" style={{ color: 'rgb(37,99,235)' }} />
-              Your Current Limits
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg p-4 border border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Products</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {limits.maxProducts === 9999 ? "∞" : limits.maxProducts}
-                </p>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Services</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {limits.maxServices === 9999 ? "∞" : limits.maxServices}
-                </p>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Product VIP</p>
-                <p className="text-2xl font-bold" style={{ color: 'rgb(37,99,235)' }}>
-                  {limits.vipTagsProduct || 0}
-                </p>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-gray-100">
-                <p className="text-xs text-gray-500 mb-1">Service VIP</p>
-                <p className="text-2xl font-bold" style={{ color: 'rgb(37,99,235)' }}>
-                  {limits.vipTagsService || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8 bg-gray-100 p-1 rounded-lg">
-            <TabsTrigger 
-              value="product"
-              className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all"
-            >
-              Products
-            </TabsTrigger>
-            <TabsTrigger 
-              value="service"
-              className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all"
-            >
-              Services
-            </TabsTrigger>
-            <TabsTrigger 
-              value="bundle"
-              className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all"
-            >
-              Bundles
-            </TabsTrigger>
-            <TabsTrigger 
-              value="boost"
-              className="data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all"
-            >
-              Boosts
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="product">
-            {loadingDbPlans ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">Loading plans...</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {dbPlans
-                  .filter(plan => plan.category === "product")
-                  .sort((a, b) => {
-                    // Maintenance plans (₦700) go last
-                    if (a.type === "maintenance") return 1;
-                    if (b.type === "maintenance") return -1;
-                    // Free plans go first
-                    if (a.price === 0) return -1;
-                    if (b.price === 0) return 1;
-                    // Sort by price for the rest
-                    return a.price - b.price;
-                  })
-                  .map((plan) => renderPlanCard(plan))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="service">
-            {loadingDbPlans ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">Loading plans...</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {dbPlans
-                  .filter(plan => plan.category === "service")
-                  .sort((a, b) => {
-                    // Maintenance plans (₦700) go last
-                    if (a.type === "maintenance") return 1;
-                    if (b.type === "maintenance") return -1;
-                    // Free plans go first
-                    if (a.price === 0) return -1;
-                    if (b.price === 0) return 1;
-                    // Sort by price for the rest
-                    return a.price - b.price;
-                  })
-                  .map((plan) => renderPlanCard(plan))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="bundle">
-            {loadingDbPlans ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">Loading plans...</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="grid md:grid-cols-3 gap-6">
-                  {dbPlans.filter(plan => plan.category === "bundle").map((plan) => renderPlanCard(plan))}
-                </div>
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" style={{ color: 'rgb(37,99,235)' }} />
-                    Save More with Longer Plans
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Monthly Bundle: ₦2,500/month • Quarterly: ₦6,000 (save ₦1,500) • Yearly: ₦21,000 (save ₦9,000)
+        {/* Credit + limits */}
+        <div className="mb-6 grid gap-4 lg:grid-cols-[1fr_1.6fr]">
+          {!creditLoading && (
+            <div className="rounded-3xl border border-brand-yellow-deep/40 bg-gradient-to-br from-brand-yellow-soft to-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-yellow text-slate-900">
+                  <Coins className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-xs font-medium text-slate-500">App credit</p>
+                  <p className="text-2xl font-extrabold tabular-nums text-slate-900">
+                    {creditBalance.toLocaleString()} <span className="text-sm font-semibold text-slate-500">credits</span>
                   </p>
                 </div>
               </div>
-            )}
+              <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                Earned from KYC verification and confirmed sales. Applied automatically at checkout on eligible plans.
+              </p>
+            </div>
+          )}
+
+          {!subLoading && limits && (
+            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Zap className="h-4 w-4 text-primary" /> Your current limits
+              </h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {limitTiles.map(([label, value, accent]) => (
+                  <div key={label} className="rounded-2xl bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">{label}</p>
+                    <p className={cn("mt-0.5 text-2xl font-extrabold tabular-nums", accent ? "text-primary" : "text-slate-900")}>
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Plans */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-4 grid w-full grid-cols-4 sm:mx-auto sm:max-w-md">
+            <TabsTrigger value="product" className="px-1.5 sm:px-3">Products</TabsTrigger>
+            <TabsTrigger value="service" className="px-1.5 sm:px-3">Services</TabsTrigger>
+            <TabsTrigger value="bundle" className="px-1.5 sm:px-3">Bundles</TabsTrigger>
+            <TabsTrigger value="boost" className="px-1.5 sm:px-3">Boosts</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="product">{renderPlans("product", { sort: true })}</TabsContent>
+          <TabsContent value="service">{renderPlans("service", { sort: true })}</TabsContent>
+
+          <TabsContent value="bundle">
+            <div className="space-y-4">
+              {renderPlans("bundle", { cols: "lg:grid-cols-3" })}
+              <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                <Sparkles className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900">Save more with longer plans</h4>
+                  <p className="mt-0.5 text-sm text-slate-600">
+                    Monthly ₦2,500/month · Quarterly ₦6,000 (save ₦1,500) · Yearly ₦21,000 (save ₦9,000)
+                  </p>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="boost">
-            {loadingDbPlans ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">Loading plans...</p>
-              </div>
-            ) : (
-              <div className="max-w-5xl mx-auto">
-                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-yellow-600" />
-                    Boost Your Visibility
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    One-time boosts give your products/services maximum exposure for 7 days. Perfect for special promotions or new launches!
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-2xl border border-brand-yellow-deep/40 bg-brand-yellow-soft p-4">
+                <Zap className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900">Boost your visibility</h4>
+                  <p className="mt-0.5 text-sm text-slate-600">
+                    One-time boosts give your products or services maximum exposure for 7 days — perfect for promotions and new launches.
                   </p>
                 </div>
-                <div className="grid md:grid-cols-3 gap-6">
-                  {dbPlans.filter(plan => plan.category === "boost").map((plan) => renderPlanCard(plan))}
-                </div>
               </div>
-            )}
+              {renderPlans("boost", { cols: "lg:grid-cols-3" })}
+            </div>
           </TabsContent>
         </Tabs>
 
-        <div className="mt-12 max-w-3xl mx-auto w-full">
-          <div className="bg-gray-50 rounded-xl p-8 border border-gray-200">
-            <div className="flex items-center gap-2 mb-6">
-              <Sparkles className="w-5 h-5 text-[rgb(37,99,235)]" strokeWidth={2} />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Frequently Asked Questions
-              </h3>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm mb-1">
-                    Can I upgrade my plan anytime?
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Yes! You can upgrade at any time. Your new benefits will be active immediately.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm mb-1">
-                    What happens when my subscription expires?
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    You'll automatically return to the free plan. Your listings will remain but with limited features.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-1.5 h-1.5 bg-[rgb(37,99,235)] rounded-full mt-2"></div>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm mb-1">
-                    What is a Maintenance plan?
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    After 3 paid months, you can switch to a maintenance plan at ₦700/month to keep your content active without premium features.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* FAQ */}
+        <div className="mx-auto mt-12 w-full max-w-3xl rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-slate-900">
+            <Sparkles className="h-5 w-5 text-primary" /> Frequently asked questions
+          </h3>
+          <Accordion type="single" collapsible className="w-full">
+            {faqs.map(([q, a], i) => (
+              <AccordionItem key={q} value={`faq-${i}`} className="border-slate-200">
+                <AccordionTrigger className="text-left text-sm font-semibold text-slate-900">{q}</AccordionTrigger>
+                <AccordionContent className="text-sm leading-relaxed text-slate-600">{a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </div>
     </div>
