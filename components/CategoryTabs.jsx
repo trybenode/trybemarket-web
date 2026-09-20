@@ -16,10 +16,10 @@ const CategoryTabs = ({ categories, onSelectCategory }) => {
           <button
             key={category}
             onClick={() => handleCategoryClick(category)}
-            className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors duration-200 ${
+            className={`whitespace-nowrap rounded-full border px-4 py-1.5 text-sm font-semibold transition active:scale-95 ${
               activeCategory === category
-                ? "bg-blue-600 text-white"
-                : "bg-white border border-yellow-400 text-gray-700 hover:bg-gray-50"
+                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                : "border-slate-200 bg-white text-slate-700 hover:border-brand-yellow-deep hover:bg-brand-yellow-soft"
             }`}
           >
             {category}
