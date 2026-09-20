@@ -18,7 +18,7 @@ import toast from "react-hot-toast"; // Using react-hot-toast
 import Header from "@/components/Header";
 
 export default function EditProfilePage() {
-  const { currentUser, setCurrentUser } = useUser();
+  const { currentUser, setCurrentUser, loading: authLoading, profileError, refreshProfile } = useUser();
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -36,6 +36,15 @@ export default function EditProfilePage() {
   const [phoneError, setPhoneError] = useState("");
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [whatsappNotifications, setWhatsappNotifications] = useState(false);
+
+  // The signed-in user's Firestore id. Only ever read after the profile has
+  // loaded (see the guards below); never assume `.uid` exists on the object.
+  const userId = currentUser?.uid || currentUser?.id;
+
+  // Not signed in (and not still finding out) -> go to login instead of spinning forever.
+  useEffect(() => {
+    if (!authLoading && !currentUser && !profileError) router.push("/login");
+  }, [authLoading, currentUser, profileError, router]);
 
   // Populate form with user data
   useEffect(() => {
@@ -164,6 +173,10 @@ export default function EditProfilePage() {
 
   // Function to save updated profile data (without notifications)
   const handleSaveProfile = async () => {
+    if (!userId) {
+      toast.error("Your profile hasn't finished loading. Please try again in a moment.");
+      return;
+    }
     setLoading(true);
     try {
       let imageUrl = image;
@@ -180,7 +193,7 @@ export default function EditProfilePage() {
         locationType: selected,
       };
 
-      const userRef = doc(db, "users", currentUser.uid);
+      const userRef = doc(db, "users", userId);
       await updateDoc(userRef, updatedUserData);
 
       setCurrentUser((prevUser) => ({
@@ -216,6 +229,11 @@ export default function EditProfilePage() {
       return;
     }
 
+    if (!userId) {
+      toast.error("Your profile hasn't finished loading. Please try again in a moment.");
+      return;
+    }
+
     setSavingNotifications(true);
     try {
       const notificationData = {
@@ -224,7 +242,7 @@ export default function EditProfilePage() {
         whatsappNotifications: whatsappNotifications && phone ? true : false,
       };
 
-      const userRef = doc(db, "users", currentUser.uid);
+      const userRef = doc(db, "users", userId);
       await updateDoc(userRef, notificationData);
 
       setCurrentUser((prevUser) => ({
@@ -241,8 +259,22 @@ export default function EditProfilePage() {
     }
   };
 
-  // Loading state
-  if (isFetching) {
+  // The profile couldn't be loaded (network) — say so and let them retry.
+  if (!authLoading && !currentUser && profileError) {
+    return (
+      <div className='min-h-screen bg-white flex items-center justify-center px-6'>
+        <div className='flex flex-col items-center text-center max-w-sm'>
+          <p className='text-gray-800 font-medium'>{profileError}</p>
+          <Button className='mt-4' onClick={refreshProfile}>
+            Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state — wait for the auth/profile load itself, not just the form.
+  if (authLoading || isFetching) {
     return (
       <div className='min-h-screen bg-white flex items-center justify-center'>
         <div className='flex flex-col items-center'>
