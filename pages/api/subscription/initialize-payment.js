@@ -1,5 +1,6 @@
 import { adminDB } from "@/lib/firebaseAdmin";
 import { checkPlanEligibility } from "@/lib/subscriptionStore";
+import { SITE_URL } from "@/lib/siteUrl";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -72,7 +73,7 @@ export default async function handler(req, res) {
           amount: amountInKobo,
           reference: reference,
           currency: "NGN",
-          callback_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://trybemarket.online'}/payment/callback`,
+          callback_url: `${SITE_URL}/payment/callback`,
           metadata: {
             userId: userId,
             planId: plan.id,

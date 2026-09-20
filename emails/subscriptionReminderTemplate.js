@@ -1,3 +1,5 @@
+import { SITE_URL, SITE_HOST } from "../lib/siteUrl.js";
+
 /**
  * Email template for subscription renewal reminders.
  * Sent at 7-day, 3-day, and 1-day marks before a plan expires.
@@ -105,7 +107,7 @@ export function subscriptionReminderTemplate({
                 <p style="margin:0;font-size:13px;color:#4a5568;line-height:1.6;">
                   You're receiving this because you have an active subscription on TrybeMarket.
                   Questions? Reply to this email or visit
-                  <a href="https://trybemarket.online" style="color:#2b6cb0;">trybemarket.online</a>.
+                  <a href="${SITE_URL}" style="color:#2b6cb0;">${SITE_HOST}</a>.
                 </p>
               </td>
             </tr>

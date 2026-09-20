@@ -1,7 +1,9 @@
 import { db } from "@/lib/firebase";
 import { collection, getDocs, limit, query } from "firebase/firestore";
 
-const BASE_URL = "https://trybemarket.online";
+import { SITE_URL } from "@/lib/siteUrl";
+
+const BASE_URL = SITE_URL;
 
 const staticRoutes = [
   { url: "/", changeFrequency: "daily", priority: 1.0 },

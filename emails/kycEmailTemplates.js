@@ -1,3 +1,5 @@
+import { SITE_URL } from "../lib/siteUrl.js";
+
 /**
  * KYC Email Templates for Resend
  */
@@ -171,7 +173,7 @@ export function kycRejectedTemplate({ name }) {
         <a href="mailto:contact@trybemarket.online">contact@trybemarket.online</a>.
       </p>
 
-      <a href="https://trybemarket.online/kyc" class="retry-button">Retry KYC Verification</a>
+      <a href="${SITE_URL}/kyc" class="retry-button">Retry KYC Verification</a>
 
       <div class="footer">
         <p>Best regards,<br />The TrybeMarket Team</p>

@@ -1,6 +1,8 @@
 import ListingPageClient from "./ListingPageClient";
 
-const BASE_URL = "https://trybemarket.online";
+import { SITE_URL } from "@/lib/siteUrl";
+
+const BASE_URL = SITE_URL;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;

@@ -13,6 +13,7 @@ import RouteProgress from "@/components/RouteProgress";
 import { PwaProvider } from "@/context/PwaContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { SITE_URL } from "@/lib/siteUrl";
 
 const GA_ID = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID;
 
@@ -44,11 +45,11 @@ export const metadata = {
     title: "TrybeMarket | Campus Marketplace for Students & Artisans",
     description:
       "Create your shop link, list products, and reach more buyers without spamming groups. TrybeMarket helps students sell smarter, showcase services, and grow their brand on campus.",
-    url: "https://trybemarket.online",
+    url: SITE_URL,
     siteName: "TrybeMarket",
     images: [
       {
-        url: "https://trybemarket.online/trybemarket.png",
+        url: `${SITE_URL}/trybemarket.png`,
         width: 512,
         height: 512,
         alt: "TrybeMarket - Campus Marketplace for Students",
@@ -63,11 +64,11 @@ export const metadata = {
     title: "TrybeMarket | Buy, Sell & Hire Services on Campus",
     description:
       "TrybeMarket empowers students to sell products, showcase their services, and grow without stress. One link. Zero spam. Full campus reach.",
-    images: ["https://trybemarket.online/trybemarket.png"],
+    images: [`${SITE_URL}/trybemarket.png`],
     creator: "@TrybeMarket",
   },
 
-  metadataBase: new URL("https://trybemarket.online"),
+  metadataBase: new URL(SITE_URL),
 
   robots: {
     index: true,
@@ -106,14 +107,14 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "TrybeMarket",
-  url: "https://trybemarket.online",
+  url: SITE_URL,
   description:
     "The smart campus marketplace that lets students buy, sell, and hire services effortlessly.",
   potentialAction: {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://trybemarket.online/explore-services?q={search_term_string}",
+      urlTemplate: `${SITE_URL}/explore-services?q={search_term_string}`,
     },
     "query-input": "required name=search_term_string",
   },
