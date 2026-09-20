@@ -9,6 +9,7 @@ import ReferralCapture from "@/components/ReferralCapture";
 import ManifestRefLink from "@/components/ManifestRefLink";
 import PwaBootstrap from "@/components/PwaBootstrap";
 import InstallPrompt from "@/components/InstallPrompt";
+import RouteProgress from "@/components/RouteProgress";
 import { PwaProvider } from "@/context/PwaContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
@@ -144,6 +145,9 @@ export default function RootLayout({ children }) {
         <PwaProvider>
           <UserProvider>
             <PwaBootstrap />
+            <Suspense fallback={null}>
+              <RouteProgress />
+            </Suspense>
             {children}
             <InstallPrompt />
           </UserProvider>

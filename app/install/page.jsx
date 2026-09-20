@@ -424,10 +424,6 @@ function InstallInner() {
             )}
 
             <StepList steps={STEPS[activeTab]} />
-
-            <p className="text-center text-xs text-gray-400">
-              Already have the Android app from Google Play? You can keep using that — this is the same TrybeMarket in your browser.
-            </p>
           </div>
         )}
       </div>

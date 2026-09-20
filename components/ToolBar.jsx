@@ -34,22 +34,13 @@ export default React.memo(function ToolBar() {
         {/* Right Section: Download + Profile */}
         <div className="flex items-center gap-3 flex-shrink-0">
 
-          {/* Download Button */}
-          <a
-            href="https://play.google.com/store/apps/details?id=com.markettrybe.myexpoapp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-800 transition"
-          >
-            Download App
-          </a>
-
-          {/* Install as an app (the PWA) — hidden once installed, and below sm where
-              the row is already full (phones get the smart prompt / account menu). */}
+          {/* Install the app (PWA). Replaces the old Play Store "Download App"
+              button — downloads now go through /install for every platform.
+              Hidden once the app is installed or we're running inside it. */}
           {ready && !installed && (
             <Link
               href="/install"
-              className="hidden sm:inline-flex px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 text-sm font-medium hover:bg-gray-50 transition"
+              className="px-4 py-2 rounded-lg bg-black text-white text-sm font-medium hover:bg-gray-800 transition"
             >
               Install App
             </Link>
