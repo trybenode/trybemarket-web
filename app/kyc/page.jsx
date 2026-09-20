@@ -160,9 +160,6 @@ export default function KycPage() {
       const frontBase64 = frontBase64Full.split(",")[1];
       const backBase64 = backBase64Full.split(",")[1];
 
-      // Get user email
-      const email = getUserEmail();
-
       // Store pending KYC as before
       await setDoc(doc(db, "kycRequests", user.uid), {
         userId: user.uid,
@@ -174,19 +171,18 @@ export default function KycPage() {
         notificationSent: false,
         submittedAt: new Date(),
       });
+
+      // Both calls below prove who is asking with the ID token. kyc-notify reads
+      // the details from the request just stored above (nothing to send in the
+      // body), and a failure to notify the team must never block the submission.
+      const idToken = await user.getIdToken();
       await fetch("/api/kyc-notify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.uid,
-          fullName,
-          matricNumber,
-        }),
-      });
+        headers: { Authorization: `Bearer ${idToken}` },
+      }).catch((error) => console.error("Error notifying the team of a KYC request:", error));
 
       // Send to background KYC verification — identity is proven by the ID
       // token, not the userId in the body (see app/api/kyc-submit/route.js).
-      const idToken = await user.getIdToken();
       const submitResponse = await fetch("/api/kyc-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
@@ -196,7 +192,6 @@ export default function KycPage() {
           matricNumber,
           frontID: frontBase64,
           backID: backBase64,
-          email,
         }),
       });
 
