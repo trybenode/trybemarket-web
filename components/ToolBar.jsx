@@ -44,11 +44,12 @@ export default React.memo(function ToolBar() {
             Download App
           </a>
 
-          {/* Install as an app (the PWA) — hidden once installed */}
+          {/* Install as an app (the PWA) — hidden once installed, and below sm where
+              the row is already full (phones get the smart prompt / account menu). */}
           {ready && !installed && (
             <Link
               href="/install"
-              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 text-sm font-medium hover:bg-gray-50 transition"
+              className="hidden sm:inline-flex px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 text-sm font-medium hover:bg-gray-50 transition"
             >
               Install App
             </Link>
