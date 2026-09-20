@@ -5,34 +5,74 @@ import { newMessageTemplate } from "@/emails/newMessageTemplate";
 import { adminDB } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
+import { requireAuth } from "@/lib/verifyRequestAuth";
+import {
+  NotificationError,
+  USER_NOTIFICATION_CHANNELS,
+  USER_NOTIFICATION_TYPES,
+  resolveNotificationContext,
+} from "@/lib/notificationServer";
+import { RESEND_FROM } from "@/lib/kycEmail";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+/**
+ * Message notifications (email / WhatsApp / push) for a new chat message.
+ *
+ * Requires a signed-in caller (Authorization: Bearer <Firebase ID token>) who
+ * is a participant of `conversationId`. The recipient, every contact detail,
+ * the sender's name and the chat link are derived server-side — see
+ * lib/notificationServer.js. The body may only carry:
+ *   conversationId   required
+ *   channels         optional subset of ["email","whatsapp","push"]; each is still
+ *                    subject to the recipient's opt-ins
+ *   productName      optional fallback label for conversations with no product recorded
+ *   notificationType optional, one of new_message | new_inquiry | service_inquiry
+ * Anything else in the body (userId, recipientId, recipientEmail, recipientPhone,
+ * recipientPushToken, senderName, chatLink, ...) is ignored.
+ */
 export async function POST(req) {
+  const auth = await requireAuth(req);
+  if (auth.error) {
+    return Response.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
-    const {
-      userId,              // SENDER's Firestore user ID (for email limit checking)
-      recipientId,         // RECIPIENT's Firestore user ID (for WhatsApp limit checking)
-      recipientPhone,      // "2348012345678"
-      recipientEmail,      // "user@example.com"
-      recipientName,
-      recipientPushToken,  // Expo push token: "ExponentPushToken[xxx]"
-      senderName,
-      productName,
-      chatLink,
-      conversationId,
-      channels,            // ["whatsapp", "email", "push"]
-      notificationType,    // "new_message", "new_inquiry", "service_inquiry", "kyc_approved", etc.
-    } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const userId = auth.uid; // SENDER — for the email quota
 
-    console.log("Unified notification API called:", { userId, recipientId, channels });
-
-    if (!userId || !recipientName || !senderName || !conversationId) {
-      return Response.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    let context;
+    try {
+      context = await resolveNotificationContext(userId, body);
+    } catch (error) {
+      if (error instanceof NotificationError) {
+        return Response.json({ error: error.message }, { status: error.status });
+      }
+      throw error;
     }
+
+    const {
+      conversationId,
+      senderName,
+      recipientId,
+      recipient,
+      productName,
+      allowedChannels,
+    } = context;
+    const recipientName = recipient.name;
+    const recipientEmail = recipient.email;
+    const recipientPhone = recipient.phone;
+    const recipientPushToken = recipient.pushToken;
+    const chatLink = `${new URL(req.url).origin}/chat/${conversationId}`;
+    const notificationType = USER_NOTIFICATION_TYPES.includes(body.notificationType)
+      ? body.notificationType
+      : "new_message";
+
+    // Requested channels, restricted to known ones the recipient allows.
+    const requested = Array.isArray(body.channels) ? body.channels : [];
+    const channels = requested.filter(
+      (c) => USER_NOTIFICATION_CHANNELS.includes(c) && allowedChannels.includes(c)
+    );
 
     const results = {};
     let successCount = 0;
@@ -49,9 +89,8 @@ export async function POST(req) {
         return;
       }
 
-      console.log("[PUSH] Sending push notification to:", recipientPushToken.substring(0, 30) + "...");
-
-      const pushType = notificationType || "new_message";
+      
+      const pushType = notificationType;
       const { title, body, data } = buildPushContent(pushType, {
         senderName,
         productName,
@@ -103,10 +142,10 @@ export async function POST(req) {
         results.emailBlocked = true;
         emailLimitReached = true;
       } else {
-        console.log(`Email quota OK. Sending to: ${recipientEmail}`);
+        console.log("Email quota OK. Sending message notification email.");
         try {
           const emailResult = await resend.emails.send({
-            from: "Trybe Market <contact@trybemarket.online>",
+            from: RESEND_FROM,
             to: recipientEmail,
             subject: `📩 New message about ${productName || "your listing"}`,
             html: newMessageTemplate({ senderName, productName, chatLink }),
@@ -134,7 +173,7 @@ export async function POST(req) {
         whatsappRemaining = whatsappCheck.remaining;
         whatsappLimit = whatsappCheck.limit;
       } else {
-        console.log(`WhatsApp quota OK. Attempting to send to: ${recipientPhone}`);
+        console.log("WhatsApp quota OK. Attempting to send.");
 
         const sendSuccess = await sendWhatsAppNotification({
           recipientPhone,
@@ -205,9 +244,6 @@ export async function POST(req) {
     return Response.json(response);
   } catch (error) {
     console.error("Notification route error:", error);
-    return Response.json(
-      { error: "Internal server error", details: error.message },
-      { status: 500 }
-    );
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

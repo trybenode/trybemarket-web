@@ -4,6 +4,7 @@
  * Dedicated endpoint for sending push notifications for all event types.
  * Used by: admin dashboard (KYC updates), cron jobs (reminders),
  * and any service that needs to push-notify a user.
+ * REQUIRES an admin ID token or the CRON_SECRET bearer — see authorize() below.
  *
  * POST /api/notifications/push
  *
@@ -26,8 +27,34 @@
 import { sendExpoPushNotification, buildPushContent } from "@/lib/pushNotification";
 import { adminDB } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
+import crypto from "crypto";
+import { requireAdmin } from "@/lib/requireAdmin";
+
+/**
+ * Callers are trusted server-side actors only: an admin (verified ID token +
+ * membership in `admins`) or a cron/service holding CRON_SECRET. This endpoint
+ * accepts a raw push token and custom title/body, so left open it could push
+ * any text to any device. User-triggered chat notifications go through
+ * /api/notifications/send instead, which derives everything from the conversation.
+ */
+async function authorize(req) {
+  const header = req.headers.get("authorization") || "";
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && header.startsWith("Bearer ")) {
+    const given = Buffer.from(header.slice(7));
+    const expected = Buffer.from(cronSecret);
+    if (given.length === expected.length && crypto.timingSafeEqual(given, expected)) return { ok: true };
+  }
+  const admin = await requireAdmin(req);
+  return admin.error ? { error: admin.error, status: admin.status } : { ok: true };
+}
 
 export async function POST(req) {
+  const access = await authorize(req);
+  if (access.error) {
+    return Response.json({ success: false, error: access.error }, { status: access.status });
+  }
+
   try {
     const {
       recipientId,
@@ -124,7 +151,7 @@ export async function POST(req) {
   } catch (error) {
     console.error("[PUSH API] Error:", error);
     return Response.json(
-      { success: false, error: "Internal server error", details: error.message },
+      { success: false, error: "Internal server error" },
       { status: 500 }
     );
   }
