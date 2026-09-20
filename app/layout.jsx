@@ -1,4 +1,5 @@
 import "./globals.css";
+import { Inter } from "next/font/google";
 import Script from "next/script";
 import { Suspense } from "react";
 import { UserProvider } from "@/context/UserContext";
@@ -14,6 +15,10 @@ import { PwaProvider } from "@/context/PwaContext";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL } from "@/lib/siteUrl";
+
+// Self-hosted at build time (no runtime request to Google), exposed as a CSS
+// variable so Tailwind's font-sans and the body rule both use it.
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 
 const GA_ID = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID;
 
@@ -122,7 +127,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang='en'>
+    <html lang='en' className={inter.variable}>
       <body>
         <script
           type="application/ld+json"
