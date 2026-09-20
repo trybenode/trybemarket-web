@@ -17,10 +17,9 @@ export default function BackBtn() {
     <button
       onClick={goBack}
       aria-label="Go back"
-      className="flex items-center space-x-1 text-yellow-600 hover:text-yellow-800"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-700 transition hover:bg-slate-100 active:scale-95"
     >
-      <ArrowLeft size={20} className="text-yellow-600 hover:text-yellow-800" />
-      {/* <span>Go Back</span> */}
+      <ArrowLeft size={20} />
     </button>
   );
 }
