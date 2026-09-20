@@ -11,7 +11,7 @@ import { PriceTag, discountPercent } from "@/components/ui/price-tag";
  * is a visual cue for the action (`btnName`: "View", "Edit"...), not a second
  * target. A discount pill sits on the photo so a saving is visible at a glance.
  */
-function ListingCard({ product = {}, btnName = "View Details" }) {
+function ListingCard({ product = {}, btnName = "View Details", overlay = null }) {
   const imageUri = useMemo(() => {
     if (Array.isArray(product.images) && product.images.length > 0) {
       return product.images[0]?.url || product.images[0] || null;
@@ -50,6 +50,8 @@ function ListingCard({ product = {}, btnName = "View Details" }) {
             VIP
           </Badge>
         )}
+        {/* extra badges from the parent (e.g. "Boosted" in the carousel) */}
+        {overlay}
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3">
@@ -60,7 +62,11 @@ function ListingCard({ product = {}, btnName = "View Details" }) {
           {product.name || "Unnamed Product"}
         </h3>
         <div className="mt-auto pt-1">
-          <PriceTag price={product.price} originalPrice={product.originalPrice} size="sm" />
+          {product.price != null ? (
+            <PriceTag price={product.price} originalPrice={product.originalPrice} size="sm" />
+          ) : (
+            <p className="text-sm font-semibold text-slate-500">Ask for price</p>
+          )}
         </div>
         <Button
           variant="soft"
