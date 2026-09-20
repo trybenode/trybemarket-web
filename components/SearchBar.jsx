@@ -111,12 +111,12 @@ export default React.memo(function SearchBar({ onResults }) {
   return (
     <div className="relative">
       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-        <Search className="h-5 w-5 text-gray-400" />
+        <Search className="h-5 w-5 text-slate-400" />
       </div>
       <Input
         type="text"
         placeholder="Search products..."
-        className="pl-10 py-2 rounded-full border border-gray-300 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+        className="h-11 rounded-full border-slate-200 bg-white pl-10 shadow-sm focus-visible:ring-primary/30"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
       />

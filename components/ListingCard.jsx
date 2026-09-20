@@ -1,13 +1,17 @@
 import React, { useMemo } from "react";
 import Image from "next/image";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { formatNumber } from "@/lib/utils";
 import { Crown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PriceTag, discountPercent } from "@/components/ui/price-tag";
 
+/**
+ * A listing in a grid (home, shop, favorites, related items). The whole card is
+ * the tap target — parents wrap it in a link or click handler — so the button
+ * is a visual cue for the action (`btnName`: "View", "Edit"...), not a second
+ * target. A discount pill sits on the photo so a saving is visible at a glance.
+ */
 function ListingCard({ product = {}, btnName = "View Details" }) {
-  // Memoize imageUri to avoid recalculations
   const imageUri = useMemo(() => {
     if (Array.isArray(product.images) && product.images.length > 0) {
       return product.images[0]?.url || product.images[0] || null;
@@ -15,72 +19,60 @@ function ListingCard({ product = {}, btnName = "View Details" }) {
     return product.image || null;
   }, [product.images, product.image]);
 
-  // Price formatting helper
-  const displayOriginalPrice = product.originalPrice != null;
-  const displayPrice =
-    product.price != null ? formatNumber(product.price) : "N/A";
+  const off = discountPercent(product.price, product.originalPrice);
 
   return (
-    <Card className="bg-white border border-gray-200 overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-shadow h-full flex flex-col group">
-      <div className="relative h-40 w-full bg-gray-100">
+    <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {imageUri ? (
           <Image
             src={imageUri}
             alt={product.name ? `${product.name} image` : "Product image"}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
             loading="lazy"
-            placeholder="blur"
-            blurDataURL="/placeholder.svg"
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center">
-            <p className="text-sm text-gray-400">No Image</p>
+          <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">
+            No image
           </div>
         )}
-        
-        {/* VIP Badge */}
+
+        {off !== null && (
+          <Badge variant="success" className="absolute left-2 top-2 shadow-sm">
+            -{off}%
+          </Badge>
+        )}
         {product.isVip && (
-          <div className="absolute top-2 right-2">
-            <Badge className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white border-0 shadow-md flex items-center gap-1 px-2 py-1">
-              <Crown className="h-3 w-3" />
-              <span className="text-xs font-bold">VIP</span>
-            </Badge>
-          </div>
+          <Badge variant="yellow" className="absolute right-2 top-2 shadow-sm">
+            <Crown className="h-3 w-3" />
+            VIP
+          </Badge>
         )}
       </div>
 
-      <CardContent className="p-3 flex-grow">
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
         <h3
-          className="text-sm font-semibold text-gray-900 truncate mb-1"
+          className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900"
           title={product.name || "Unnamed Product"}
         >
           {product.name || "Unnamed Product"}
         </h3>
-
-        {displayOriginalPrice && product.originalPrice && (
-          <p className="text-xs line-through text-gray-400">
-            ₦{formatNumber(product.originalPrice)}
-          </p>
-        )}
-
-        <p className="text-base font-bold text-gray-900">₦{displayPrice}</p>
-      </CardContent>
-
-      <CardFooter className="p-3 pt-0">
+        <div className="mt-auto pt-1">
+          <PriceTag price={product.price} originalPrice={product.originalPrice} size="sm" />
+        </div>
         <Button
-          className="w-full rounded-md text-white text-sm h-9"
-          style={{ backgroundColor: 'rgb(37,99,235)' }}
-          variant="default"
+          variant="soft"
+          size="xs"
+          className="w-full"
           aria-label={`${btnName} for ${product.name || "product"}`}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
+          tabIndex={-1}
         >
           {btnName}
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
 
