@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CheckCircle, ArrowRight } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 
@@ -32,90 +32,48 @@ const ThankYouPage = () => {
   }, [countdown, router]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Header title="Payment Successful" />
-      <div className="container mx-auto px-4 py-5 max-w-3xl">
-        
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="w-full max-w-md">
-            {/* Success Icon */}
-            <div className="flex justify-center mb-8">
-              <div className="relative">
-                <div className="absolute inset-0 bg-green-100 rounded-full animate-ping opacity-75"></div>
-                <div className="relative w-24 h-24 bg-green-50 rounded-full flex items-center justify-center">
-                  <CheckCircle className="text-green-600 w-16 h-16" strokeWidth={2.5} />
-                </div>
-              </div>
-            </div>
+    <div className="min-h-screen bg-slate-50 pb-12">
+      <Header title="Payment successful" />
 
-            {/* Main Content */}
-            <div className="text-center mb-10">
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">
-                Thank You!
-              </h1>
-              
-              <p className="text-lg text-gray-600 mb-2">
-                Your subscription has been activated successfully.
-              </p>
-              
-              <p className="text-sm text-gray-500">
-                You now have access to all premium features.
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3 mb-8">
-              <Button
-                onClick={() => router.push("/my-shop")}
-                className="w-full text-white shadow-sm py-6 text-base"
-                style={{ backgroundColor: 'rgb(37,99,235)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(29,78,216)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(37,99,235)'}
-              >
-                View My Shop
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              
-              <Button
-                onClick={() => router.push("/product-upload")}
-                variant="outline"
-                className="w-full border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 py-6 text-base"
-              >
-                Upload Product
-              </Button>
-              
-              <Button
-                onClick={() => router.push("/")}
-                variant="ghost"
-                className="w-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 py-6 text-base"
-              >
-                Go to Homepage
-              </Button>
-            </div>
-
-            {/* Countdown */}
-            <div className="text-center pt-6 border-t border-gray-200">
-              <p className="text-sm text-gray-500">
-                Redirecting to homepage in{" "}
-                <span className="font-semibold text-gray-900">{countdown}</span> seconds
-              </p>
-            </div>
+      <div className="mx-auto max-w-md px-4 pt-10">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-6 text-center shadow-sm sm:p-8">
+          {/* Success mark */}
+          <div className="relative mx-auto mb-6 h-20 w-20">
+            <span className="absolute inset-0 animate-ping rounded-full bg-emerald-200/70 motion-reduce:animate-none" aria-hidden />
+            <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md">
+              <Check className="h-10 w-10" strokeWidth={3} />
+            </span>
           </div>
-        </div>
 
-        {/* Footer Help Text */}
-        <div className="text-center pb-8">
-          <p className="text-sm text-gray-500">
-            Need help?{" "}
-            <a 
-              href="mailto:support@trybemarket.com" 
-              className="font-medium hover:underline"
-              style={{ color: 'rgb(37,99,235)' }}
-            >
-              Contact support
-            </a>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Thank you!</h1>
+          <p className="mt-2 text-base text-slate-600">Your subscription has been activated successfully.</p>
+          <p className="mt-1 text-sm text-slate-500">You now have access to all premium features.</p>
+
+          <div className="mt-7 space-y-2.5">
+            <Button size="lg" className="w-full" onClick={() => router.push("/my-shop")}>
+              View my shop
+              <ArrowRight />
+            </Button>
+            <Button size="lg" variant="soft" className="w-full" onClick={() => router.push("/product-upload")}>
+              Upload a product
+            </Button>
+            <Button size="lg" variant="ghost" className="w-full text-slate-600" onClick={() => router.push("/")}>
+              Go to homepage
+            </Button>
+          </div>
+
+          <p className="mt-6 border-t border-slate-100 pt-4 text-sm text-slate-500" role="status">
+            Taking you to the homepage in{" "}
+            <span className="font-semibold tabular-nums text-slate-900">{countdown}</span>s
           </p>
         </div>
+
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Need help?{" "}
+          <a href="mailto:contact@trybemarket.online" className="font-semibold text-primary hover:underline">
+            Contact support
+          </a>
+        </p>
       </div>
     </div>
   );
