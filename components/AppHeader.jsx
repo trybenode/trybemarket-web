@@ -25,7 +25,7 @@ const UserProfile = dynamic(() => import("@/components/UserProfile"), {
  * shows a placeholder instead of flashing Login / Sign Up at someone who is
  * already signed in.
  */
-function HeaderAccount() {
+function HeaderAccount({ compactOnPhone = false }) {
   const { currentUser, loading } = useUser() || {};
   const { ready, installed } = usePwa();
 
@@ -33,11 +33,13 @@ function HeaderAccount() {
     <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
       {ready && !installed && (
         <>
+          {/* Phone-sized install icon. Skipped on inner pages (compactOnPhone) so the page
+              title has room; the install action is still in the account menu there. */}
           <Button
             asChild
             variant="soft"
             size="icon"
-            className="h-9 w-9 rounded-full sm:hidden"
+            className={cn("h-9 w-9 rounded-full sm:hidden", compactOnPhone && "hidden")}
           >
             <Link href="/install" aria-label="Install the TrybeMarket app">
               <Download />
@@ -112,7 +114,7 @@ export default function AppHeader({ title, back = false, actions = null, classNa
         {(!back || !title) && <div className="flex-1" />}
 
         {actions}
-        <HeaderAccount />
+        <HeaderAccount compactOnPhone={back} />
       </div>
     </header>
   );
