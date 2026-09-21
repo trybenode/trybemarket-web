@@ -3,8 +3,15 @@ import React, { useState, useEffect } from "react";
 import { useRouter, notFound } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { PriceTag } from "@/components/ui/price-tag";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -15,15 +22,12 @@ import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
-  MapPin,
   Calendar,
   X,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { toast } from "react-hot-toast";
-import BackBtn from "@/components/BackButton";
-import { formatNumber } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { getServiceById } from "@/hooks/servicesHooks";
 import useUserStore from "@/lib/userStore";
 import { initiateConversation, getUserInfo } from "@/utils/messaginghooks";
@@ -31,6 +35,24 @@ import { isUserRecentlyActive } from "@/hooks/useLastSeen";
 import useFavoritesStore from "@/lib/FavouriteStore";
 import ProductDetailsHeader from "@/components/ProductDetailsHeader";
 import { sendMessageNotification } from "@/lib/notificationClient";
+import ImageGallery from "@/components/listing/ImageGallery";
+import SellerCard from "@/components/listing/SellerCard";
+import ContactComposer from "@/components/listing/ContactComposer";
+import ListingSkeleton from "@/components/listing/ListingSkeleton";
+import SafetyNote from "@/components/listing/SafetyNote";
+
+// One-tap first messages for a service (the product page has its own set).
+const SERVICE_QUICK_REPLIES = [
+  "Are you available this week?",
+  "What's your rate for this?",
+  "Can you do it on campus?",
+];
+
+const SERVICE_SAFETY_TIPS = [
+  "Agree the price and what's included before you start.",
+  "Meet in a busy, public spot on campus.",
+  "Keep chatting inside TrybeMarket.",
+];
 
 export default function ServicePage({ params }) {
   const router = useRouter();
@@ -44,6 +66,8 @@ export default function ServicePage({ params }) {
   const [sellerInfo, setSellerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const currentUser = useUserStore((state) => state.user);
   const getUserFullName = useUserStore((state) => state.getUserFullName);
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
@@ -261,8 +285,9 @@ export default function ServicePage({ params }) {
 
   if (loading) {
     return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600' />
+      <div className="min-h-screen bg-slate-50">
+        <ProductDetailsHeader id={id} currentUserId={currentUser} title="Service" />
+        <ListingSkeleton />
       </div>
     );
   }
@@ -271,183 +296,159 @@ export default function ServicePage({ params }) {
     notFound();
   }
 
+  const images = (service.images || []).filter(Boolean);
+  const availability = formatAvailability(service.availability);
+  const description = service.description || "";
+  const detailRows = [
+    ["Category", service.categoryId],
+    ["University", service.university],
+    ["Availability", availability],
+  ].filter(([, value]) => value);
+
+  const isOwner = !!currentUser?.id && currentUser.id === service.userId;
+  const sellerFirstName = (sellerInfo?.fullName || "the provider").split(" ")[0];
+
+  const openMessage = () => {
+    if (!currentUser) {
+      toast("Please log in to message the provider", { duration: 3000 });
+      router.push("/login");
+      return;
+    }
+    setSheetOpen(true);
+  };
+
+  const composer = (
+    <ContactComposer
+      message={message}
+      setMessage={setMessage}
+      onSend={handleSendMessage}
+      sending={sendingMessage}
+      quickReplies={SERVICE_QUICK_REPLIES}
+      placeholder="Write a message to the provider…"
+    />
+  );
+
   return (
-    <div className='container mx-auto px-4 py-6 max-w-6xl'>
-      <ProductDetailsHeader id={id} currentUserId={currentUser} category={service?.categoryId} />
+    <div className="min-h-screen bg-slate-50 pb-28 md:pb-12">
+      <ProductDetailsHeader id={id} currentUserId={currentUser} category={service?.categoryId} title="Service" />
 
-      {/* Header */}
+      <main className="mx-auto max-w-6xl md:grid md:grid-cols-[1.1fr_1fr] md:items-start md:gap-8 md:px-4 md:py-6">
+        <div className="md:sticky md:top-20">
+          <ImageGallery
+            images={images}
+            name={service.name}
+            activeIndex={Math.min(currentImageIndex, Math.max(images.length - 1, 0))}
+            onChange={setCurrentImageIndex}
+            onOpen={handleImageClick}
+          />
+        </div>
 
-      {/* {/* Two Equal Columns */}
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
-        {/* Left Column - Images */}
-        <div className='space-y-4'>
-          <div 
-            className='relative rounded-lg overflow-hidden bg-gray-100 aspect-square cursor-pointer hover:opacity-95 transition-opacity'
-            onClick={handleImageClick}
-          >
-            {service.images[currentImageIndex] ? (
-              <div key={currentImageIndex}>
-                <Image
-                  src={service.images[currentImageIndex]}
-                  alt={`${service.name} image ${currentImageIndex + 1}`}
-                  width={600}
-                  height={600}
-                  priority={currentImageIndex === 0}
-                  className='object-contain w-full h-full'
-                  sizes='(max-width: 768px) 100vw, 50vw'
-                />
-              </div>
+        <div className="space-y-4 px-4 pt-5 md:px-0 md:pt-0">
+          {/* Title & price */}
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <h1 className="text-xl font-bold leading-snug text-slate-900 md:text-2xl">{service.name}</h1>
+            <p className="mt-2 text-xs font-medium text-slate-500">Starting price</p>
+            {service.price != null ? (
+              <PriceTag price={service.price} size="lg" />
             ) : (
-              <div className='flex items-center justify-center h-full'>
-                <p className='text-gray-500'>No image available</p>
-              </div>
+              <p className="text-lg font-bold text-slate-700">Ask for price</p>
             )}
-            <Button
-              variant='ghost'
-              size='icon'
-              className='absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePrevImage();
-              }}
-              aria-label='Previous image'
-            >
-              <ChevronLeft className='h-5 w-5' />
-            </Button>
-            <Button
-              variant='ghost'
-              size='icon'
-              className='absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full'
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNextImage();
-              }}
-              aria-label='Next image'
-            >
-              <ChevronRight className='h-5 w-5' />
-            </Button>
-          </div>
-          <div className='flex space-x-2 overflow-x-auto pb-2'>
-            {service.images.map((image, index) => (
-              <div
-                key={index}
-                className={`relative w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2 ${
-                  currentImageIndex === index
-                    ? "border-blue-500"
-                    : "border-transparent"
-                }`}
-                onClick={() => setCurrentImageIndex(index)}
-              >
-                <Image
-                  src={image}
-                  alt={`Thumbnail ${index + 1}`}
-                  fill
-                  className='object-cover'
-                  sizes='80px'
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Column - Details & Actions */}
-        <div className='space-y-6'>
-          {/* Price Card */}
-          <Card className='bg-gray-50 p-6 rounded-lg border border-gray-200'>
-            <h2 className='text-2xl font-bold text-gray-900 mb-2'>
-              {service.name}
-            </h2>
-            <span className='inline-block text-gray-500 text-base py-1 rounded-full mt-2'>
-              Base Price
-            </span>
-            <p className='text-2xl font-extrabold text-green-600'>
-              ₦{formatNumber(service.price)}
-            </p>
-          </Card>
-
-          {/* Tabs for Details & Description */}
-          <Tabs defaultValue='details'>
-            <TabsList className='grid w-full grid-cols-3 bg-gray-100 rounded-lg p-1'>
-              <TabsTrigger value='details'>Details</TabsTrigger>
-              <TabsTrigger value='description'>Description</TabsTrigger>
-              <TabsTrigger value='reviews'>Reviews</TabsTrigger>
-            </TabsList>
-            <TabsContent value='details' className='mt-4'>
-              <Card className='p-4'>
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-1'>
-                    <p className='font-bold text-gray-800'>Name</p>
-                    <div className='flex items-center gap-2'>
-                      {/* <Avatar className='h-8 w-8'>
-                        <AvatarFallback className='bg-gray-200 text-gray-600 text-sm'>
-                          AD
-                        </AvatarFallback>
-                      </Avatar> */}
-                      <p className='text-gray-600'>{service.name}</p>
-                    </div>
-                  </div>
-                  <div className='space-y-1'>
-                    <p className='font-bold text-gray-800'>Category</p>
-                    <p className='text-gray-600'>{service.categoryId}</p>
-                  </div>
-                  <div className='space-y-1'>
-                    <p className='font-bold text-gray-800'>University</p>
-                    <div className='flex items-center gap-2'>
-                      <MapPin className='h-4 w-4 text-gray-500' />
-                      <p className='text-gray-600'>{service.university}</p>
-                    </div>
-                  </div>
-                  <div className='space-y-1'>
-                    <p className='font-bold text-gray-800'>Availability</p>
-                    <div className='flex items-center gap-2'>
-                      <Calendar className='h-4 w-4 text-gray-500' />
-                      <p className='text-gray-600'>
-                        {formatAvailability(service.availability)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </TabsContent>
-            <TabsContent value='description' className='mt-4'>
-              <Card className='p-4'>
-                <p className='text-gray-700 whitespace-pre-line'>
-                  {service.description}
-                </p>
-              </Card>
-            </TabsContent>
-            <TabsContent value='reviews' className='mt-4'>
-              <Card className='p-4'>
-                <p className='text-gray-700 italic'>
-                  No reviews yet. Be the first to leave a review!
-                </p>
-              </Card>
-            </TabsContent>
-          </Tabs>
-
-          {/* Message Box */}
-          <Card className='bg-gray-50 p-4 rounded-lg border border-gray-200'>
-            <h2 className='text-lg font-semibold mb-2'>Contact Provider:</h2>
-            <div className='flex'>
-              <input
-                type='text'
-                placeholder='Type your message...'
-                className='flex-1 rounded-l-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-              <Button
-                onClick={handleSendMessage}
-                className='rounded-l-none bg-blue-600 hover:bg-blue-700'
-                disabled={sendingMessage}
-              >
-                <MessageCircle className='h-4 w-4 mr-2' />
-                Send
-              </Button>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {service.categoryId && <Badge variant="brand">{service.categoryId}</Badge>}
+              <Badge variant="muted">
+                <Calendar className="h-3 w-3" /> {availability}
+              </Badge>
             </div>
-          </Card>
+          </section>
+
+          <SellerCard seller={sellerInfo} sellerId={service.userId} />
+
+          {/* Description */}
+          {description && (
+            <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <h2 className="mb-2 text-sm font-semibold text-slate-900">About this service</h2>
+              <p
+                className={cn(
+                  "whitespace-pre-line text-sm leading-relaxed text-slate-600",
+                  !descOpen && "line-clamp-4"
+                )}
+              >
+                {description}
+              </p>
+              {description.length > 200 && (
+                <button
+                  type="button"
+                  onClick={() => setDescOpen((open) => !open)}
+                  className="mt-2 text-sm font-semibold text-primary hover:underline"
+                >
+                  {descOpen ? "Show less" : "Read more"}
+                </button>
+              )}
+            </section>
+          )}
+
+          {/* Details */}
+          {detailRows.length > 0 && (
+            <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">Details</h2>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                {detailRows.map(([label, value]) => (
+                  <div key={label} className="min-w-0">
+                    <dt className="text-xs text-slate-500">{label}</dt>
+                    <dd className="text-sm font-medium text-slate-900">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          {/* Contact (desktop; phones use the bottom bar + sheet) */}
+          <section className="hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm md:block">
+            {isOwner ? (
+              <p className="text-sm text-slate-600">This is your service. Students will message you from here.</p>
+            ) : (
+              <>
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <MessageCircle className="h-4 w-4 text-primary" /> Message {sellerFirstName}
+                </h2>
+                {composer}
+              </>
+            )}
+          </section>
+
+          <SafetyNote tips={SERVICE_SAFETY_TIPS} />
         </div>
-      </div>
+      </main>
+
+      {/* Phone: sticky action bar */}
+      {!isOwner && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+          <div className="mx-auto flex max-w-6xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              {service.price != null ? (
+                <PriceTag price={service.price} size="md" />
+              ) : (
+                <p className="text-sm font-semibold text-slate-600">Ask for price</p>
+              )}
+            </div>
+            <Button size="lg" onClick={openMessage} className="shrink-0">
+              <MessageCircle />
+              Message provider
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Phone: message sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <SheetHeader className="text-left">
+            <SheetTitle>Message {sellerFirstName}</SheetTitle>
+            <SheetDescription>Ask about “{service.name}”. Tap a quick question or write your own.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">{composer}</div>
+        </SheetContent>
+      </Sheet>
 
       {/* Image Modal */}
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>

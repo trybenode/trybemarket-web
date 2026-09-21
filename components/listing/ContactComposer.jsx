@@ -11,8 +11,8 @@ const QUICK_REPLIES = ["Is this still available?", "What's your best price?", "W
  * mobile bottom sheet. Quick replies fill the box with one tap, because most
  * first messages are the same handful of questions.
  */
-export default function ContactComposer({ message, setMessage, onSend, sending, negotiable = false, autoFocus = false }) {
-  const chips = negotiable ? [...QUICK_REPLIES, "Can you do a lower price?"] : QUICK_REPLIES;
+export default function ContactComposer({ message, setMessage, onSend, sending, negotiable = false, autoFocus = false, quickReplies = null, placeholder = "Write a message to the seller…" }) {
+  const chips = quickReplies || (negotiable ? [...QUICK_REPLIES, "Can you do a lower price?"] : QUICK_REPLIES);
 
   return (
     <div className="space-y-3">
@@ -35,7 +35,7 @@ export default function ContactComposer({ message, setMessage, onSend, sending, 
         rows={3}
         maxLength={500}
         autoFocus={autoFocus}
-        placeholder="Write a message to the seller…"
+        placeholder={placeholder}
         className="w-full resize-none rounded-xl border border-input bg-white p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
       />
 
