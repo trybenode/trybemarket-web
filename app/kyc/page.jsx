@@ -8,8 +8,8 @@ import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, BadgeCheck, Coins, Lock, Camera } from "lucide-react";
+import { useUser } from "@/context/UserContext";
 import toast from "react-hot-toast";
 import convertToBase64 from "@/hooks/useConvertToBase64";
 import Header from "@/components/Header";
@@ -28,6 +28,7 @@ export default function KycPage() {
   const [modalIconType, setModalIconType] = useState("success");
   const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
   const router = useRouter();
+  const { currentUser } = useUser() || {};
 
   // revoke object URLs when the component unmounts or when image previews change
   useEffect(() => {
@@ -140,7 +141,7 @@ export default function KycPage() {
           setModalVisible(true);
           return;
         }
-        if (kycData.status === "approved") {
+        if (kycData.status === "approved" || kycData.status === "verified") {
           setLoading(false);
           setModalMessage("Your KYC has already been approved.");
           setModalIconType("success");
@@ -222,123 +223,129 @@ export default function KycPage() {
     }
   };
 
+  // One ID-upload tile: dashed and tappable until a photo is chosen, then shows the photo.
+  const uploadTile = (label, file, preview, onPick, hint) => (
+    <div className='space-y-2'>
+      <Label>{label}</Label>
+      <button
+        type='button'
+        onClick={onPick}
+        disabled={loading}
+        className={`flex w-full items-center gap-4 rounded-2xl border-2 p-3 text-left transition active:scale-[0.99] disabled:opacity-60 ${
+          file ? "border-emerald-300 bg-emerald-50/50" : "border-dashed border-slate-300 bg-white hover:border-primary/50 hover:bg-blue-50/40"
+        }`}
+      >
+        {preview ? (
+          <img src={preview} alt={`${label} preview`} className='h-16 w-24 shrink-0 rounded-xl object-cover' />
+        ) : (
+          <span className='flex h-16 w-24 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400'>
+            <Camera className='h-6 w-6' />
+          </span>
+        )}
+        <span className='min-w-0'>
+          <span className='block text-sm font-semibold text-slate-900'>
+            {file ? "Photo selected — tap to change" : "Tap to choose a photo"}
+          </span>
+          <span className='block text-xs text-slate-500'>{hint}</span>
+        </span>
+      </button>
+    </div>
+  );
+
   return (
-    <div className='min-h-screen bg-slate-50'>
+    <div className='min-h-screen bg-slate-50 pb-16'>
       <Header title="KYC Registration" />
-      <div className='container mx-auto px-4 py-5 max-w-6xl'>
-
-        <Card className='border border-gray-200'>
-          <CardContent className='space-y-4 pt-6'>
-            <div className='space-y-2'>
-              <Label htmlFor='fullName'>Full Name</Label>
-              <Input
-                id='fullName'
-                placeholder='Full Name'
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                disabled={loading}
-              />
+      <div className='mx-auto max-w-xl px-4 py-5 space-y-4'>
+        {currentUser?.isVerified ? (
+          <div className='rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-center'>
+            <BadgeCheck className='mx-auto h-12 w-12 text-emerald-500' />
+            <h2 className='mt-3 text-lg font-bold text-slate-900'>You're already verified</h2>
+            <p className='mt-1 text-sm text-slate-600'>Nothing more to do here — your Verified Student badge is on your profile.</p>
+            <Button className='mt-5' onClick={() => router.push("/")}>Back to marketplace</Button>
+          </div>
+        ) : (
+          <>
+            {/* Why */}
+            <div className='rounded-3xl border border-brand-yellow-deep/40 bg-gradient-to-br from-brand-yellow-soft to-white p-5'>
+              <h2 className='text-lg font-extrabold tracking-tight text-slate-900'>Verify you're a student</h2>
+              <p className='mt-1 text-sm text-slate-600'>It takes a minute and unlocks more on TrybeMarket.</p>
+              <ul className='mt-3 space-y-2 text-sm text-slate-700'>
+                <li className='flex items-center gap-2'><BadgeCheck className='h-4 w-4 shrink-0 text-emerald-600' /> A Verified Student badge on your profile</li>
+                <li className='flex items-center gap-2'><Coins className='h-4 w-4 shrink-0 text-amber-600' /> 150 App Credit when you're approved</li>
+                <li className='flex items-center gap-2'><Lock className='h-4 w-4 shrink-0 text-primary' /> Required to subscribe to a plan</li>
+              </ul>
             </div>
 
-            <div className='space-y-2'>
-              <Label htmlFor='matricNumber'>Matric Number</Label>
-              <Input
-                id='matricNumber'
-                placeholder='Matric Number'
-                value={matricNumber}
-                onChange={(e) => setMatricNumber(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            {/* Front ID Upload */}
-            <div className='space-y-2'>
-              <Label>Front ID Image</Label>
-              <button
-                className='w-full rounded-md border border-gray-300 bg-white p-3 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                onClick={() => pickImage(setFrontID, setFrontIDPreview)}
-                disabled={loading}
-              >
-                {frontID ? "Image Selected" : "Choose Front ID Image"}
-              </button>
-              {frontIDPreview && (
-                <img
-                  src={frontIDPreview}
-                  alt='Front ID Preview'
-                  className='mt-2 h-24 w-32 rounded-md object-cover'
+            {/* Form */}
+            <div className='space-y-5 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm'>
+              <div className='space-y-2'>
+                <Label htmlFor='fullName'>Full name</Label>
+                <Input
+                  id='fullName'
+                  placeholder='As shown on your ID'
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={loading}
+                  className='h-11'
                 />
-              )}
-              <p className='text-xs text-red-500'>
-                * Upload photo of front of ID card
-              </p>
-            </div>
+              </div>
 
-            {/* Back ID Upload */}
-            <div className='space-y-2'>
-              <Label>Back ID Image</Label>
-              <button
-                className='w-full rounded-md border border-gray-300 bg-white p-3 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                onClick={() => pickImage(setBackID, setBackIDPreview)}
-                disabled={loading}
-              >
-                {backID ? "Image Selected" : "Choose Back ID Image"}
-              </button>
-              {backIDPreview && (
-                <img
-                  src={backIDPreview}
-                  alt='Back ID Preview'
-                  className='mt-2 h-24 w-32 rounded-md object-cover'
+              <div className='space-y-2'>
+                <Label htmlFor='matricNumber'>Matric number</Label>
+                <Input
+                  id='matricNumber'
+                  placeholder='e.g. LCU/UG/XX/XXXXX'
+                  value={matricNumber}
+                  onChange={(e) => setMatricNumber(e.target.value)}
+                  disabled={loading}
+                  className='h-11'
                 />
-              )}
-              <p className='text-xs text-red-500'>
-                * Upload photo of back of ID card
-              </p>
-            </div>
+              </div>
 
-            <Button
-              onClick={handleSubmit}
-              disabled={
-                !fullName || !matricNumber || !frontID || !backID || loading
-              }
-              className='w-full'
-            >
-              {loading ? (
-                <>
-                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                  Submitting...
-                </>
-              ) : (
-                "Submit"
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+              {uploadTile("Front of ID card", frontID, frontIDPreview, () => pickImage(setFrontID, setFrontIDPreview), "JPEG, PNG or GIF, up to 5MB")}
+              {uploadTile("Back of ID card", backID, backIDPreview, () => pickImage(setBackID, setBackIDPreview), "JPEG, PNG or GIF, up to 5MB")}
+
+              <p className='text-xs leading-relaxed text-slate-500'>
+                Use a clear, well-lit photo where your name and matric number are easy to read.
+              </p>
+
+              <Button
+                size='lg'
+                onClick={handleSubmit}
+                loading={loading}
+                disabled={!fullName || !matricNumber || !frontID || !backID}
+                className='w-full'
+              >
+                {loading ? "Submitting…" : "Submit for verification"}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Modal */}
+      {/* Result */}
       {modalVisible && (
-        <div className='fixed inset-0 flex items-center justify-center bg-black bg-opacity-50'>
-          <Card className='w-80 sm:w-96 border border-gray-200'>
-            <CardContent className='space-y-4 pt-6'>
-              <div className='flex justify-center'>
-                {modalIconType === "success" ? (
-                  <CheckCircle className='h-12 w-12 text-green-500' />
-                ) : (
-                  <AlertCircle className='h-12 w-12 text-yellow-500' />
-                )}
-              </div>
-              <p className='text-center text-gray-700'>{modalMessage}</p>
-              <Button
-                className='w-full'
-                onClick={() => {
-                  setModalVisible(false);
-                  router.back();
-                }}
-              >
-                Close
-              </Button>
-            </CardContent>
-          </Card>
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'>
+          <div className='w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl'>
+            <div className='flex justify-center'>
+              {modalIconType === "success" ? (
+                <CheckCircle className='h-12 w-12 text-emerald-500' />
+              ) : (
+                <AlertCircle className='h-12 w-12 text-amber-500' />
+              )}
+            </div>
+            <p className='mt-3 text-slate-700'>{modalMessage}</p>
+            <Button
+              size='lg'
+              className='mt-5 w-full'
+              onClick={() => {
+                setModalVisible(false);
+                router.back();
+              }}
+            >
+              Close
+            </Button>
+          </div>
         </div>
       )}
     </div>
