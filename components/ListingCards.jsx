@@ -65,6 +65,24 @@ useEffect(() => {
 
 
 
+  // A hook must run on EVERY render, so this sits above the early returns below.
+  // It used to sit after them: when `isLoading` flipped to true while the list
+  // was showing (a logout resets the campus filter and reloads; so does the
+  // Refresh button), React saw fewer hooks than the previous render and threw
+  // "Rendered fewer hooks than expected", blanking the whole app.
+const productCards = useMemo(() => {
+  return products.map((item) => (
+    <div key={item.id}>
+      <div
+        className="h-full cursor-pointer"
+        onClick={() => router.push(`/listing/${item.id}`)}
+      >
+        <ListingCard product={item.product} btnName="View" />
+      </div>
+    </div>
+  ));
+}, [products, router]);
+
   if (isLoading) {
     return (
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
@@ -84,18 +102,6 @@ useEffect(() => {
   }
 
 
-const productCards = useMemo(() => {
-  return products.map((item) => (
-    <div key={item.id}>
-      <div
-        className="h-full cursor-pointer"
-        onClick={() => router.push(`/listing/${item.id}`)}
-      >
-        <ListingCard product={item.product} btnName="View" />
-      </div>
-    </div>
-  ));
-}, [products, router]);
 
   return (
     <div className="flex flex-col">
