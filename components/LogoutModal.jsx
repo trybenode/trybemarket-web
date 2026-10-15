@@ -1,10 +1,14 @@
 
 import React from "react";
+import { createPortal } from "react-dom";
 
 export default React.memo( function LogoutModal({ isOpen, onClose, onConfirm }) {
   if (!isOpen) return null;
 
-  return (
+  // Portalled to <body>: this modal is opened from the header, whose
+  // backdrop-blur makes it the containing block for `fixed` children — rendered
+  // in place, the overlay was only header-sized and the dialog spilled off the top.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white w-full mx-2 max-w-sm p-6 rounded-xl shadow-lg">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
@@ -25,6 +29,7 @@ export default React.memo( function LogoutModal({ isOpen, onClose, onConfirm }) 
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 })
