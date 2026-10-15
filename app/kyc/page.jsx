@@ -38,12 +38,63 @@ export default function KycPage() {
     };
   }, [frontIDPreview, backIDPreview]);
 
+  // Send a failure from this page to /api/client-error, so it shows up in the
+  // Vercel logs and Firestore `clientErrors` instead of only in the student's
+  // browser. Best-effort: never throws.
+  const reportClientError = (step, error, files = [frontID, backID]) => {
+    getAuth().currentUser?.getIdToken()
+      .then((idToken) =>
+        fetch("/api/client-error", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({
+            where: "kyc",
+            step,
+            errorName: error?.name,
+            errorMessage: error?.message,
+            errorCode: error?.code,
+            files: files.map((f) => ({ type: f?.type, size: f?.size })),
+            online: navigator.onLine,
+          }),
+        })
+      )
+      .catch(() => {});
+  };
+
+  // Copies the picked photo into memory as a JPEG no larger than
+  // MAX_ID_PHOTO_SIDE on its longest side. On Android, Chrome can fail to read a
+  // gallery/Google Photos pick again at upload time (ERR_UPLOAD_FILE_CHANGED,
+  // surfacing as "Failed to fetch") even though the preview showed; an
+  // in-memory copy can't go stale. It also keeps uploads small on slow data
+  // while leaving an ID card's text sharp enough for the OCR check.
+  const MAX_ID_PHOTO_SIDE = 2000;
+  const prepareIdPhoto = async (file) => {
+    try {
+      const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      const scale = Math.min(1, MAX_ID_PHOTO_SIDE / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const blob = await new Promise((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("couldn't re-encode the photo"))), "image/jpeg", 0.9)
+      );
+      return new File([blob], "id-photo.jpg", { type: "image/jpeg" });
+    } catch (error) {
+      // Couldn't decode it here — fall back to a plain in-memory copy (this
+      // throws too if the phone can't read the file at all).
+      reportClientError("preparing the photo (fell back to a plain copy)", error, [file]);
+      return new File([await file.arrayBuffer()], file.name, { type: file.type });
+    }
+  };
+
   // Handle file selection and preview
   const pickImage = (setImage, setPreview) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
-    input.onchange = (event) => {
+    input.onchange = async (event) => {
       const file = event.target.files?.[0];
       if (file) {
         if (!VALID_IMAGE_TYPES.includes(file.type)) {
@@ -55,14 +106,24 @@ export default function KycPage() {
           toast.error("Image size must be less than 5MB.");
           return;
         }
-        setImage(file);
-        setPreview(URL.createObjectURL(file));
+        let photo;
+        try {
+          photo = await prepareIdPhoto(file);
+        } catch (error) {
+          reportClientError("reading the picked photo", error, [file]);
+          toast.error("We couldn't read that photo. Take a new photo with your camera, or save it to your phone first, then pick it again.");
+          return;
+        }
+        setImage(photo);
+        setPreview(URL.createObjectURL(photo));
       }
     };
     input.click();
   };
 
-  // Upload image to Cloudinary
+  // Upload image to Cloudinary — straight from the browser, or through our
+  // server (/api/kyc-upload) when the browser can't reach Cloudinary at all:
+  // some students' networks reach our site but not api.cloudinary.com.
   const uploadImageToCloudinary = async (file) => {
     if (!VALID_IMAGE_TYPES.includes(file.type)) {
       throw new Error("Only JPEG, PNG, or GIF images are allowed.");
@@ -86,9 +147,9 @@ export default function KycPage() {
       res = await response.json().catch(() => ({}));
     } catch (error) {
       console.error("Cloudinary Upload Error:", error);
-      // Keep the browser's own error: "Failed to fetch" (no connection) and
-      // NotReadableError (the phone couldn't read the picked photo) need different fixes.
-      throw new Error(`couldn't upload the photo (${error?.name}: ${error?.message})`);
+      // Recorded even when the retry below works, so we can see how often it's needed.
+      reportClientError("uploading straight to Cloudinary (retrying through our server)", error, [file]);
+      return uploadThroughServer(file);
     }
     if (!res.secure_url) {
       // Keep Cloudinary's own reason (file too large, format not allowed…) —
@@ -97,6 +158,29 @@ export default function KycPage() {
       throw new Error(res.error?.message || "the image server rejected the photo");
     }
     return res.secure_url;
+  };
+
+  const uploadThroughServer = async (file) => {
+    const idToken = await getAuth().currentUser.getIdToken();
+    const data = new FormData();
+    data.append("file", file);
+    let response;
+    try {
+      response = await fetch("/api/kyc-upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: data,
+      });
+    } catch (error) {
+      // Keep the browser's own error: "Failed to fetch" (no connection) and
+      // NotReadableError (the phone couldn't read the photo) need different fixes.
+      throw new Error(`couldn't upload the photo (${error?.name}: ${error?.message})`);
+    }
+    const res = await response.json().catch(() => ({}));
+    if (!response.ok || !res.url) {
+      throw new Error(res.error || `the upload failed (${response.status})`);
+    }
+    return res.url;
   };
 
   const getUserEmail = () => {
@@ -229,25 +313,7 @@ export default function KycPage() {
       setModalVisible(true);
     } catch (error) {
       console.error(`Error in handleSubmit (${step}):`, error);
-      // Report it, so a failure on a student's phone shows up in the Vercel
-      // logs and Firestore `clientErrors` instead of only in their browser.
-      getAuth().currentUser?.getIdToken()
-        .then((idToken) =>
-          fetch("/api/client-error", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-            body: JSON.stringify({
-              where: "kyc",
-              step,
-              errorName: error?.name,
-              errorMessage: error?.message,
-              errorCode: error?.code,
-              files: [frontID, backID].map((f) => ({ type: f?.type, size: f?.size })),
-              online: navigator.onLine,
-            }),
-          })
-        )
-        .catch(() => {});
+      reportClientError(step, error);
       toast.error(`Failed while ${step}: ${error?.message || "unknown error"}. Please try again.`, { duration: 8000 });
     } finally {
       setLoading(false);
