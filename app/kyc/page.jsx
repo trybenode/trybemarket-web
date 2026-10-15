@@ -72,6 +72,7 @@ export default function KycPage() {
     data.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET);
     data.append("cloud_name", process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
 
+    let res;
     try {
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${
@@ -82,17 +83,20 @@ export default function KycPage() {
           body: data,
         }
       );
-
-      const res = await response.json();
-      if (res.secure_url) {
-        return res.secure_url;
-      } else {
-        throw new Error("Upload failed");
-      }
+      res = await response.json().catch(() => ({}));
     } catch (error) {
       console.error("Cloudinary Upload Error:", error);
-      throw new Error("Image upload failed.");
+      // Keep the browser's own error: "Failed to fetch" (no connection) and
+      // NotReadableError (the phone couldn't read the picked photo) need different fixes.
+      throw new Error(`couldn't upload the photo (${error?.name}: ${error?.message})`);
     }
+    if (!res.secure_url) {
+      // Keep Cloudinary's own reason (file too large, format not allowed…) —
+      // it used to be swallowed, leaving only a generic "try again" toast.
+      console.error("Cloudinary Upload Error:", res.error);
+      throw new Error(res.error?.message || "the image server rejected the photo");
+    }
+    return res.secure_url;
   };
 
   const getUserEmail = () => {
@@ -117,6 +121,9 @@ export default function KycPage() {
     }
 
     setLoading(true);
+    // Which step is running, so a failure says where it happened instead of a
+    // bare "try again" (these all failed silently into the same toast before).
+    let step = "checking your account";
 
     try {
       const auth = getAuth();
@@ -152,16 +159,20 @@ export default function KycPage() {
       }
 
       // Upload to Cloudinary as before
+      step = "uploading the front of your ID";
       const frontIDUrl = await uploadImageToCloudinary(frontID);
+      step = "uploading the back of your ID";
       const backIDUrl = await uploadImageToCloudinary(backID);
 
       // Convert images to base64 (strip prefix)
+      step = "reading your photos";
       const frontBase64Full = await convertToBase64(frontID);
       const backBase64Full = await convertToBase64(backID);
       const frontBase64 = frontBase64Full.split(",")[1];
       const backBase64 = backBase64Full.split(",")[1];
 
       // Store pending KYC as before
+      step = "saving your request";
       await setDoc(doc(db, "kycRequests", user.uid), {
         userId: user.uid,
         fullName,
@@ -176,6 +187,7 @@ export default function KycPage() {
       // Both calls below prove who is asking with the ID token. kyc-notify reads
       // the details from the request just stored above (nothing to send in the
       // body), and a failure to notify the team must never block the submission.
+      step = "sending your request for verification";
       const idToken = await user.getIdToken();
       await fetch("/api/kyc-notify", {
         method: "POST",
@@ -216,8 +228,27 @@ export default function KycPage() {
       setModalIconType("success");
       setModalVisible(true);
     } catch (error) {
-      console.error("Error in handleSubmit:", error);
-      toast.error("Failed to submit Kyc, Please try again.");
+      console.error(`Error in handleSubmit (${step}):`, error);
+      // Report it, so a failure on a student's phone shows up in the Vercel
+      // logs and Firestore `clientErrors` instead of only in their browser.
+      getAuth().currentUser?.getIdToken()
+        .then((idToken) =>
+          fetch("/api/client-error", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({
+              where: "kyc",
+              step,
+              errorName: error?.name,
+              errorMessage: error?.message,
+              errorCode: error?.code,
+              files: [frontID, backID].map((f) => ({ type: f?.type, size: f?.size })),
+              online: navigator.onLine,
+            }),
+          })
+        )
+        .catch(() => {});
+      toast.error(`Failed while ${step}: ${error?.message || "unknown error"}. Please try again.`, { duration: 8000 });
     } finally {
       setLoading(false);
     }
