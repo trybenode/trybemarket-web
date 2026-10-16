@@ -47,6 +47,8 @@ export default React.memo(function ServiceSearchBar({ services, onResults }) {
       </div>
       <input
         type='text'
+        // Stops browsers offering saved emails/names in the search box.
+        autoComplete='off'
         placeholder='Search for services...'
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
