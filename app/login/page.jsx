@@ -169,6 +169,11 @@ export default function LoginPage() {
       const user = userCredential.user;
 
       const userRef = doc(db, "users", user.uid);
+      // Google sign-in runs this for returning users too, so only stamp
+      // createdAt when the profile doesn't have one yet — and use the account's
+      // real creation time, not "now". Overwriting it made old accounts look new.
+      const existingUser = await getDoc(userRef);
+      const hasCreatedAt = existingUser.exists() && existingUser.data().createdAt;
       await setDoc(
         userRef,
         {
@@ -176,7 +181,9 @@ export default function LoginPage() {
           email: user.email,
           fullName: user.displayName,
           emailVerified: true,
-          createdAt: new Date().toISOString(),
+          ...(hasCreatedAt
+            ? {}
+            : { createdAt: new Date(user.metadata.creationTime || Date.now()).toISOString() }),
           profilePicture: user.photoURL,
         },
         { merge: true }

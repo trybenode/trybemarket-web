@@ -11,7 +11,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,6 +214,11 @@ export default function SignupPage() {
       const user = userCredential.user;
 
       const userRef = doc(db, "users", user.uid);
+      // Google sign-in runs this for returning users too, so only stamp
+      // createdAt when the profile doesn't have one yet — and use the account's
+      // real creation time, not "now". Overwriting it made old accounts look new.
+      const existingUser = await getDoc(userRef);
+      const hasCreatedAt = existingUser.exists() && existingUser.data().createdAt;
       await setDoc(
         userRef,
         {
@@ -221,7 +226,9 @@ export default function SignupPage() {
           email: user.email,
           fullName: user.displayName,
           emailVerified: true,
-          createdAt: new Date().toISOString(),
+          ...(hasCreatedAt
+            ? {}
+            : { createdAt: new Date(user.metadata.creationTime || Date.now()).toISOString() }),
           profilePicture: user.photoURL,
         },
         { merge: true }
