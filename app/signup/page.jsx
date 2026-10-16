@@ -214,22 +214,26 @@ export default function SignupPage() {
       const user = userCredential.user;
 
       const userRef = doc(db, "users", user.uid);
-      // Google sign-in runs this for returning users too, so only stamp
-      // createdAt when the profile doesn't have one yet — and use the account's
-      // real creation time, not "now". Overwriting it made old accounts look new.
+      // Google sign-in runs this for returning users too, so it must not
+      // replace what's already on their profile: a name or photo they changed
+      // on Edit Profile, or createdAt (overwriting it made old accounts look
+      // new). Google's values only fill in what's missing, and a missing
+      // createdAt gets the account's real creation time, not "now".
       const existingUser = await getDoc(userRef);
-      const hasCreatedAt = existingUser.exists() && existingUser.data().createdAt;
+      const existingData = existingUser.exists() ? existingUser.data() : {};
+      const profileName = existingData.fullName || user.displayName;
+      const profilePhoto = existingData.profilePicture || user.photoURL;
       await setDoc(
         userRef,
         {
           uid: user.uid,
           email: user.email,
-          fullName: user.displayName,
+          fullName: profileName,
           emailVerified: true,
-          ...(hasCreatedAt
+          ...(existingData.createdAt
             ? {}
             : { createdAt: new Date(user.metadata.creationTime || Date.now()).toISOString() }),
-          profilePicture: user.photoURL,
+          profilePicture: profilePhoto,
         },
         { merge: true }
       );
@@ -241,8 +245,8 @@ export default function SignupPage() {
       await useUserStore.getState().setUser({
         id: user.uid,
         email: user.email,
-        fullName: user.displayName,
-        profilePicture: user.photoURL,
+        fullName: profileName,
+        profilePicture: profilePhoto,
       });
 
       // Ensure store is initialized and check for errors
@@ -269,7 +273,7 @@ export default function SignupPage() {
         );
       }
 
-      toast.success(`Sign Up Successful 🎉: Welcome ${user.displayName}`, {
+      toast.success(`Sign Up Successful 🎉: Welcome ${profileName}`, {
         position: "top-center",
         duration: 3000,
       });

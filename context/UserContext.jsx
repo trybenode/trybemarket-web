@@ -102,7 +102,13 @@ export const UserProvider = ({ children }) => {
             if (confirmed.exists()) {
               userData = { ...userData, ...confirmed.data() };
             } else {
-              await setDoc(userRef, userData, { merge: true });
+              // createdAt goes on the stored profile only, not into userData:
+              // the Auth account's real creation time, which admin metrics use.
+              await setDoc(
+                userRef,
+                { ...userData, createdAt: new Date(user.metadata?.creationTime || Date.now()).toISOString() },
+                { merge: true }
+              );
               // Backstop for any signup path other than the ones that already
               // call this — best-effort, idempotent.
               notifySignup(user);
