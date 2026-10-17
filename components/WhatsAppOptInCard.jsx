@@ -23,10 +23,12 @@ function wasDismissedRecently() {
 }
 
 /**
- * Asks a signed-in user to get offers and campus updates on WhatsApp
- * (08-campaign-messaging.md §7.3). This is the explicit consent Meta requires
- * for marketing messages, and it's separate from WhatsApp message alerts
- * (`whatsappNotifications`). Campaigns only go to `whatsappMarketing: true`.
+ * Asks a signed-in user to get TrybeMarket on WhatsApp
+ * (08-campaign-messaging.md §7.3). Saying yes turns on both WhatsApp message
+ * alerts (`whatsappNotifications`) and offers & campus updates
+ * (`whatsappMarketing`) — the explicit consent Meta requires for marketing
+ * messages, so the wording names both. Each can still be switched off on its
+ * own in Edit Profile. Campaigns only go to `whatsappMarketing: true`.
  *
  * Hidden for anyone already opted in, anyone who has opted out before (no
  * nagging), and for 30 days after "Not now".
@@ -73,13 +75,14 @@ export default function WhatsAppOptInCard({ source, className = "" }) {
     try {
       const update = {
         phone: convertToInternationalFormat(phone),
+        whatsappNotifications: true,
         whatsappMarketing: true,
         whatsappMarketingAt: new Date().toISOString(),
         whatsappMarketingSource: source || "prompt",
       };
       await updateDoc(doc(db, "users", uid), update);
       setCurrentUser?.((prev) => (prev ? { ...prev, ...update } : prev));
-      toast.success("You're in! We'll send offers and campus updates on WhatsApp.");
+      toast.success("You're in! You'll get message alerts, offers and campus updates on WhatsApp.");
     } catch (err) {
       console.error("WhatsApp opt-in failed:", err);
       toast.error("Couldn't save that. Please try again.");
@@ -102,10 +105,10 @@ export default function WhatsAppOptInCard({ source, className = "" }) {
         <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <p className="font-semibold text-slate-900">Get campus deals on WhatsApp</p>
+            <p className="font-semibold text-slate-900">Get TrybeMarket on WhatsApp</p>
             <p className="text-sm text-slate-600">
-              Get offers, new features and campus updates from TrybeMarket on WhatsApp. Stop
-              anytime: tap &ldquo;Stop promotions&rdquo; in any message, or turn it off in your profile.
+              Get alerts when buyers message you, plus offers and campus updates from TrybeMarket
+              on WhatsApp. Turn either off anytime in your profile, or reply STOP to stop offers.
             </p>
           </div>
           <form onSubmit={handleOptIn} className="flex flex-col gap-2 sm:flex-row sm:items-start">
