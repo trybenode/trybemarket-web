@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { doc, updateDoc } from "firebase/firestore";
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
+import { validatePhone, convertToInternationalFormat } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,11 @@ export default function EditProfilePage() {
   const [phoneError, setPhoneError] = useState("");
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [whatsappNotifications, setWhatsappNotifications] = useState(false);
+  // Promotional messages ("Offers & updates") — separate from message alerts.
+  // WhatsApp promos need an explicit opt-in; email promos are on unless the
+  // person unsubscribed.
+  const [whatsappMarketing, setWhatsappMarketing] = useState(false);
+  const [emailMarketing, setEmailMarketing] = useState(true);
 
   // The signed-in user's Firestore id. Only ever read after the profile has
   // loaded (see the guards below); never assume `.uid` exists on the object.
@@ -65,67 +71,13 @@ export default function EditProfilePage() {
       setPhone(displayPhone);
       setEmailNotifications(currentUser.emailNotifications !== false);
       setWhatsappNotifications(currentUser.whatsappNotifications || false);
+      setWhatsappMarketing(currentUser.whatsappMarketing === true);
+      setEmailMarketing(currentUser.marketingEmailOptOut !== true);
       
       setIsFetching(false);
     }
   }, [currentUser]);
 
-  // Validate phone number (Nigerian format: 08012345678 or 8012345678)
-  const validatePhone = (value) => {
-    if (!value) return ""; // Empty is valid
-    
-    // Remove all non-digit characters
-    const cleaned = value.replace(/\D/g, "");
-    
-    // Nigerian mobile network prefixes
-    const validPrefixes = [
-      '0701', '0702', '0703', '0704', '0705', '0706', '0707', '0708', '0709',
-      '0802', '0803', '0804', '0805', '0806', '0807', '0808', '0809',
-      '0810', '0811', '0812', '0813', '0814', '0815', '0816', '0817', '0818', '0819',
-      '0902', '0903', '0904', '0905', '0906', '0907', '0908', '0909',
-      '0912', '0913', '0915', '0916'
-    ];
-    
-    // Check if it starts with 0 or is just 10 digits
-    if (cleaned.startsWith("0")) {
-      // Format: 08012345678 (11 digits)
-      if (cleaned.length !== 11) {
-        return "Phone must be 11 digits (e.g., 08012345678)";
-      }
-      // Check if starts with valid Nigerian prefix
-      const prefix = cleaned.substring(0, 4);
-      if (!validPrefixes.includes(prefix)) {
-        return "Invalid Nigerian mobile number";
-      }
-    } else {
-      // Format: 8012345678 (10 digits)
-      if (cleaned.length !== 10) {
-        return "Phone must be 10-11 digits (e.g., 8012345678 or 08012345678)";
-      }
-      // Check if starts with valid Nigerian prefix (without leading 0)
-      const prefix = "0" + cleaned.substring(0, 3);
-      if (!validPrefixes.includes(prefix)) {
-        return "Invalid Nigerian mobile number";
-      }
-    }
-    
-    return "";
-  };
-  
-  // Convert Nigerian format to international format (234XXXXXXXXXX)
-  const convertToInternationalFormat = (nigerianPhone) => {
-    if (!nigerianPhone) return null;
-    
-    const cleaned = nigerianPhone.replace(/\D/g, "");
-    
-    // If starts with 0, remove it and prepend 234
-    if (cleaned.startsWith("0")) {
-      return "234" + cleaned.substring(1);
-    }
-    
-    // If 10 digits without 0, just prepend 234
-    return "234" + cleaned;
-  };
 
   // Handle phone number change
   const handlePhoneChange = (e) => {
@@ -213,8 +165,8 @@ export default function EditProfilePage() {
 
   // Function to save notification settings only
   const handleSaveNotifications = async () => {
-    // Validate phone if WhatsApp is enabled
-    if (whatsappNotifications && phone) {
+    // Validate phone if WhatsApp alerts or WhatsApp offers are enabled
+    if ((whatsappNotifications || whatsappMarketing) && phone) {
       const error = validatePhone(phone);
       if (error) {
         setPhoneError(error);
@@ -228,6 +180,10 @@ export default function EditProfilePage() {
       toast.error("Please enter a valid phone number to enable WhatsApp notifications");
       return;
     }
+    if (whatsappMarketing && !phone) {
+      toast.error("Please enter a valid phone number to get offers on WhatsApp");
+      return;
+    }
 
     if (!userId) {
       toast.error("Your profile hasn't finished loading. Please try again in a moment.");
@@ -236,10 +192,27 @@ export default function EditProfilePage() {
 
     setSavingNotifications(true);
     try {
+      const now = new Date().toISOString();
+      const wantsWhatsappMarketing = whatsappMarketing && phone ? true : false;
+      const hadWhatsappMarketing = currentUser?.whatsappMarketing === true;
+      const hadEmailOptOut = currentUser?.marketingEmailOptOut === true;
+
       const notificationData = {
         phone: phone ? convertToInternationalFormat(phone) : null,
         emailNotifications,
         whatsappNotifications: whatsappNotifications && phone ? true : false,
+        whatsappMarketing: wantsWhatsappMarketing,
+        marketingEmailOptOut: !emailMarketing,
+        // When and where consent was given or withdrawn, only on a change.
+        ...(wantsWhatsappMarketing && !hadWhatsappMarketing
+          ? { whatsappMarketingAt: now, whatsappMarketingSource: "edit_profile" }
+          : {}),
+        ...(!wantsWhatsappMarketing && hadWhatsappMarketing
+          ? { whatsappMarketingOptOutAt: now }
+          : {}),
+        ...(!emailMarketing && !hadEmailOptOut
+          ? { marketingEmailOptOutAt: now, marketingEmailOptOutSource: "edit_profile" }
+          : {}),
       };
 
       const userRef = doc(db, "users", userId);
@@ -485,10 +458,56 @@ export default function EditProfilePage() {
 
           <Separator />
 
+          {/* Offers & updates — promotional messages, separate from message alerts */}
+          <div className='space-y-4'>
+            <div>
+              <p className='text-base font-medium'>Offers &amp; updates</p>
+              <p className='text-sm text-gray-500'>
+                Campus deals, new features and news from TrybeMarket. Separate from message alerts. Turn off anytime.
+              </p>
+            </div>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-3'>
+                <MessageSquare className='h-5 w-5 text-green-600' />
+                <div>
+                  <Label htmlFor='whatsapp-marketing' className='text-base font-medium'>
+                    On WhatsApp
+                  </Label>
+                  <p className='text-sm text-gray-500'>Sent to the phone number above</p>
+                </div>
+              </div>
+              <Switch
+                id='whatsapp-marketing'
+                checked={whatsappMarketing}
+                onCheckedChange={setWhatsappMarketing}
+                disabled={savingNotifications}
+              />
+            </div>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-3'>
+                <Mail className='h-5 w-5 text-blue-600' />
+                <div>
+                  <Label htmlFor='email-marketing' className='text-base font-medium'>
+                    By email
+                  </Label>
+                  <p className='text-sm text-gray-500'>Sent to your account email</p>
+                </div>
+              </div>
+              <Switch
+                id='email-marketing'
+                checked={emailMarketing}
+                onCheckedChange={setEmailMarketing}
+                disabled={savingNotifications}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Save Notification Settings Button */}
           <Button
             onClick={handleSaveNotifications}
-            disabled={savingNotifications || (whatsappNotifications && phoneError)}
+            disabled={savingNotifications || ((whatsappNotifications || whatsappMarketing) && phoneError)}
             className='w-full'
           >
             {savingNotifications ? (

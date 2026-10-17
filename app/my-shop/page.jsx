@@ -18,6 +18,7 @@ import ListingCardSkeleton from "@/components/ui/ListingCardSkeleton";
 import SellerProfileSkeleton from "@/components/ui/SellerProfileSkeleton";
 import Header from "@/components/Header";
 import CrsaStatsCard from "@/components/CrsaStatsCard";
+import WhatsAppOptInCard from "@/components/WhatsAppOptInCard";
 const ListingCard = dynamic(() => import("@/components/ListingCard"), {
   loading: () => <ListingCardSkeleton />,
   ssr: false,
@@ -193,6 +194,9 @@ export default function MyShopPage() {
 
         {/* Renders only for active CRSA members — see components/CrsaStatsCard.jsx */}
         <CrsaStatsCard userId={currentUser?.uid} />
+
+        {/* Offers & updates on WhatsApp — hidden once answered (components/WhatsAppOptInCard.jsx) */}
+        <WhatsAppOptInCard source="my_shop" />
 
         {/* Primary actions */}
         <div className="grid grid-cols-2 gap-3 sm:flex">
