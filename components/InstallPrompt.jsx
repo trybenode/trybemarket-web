@@ -17,7 +17,7 @@ import { getArrivalRef } from "@/lib/installGate";
 import { trackEvent, EVENT_TYPES } from "@/utils/analytics";
 
 // Never interrupt sign-in, payment, verification or a conversation.
-const SUPPRESSED_PREFIXES = ["/login", "/signup", "/subscription", "/kyc", "/chat", "/install", "/select-university"];
+const SUPPRESSED_PREFIXES = ["/login", "/signup", "/subscription", "/kyc", "/chat", "/install", "/select-university", "/unsubscribe"];
 
 function isSuppressed(pathname) {
   return SUPPRESSED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));

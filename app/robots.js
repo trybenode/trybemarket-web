@@ -25,6 +25,8 @@ export default function robots() {
           "/subscription",
           // Transactional redirect pages
           "/thank-you",
+          // Reached from email links; carries a per-user token
+          "/unsubscribe",
         ],
       },
     ],

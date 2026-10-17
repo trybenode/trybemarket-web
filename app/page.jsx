@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import WhatsAppOptInCard from "@/components/WhatsAppOptInCard";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   collection,
@@ -202,6 +203,9 @@ export default function HomePage() {
         />
 
         <Categories />
+
+        {/* Signed-in users only; hidden once answered (components/WhatsAppOptInCard.jsx) */}
+        <WhatsAppOptInCard source="home" className="mt-4" />
 
         <BoostedProductsCarousel />
         <h2 className="mb-1 mt-6 text-lg font-bold text-slate-900">All products</h2>
