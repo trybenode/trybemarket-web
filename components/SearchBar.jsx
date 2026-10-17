@@ -115,6 +115,9 @@ export default React.memo(function SearchBar({ onResults }) {
       </div>
       <Input
         type="text"
+        // Stops browsers offering saved emails/names here — an autofilled
+        // email was being logged as a product search.
+        autoComplete="off"
         placeholder="Search products..."
         className="h-11 rounded-full border-slate-200 bg-white pl-10 shadow-sm focus-visible:ring-primary/30"
         value={searchQuery}
