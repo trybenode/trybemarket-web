@@ -47,3 +47,6 @@ markettrybe-cfed7-aeb679b5c606.json
 firestore.rules
 subscriptionPlan.js
 businessplan.txtscripts/backups/
+
+# KYC photo migration backups (scripts/migrate-kyc-photos-private.js) — contain student photo IDs; never commit
+kyc-photo-migration-backup-*.json

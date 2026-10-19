@@ -17,15 +17,6 @@ import { isKycCheckRunning, isKycCleared, KYC_CHECK_STALE_MS } from "@/lib/kycAc
 const MATRIC_CONFLICT_MESSAGE =
   "This matric number is already linked to another verified account. If you believe this is a mistake, please contact support.";
 
-// Where an ID photo is stored: the student's own kyc/<uid>/ folder.
-// /api/kyc-submit only accepts photos from the caller's own folder.
-const kycPhotoPublicId = (uid) => {
-  const random = globalThis.crypto?.randomUUID
-    ? crypto.randomUUID().replace(/-/g, "")
-    : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-  return `kyc/${uid}/${random}`;
-};
-
 
 export default function KycPage() {
   const [fullName, setFullName] = useState("");
@@ -38,6 +29,8 @@ export default function KycPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalIconType, setModalIconType] = useState("success");
+  // GIFs are accepted when picked but re-encoded to JPEG (prepareIdPhoto) —
+  // only JPEG and PNG are stored.
   const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
   const router = useRouter();
   const { currentUser } = useUser() || {};
@@ -156,49 +149,54 @@ export default function KycPage() {
     input.click();
   };
 
-  // Upload image to Cloudinary — straight from the browser, or through our
-  // server (/api/kyc-upload) when the browser can't reach Cloudinary at all:
-  // some students' networks reach our site but not api.cloudinary.com.
-  const uploadImageToCloudinary = async (file) => {
-    if (!VALID_IMAGE_TYPES.includes(file.type)) {
-      throw new Error("Only JPEG, PNG, or GIF images are allowed.");
+  // Uploads one ID photo privately to Cloudinary — straight from the browser
+  // with a signature from our server, or through our server
+  // (/api/kyc-upload) when the browser can't reach Cloudinary at all: some
+  // students' networks reach our site but not api.cloudinary.com. Either way
+  // the server decides where it goes (the student's own kyc/<uid>/ folder),
+  // that it's private, and the allowed formats and size.
+  //
+  // @returns {{ publicId, version, signature }} — what /api/kyc-submit expects
+  const uploadKycPhoto = async (file, slot) => {
+    const idToken = await getAuth().currentUser.getIdToken();
+    const signResponse = await fetch("/api/kyc/upload-signature", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ slot }),
+    });
+    const signed = await signResponse.json().catch(() => ({}));
+    if (!signResponse.ok || !signed.uploadUrl) {
+      throw new Error(signed.error || `couldn't prepare the upload (${signResponse.status})`);
     }
+
     const data = new FormData();
     data.append("file", file);
-    data.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET);
-    data.append("public_id", kycPhotoPublicId(getAuth().currentUser.uid));
+    Object.entries(signed.params).forEach(([key, value]) => data.append(key, value));
 
     let res;
     try {
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${
-          process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-        }/image/upload`,
-        {
-          method: "POST",
-          body: data,
-        }
-      );
+      const response = await fetch(signed.uploadUrl, { method: "POST", body: data });
       res = await response.json().catch(() => ({}));
     } catch (error) {
       console.error("Cloudinary Upload Error:", error);
       // Recorded even when the retry below works, so we can see how often it's needed.
       reportClientError("uploading straight to Cloudinary (retrying through our server)", error, [file]);
-      return uploadThroughServer(file);
+      return uploadThroughServer(file, slot);
     }
-    if (!res.secure_url) {
+    if (!res.public_id || !res.signature) {
       // Keep Cloudinary's own reason (file too large, format not allowed…) —
       // it used to be swallowed, leaving only a generic "try again" toast.
       console.error("Cloudinary Upload Error:", res.error);
       throw new Error(res.error?.message || "the image server rejected the photo");
     }
-    return res.secure_url;
+    return { publicId: res.public_id, version: res.version, signature: res.signature };
   };
 
-  const uploadThroughServer = async (file) => {
+  const uploadThroughServer = async (file, slot) => {
     const idToken = await getAuth().currentUser.getIdToken();
     const data = new FormData();
     data.append("file", file);
+    data.append("slot", slot);
     let response;
     try {
       response = await fetch("/api/kyc-upload", {
@@ -212,10 +210,10 @@ export default function KycPage() {
       throw new Error(`couldn't upload the photo (${error?.name}: ${error?.message})`);
     }
     const res = await response.json().catch(() => ({}));
-    if (!response.ok || !res.url) {
+    if (!response.ok || !res.publicId) {
       throw new Error(res.error || `the upload failed (${response.status})`);
     }
-    return res.url;
+    return res;
   };
 
   const getUserEmail = () => {
@@ -256,9 +254,9 @@ export default function KycPage() {
 
       // Upload both photos to the student's own folder…
       step = "uploading the front of your ID";
-      const frontUrl = await uploadImageToCloudinary(frontID);
+      const front = await uploadKycPhoto(frontID, "front");
       step = "uploading the back of your ID";
-      const backUrl = await uploadImageToCloudinary(backID);
+      const back = await uploadKycPhoto(backID, "back");
 
       // …then one call does the rest server-side: saves the request, checks
       // both stored photos, and verifies or hands it to our team. Identity is
@@ -268,7 +266,7 @@ export default function KycPage() {
       const submitResponse = await fetch("/api/kyc-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ fullName, matricNumber, frontUrl, backUrl }),
+        body: JSON.stringify({ fullName, matricNumber, photos: { front, back } }),
       });
 
       const submitData = await submitResponse.json().catch(() => ({}));

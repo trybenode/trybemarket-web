@@ -18,8 +18,8 @@ import {
   isPlausibleMatric,
   markKycForReview,
   nameWords,
-  parseKycPhotoUrl,
 } from "@/lib/kycServer";
+import { readKycPhoto, verifyKycPhoto } from "@/lib/kycPhotos";
 import { sendKycEmail, resolveKycRecipient } from "@/lib/kycEmail";
 import { notifyTeamOfKycReview } from "@/lib/kycNotify";
 
@@ -39,16 +39,18 @@ const client = credentials
 const PHOTO_FETCH_TIMEOUT_MS = 10_000;
 const OCR_TIMEOUT_MS = 20_000;
 const CHECK_DEADLINE_MS = 40_000;
-const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
 const MATRIC_CONFLICT_MESSAGE = "This matric number is already linked to another verified account.";
 
 /**
- * POST /api/kyc-submit  { fullName, matricNumber, frontUrl, backUrl }
+ * POST /api/kyc-submit  { fullName, matricNumber, photos: { front, back } }
+ *   (each photo is { publicId, version, signature } as Cloudinary returned it)
  *
  * The whole KYC submission, server-side. The browser only uploads the two ID
- * photos (to its own kyc/<uid>/ folder) and calls this once. This route:
- *   1. validates the input and that both photos are the caller's own uploads;
+ * photos (privately, to its own kyc/<uid>/ folder, with a signature from
+ * /api/kyc/upload-signature) and calls this once. This route:
+ *   1. validates the input and that both photos are the caller's own uploads,
+ *      in the right slots (lib/kycPhotos.js verifyKycPhoto);
  *   2. claims the request (lib/kycServer.js claimKycSubmission) — refusing if
  *      already verified, still being checked, or past the daily limit;
  *   3. OCRs BOTH stored photos — the same images an admin sees;
@@ -78,8 +80,8 @@ export async function POST(req) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  // A page loaded before this version sends base64 photos and no URLs.
-  if (!body.frontUrl && (body.frontID || body.backID)) {
+  // A page loaded before this version sends base64 photos or public URLs.
+  if (!body.photos && (body.frontUrl || body.frontID || body.backID)) {
     return NextResponse.json(
       { error: "This page is out of date — please refresh it and try again." },
       { status: 400 }
@@ -101,9 +103,11 @@ export async function POST(req) {
       { status: 400 }
     );
   }
-  const frontUrl = parseKycPhotoUrl(body.frontUrl, userId);
-  const backUrl = parseKycPhotoUrl(body.backUrl, userId);
-  if (!frontUrl || !backUrl) {
+  // Each photo must be the caller's own private upload, in its own slot, and
+  // distinct — one image can't stand in for both sides.
+  const front = verifyKycPhoto(body.photos?.front, userId, "front");
+  const back = verifyKycPhoto(body.photos?.back, userId, "back");
+  if (!front || !back || front.publicId === back.publicId) {
     return NextResponse.json(
       { error: "Your photos didn't upload properly — pick them again and resubmit." },
       { status: 400 }
@@ -125,8 +129,7 @@ export async function POST(req) {
     ({ attemptId } = await claimKycSubmission(userId, {
       fullName,
       matricNumber,
-      frontID: frontUrl,
-      backID: backUrl,
+      photos: { front, back },
     }));
   } catch (error) {
     if (error instanceof KycError) {
@@ -141,7 +144,7 @@ export async function POST(req) {
   try {
     let autoCheck;
     try {
-      const text = await withDeadline(readIdText(frontUrl, backUrl), CHECK_DEADLINE_MS);
+      const text = await withDeadline(readIdText(front, back), CHECK_DEADLINE_MS);
       const result = evaluateIdText(text, { fullName, matricNumber, university });
       autoCheck = {
         state: result.pass ? "passed" : "needs_review",
@@ -227,25 +230,14 @@ function describeAutoCheck(autoCheck) {
   ].join(" · ");
 }
 
-/** OCR text of both ID photos, front then back. */
-async function readIdText(frontUrl, backUrl) {
-  const [front, back] = await Promise.all([fetchPhoto(frontUrl), fetchPhoto(backUrl)]);
-  const [frontText, backText] = await Promise.all([ocr(front), ocr(back)]);
+/** OCR text of both ID photos, front then back — read from the stored private copies. */
+async function readIdText(front, back) {
+  const [frontPhoto, backPhoto] = await Promise.all([
+    readKycPhoto(front, { timeoutMs: PHOTO_FETCH_TIMEOUT_MS }),
+    readKycPhoto(back, { timeoutMs: PHOTO_FETCH_TIMEOUT_MS }),
+  ]);
+  const [frontText, backText] = await Promise.all([ocr(frontPhoto.bytes), ocr(backPhoto.bytes)]);
   return `${frontText}\n${backText}`;
-}
-
-async function fetchPhoto(url) {
-  const response = await fetch(url, {
-    redirect: "error",
-    signal: AbortSignal.timeout(PHOTO_FETCH_TIMEOUT_MS),
-  });
-  if (!response.ok) throw new Error(`Couldn't load a photo (${response.status})`);
-  if (Number(response.headers.get("content-length") || 0) > MAX_PHOTO_BYTES) {
-    throw new Error("A photo is too large");
-  }
-  const bytes = Buffer.from(await response.arrayBuffer());
-  if (bytes.length > MAX_PHOTO_BYTES) throw new Error("A photo is too large");
-  return bytes;
 }
 
 async function ocr(content) {
