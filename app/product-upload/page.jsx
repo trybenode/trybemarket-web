@@ -420,20 +420,20 @@ export default function SellPage() {
   };
 
   if (loading || authLoading) {
-    // Listing needs KYC (firestore.rules enforces it) — say so instead of a form
+    return (
+      <div className='flex items-center justify-center min-h-screen bg-white'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2' style={{ borderColor: 'rgb(37,99,235)' }} />
+      </div>
+    );
+  }
+
+  // Listing needs KYC (firestore.rules enforces it) — say so instead of a form
   // that can't be saved.
   if (currentUser && !isKycCleared(currentUser)) {
     return (
       <div className='min-h-screen bg-slate-50'>
         <Header title={isEditMode ? "Edit Product" : "Add New Product"} />
         <KycRequiredPanel />
-      </div>
-    );
-  }
-
-  return (
-      <div className='flex items-center justify-center min-h-screen bg-white'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2' style={{ borderColor: 'rgb(37,99,235)' }} />
       </div>
     );
   }
