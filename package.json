@@ -51,6 +51,7 @@
     "autoprefixer": "^10.4.20",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "2.11.0",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "dotenv": "^16.5.0",

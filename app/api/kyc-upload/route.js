@@ -1,27 +1,28 @@
 // app/api/kyc-upload/route.js
 export const runtime = "nodejs";
 
-import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/verifyRequestAuth";
+import { KYC_PHOTO_SLOTS, uploadKycPhoto } from "@/lib/kycPhotos";
 
-const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
+const VALID_IMAGE_TYPES = ["image/jpeg", "image/png"];
 // Under Vercel's 4.5MB request limit; the KYC page sends photos already
 // downscaled to a ~2000px JPEG, which is far smaller than this.
 const MAX_BYTES = 4 * 1024 * 1024;
 
 /**
- * POST /api/kyc-upload   (multipart: file)
+ * POST /api/kyc-upload   (multipart: file, slot)
  *
- * Uploads a KYC ID photo to Cloudinary on the student's behalf. The KYC page
- * uploads straight to Cloudinary first and only falls back to this when the
- * browser can't reach api.cloudinary.com at all ("Failed to fetch") — some
- * students' networks reach our site but not Cloudinary. Same unsigned preset,
- * and the same kyc/<uid>/<random> location (public_id), as the browser upload —
- * /api/kyc-submit only accepts photos from the caller's own folder.
+ * Uploads a KYC photo to Cloudinary on the student's behalf. The KYC page
+ * uploads straight to Cloudinary first (with a signature from
+ * /api/kyc/upload-signature) and only falls back to this when the browser
+ * can't reach api.cloudinary.com at all ("Failed to fetch") — some students'
+ * networks reach our site but not Cloudinary. Same parameters as the browser
+ * upload: private, in the caller's own kyc/<uid>/ folder, size-capped.
  *
- * Signed-in users only, images only, size-capped — so it can't be used as an
- * open upload relay into our Cloudinary account.
+ * Signed-in users only, images only — not an open upload relay.
+ *
+ * @returns {{ publicId, version, signature }} — what /api/kyc-submit expects
  */
 export async function POST(req) {
   const auth = await requireAuth(req);
@@ -29,43 +30,32 @@ export async function POST(req) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
-  let file;
+  let form;
   try {
-    file = (await req.formData()).get("file");
+    form = await req.formData();
   } catch {
     return NextResponse.json({ error: "Expected a photo upload" }, { status: 400 });
   }
+  const file = form.get("file");
+  const slot = form.get("slot");
   if (!file || typeof file === "string") {
     return NextResponse.json({ error: "Expected a photo upload" }, { status: 400 });
   }
+  if (!KYC_PHOTO_SLOTS.includes(slot)) {
+    return NextResponse.json({ error: "slot must be front, back or selfie" }, { status: 400 });
+  }
   if (!VALID_IMAGE_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: "Only JPEG, PNG, or GIF images are allowed." }, { status: 400 });
+    return NextResponse.json({ error: "Only JPEG or PNG images are allowed." }, { status: 400 });
   }
   if (file.size > MAX_BYTES) {
     return NextResponse.json({ error: "Image is too large" }, { status: 413 });
   }
 
-  const data = new FormData();
-  data.append("file", file);
-  data.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET);
-  data.append("public_id", `kyc/${auth.uid}/${crypto.randomUUID().replace(/-/g, "")}`);
-
   try {
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-      { method: "POST", body: data }
-    );
-    const res = await response.json().catch(() => ({}));
-    if (!res.secure_url) {
-      console.error("KYC upload: Cloudinary rejected the photo:", res.error);
-      return NextResponse.json(
-        { error: res.error?.message || "The image server rejected the photo" },
-        { status: 502 }
-      );
-    }
-    return NextResponse.json({ url: res.secure_url });
+    const photo = await uploadKycPhoto(auth.uid, slot, Buffer.from(await file.arrayBuffer()));
+    return NextResponse.json(photo);
   } catch (error) {
     console.error("KYC upload error:", error);
-    return NextResponse.json({ error: "Couldn't reach the image server" }, { status: 502 });
+    return NextResponse.json({ error: error.message || "Couldn't upload the photo" }, { status: 502 });
   }
 }
