@@ -12,7 +12,6 @@ export const useServiceForm = (currentUser) => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [openVerificationDialog, setOpenVerificationDialog] = useState(false);
   const [category, setCategory] = useState([]);
   const [serviceName, setServiceName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -24,15 +23,12 @@ export const useServiceForm = (currentUser) => {
   const [images, setImages] = useState([]);
   const [isAgreed, setIsAgreed] = useState(false);
 
-  // Verification prompt. Redirecting signed-out visitors is the PAGE's job
+  // Redirecting signed-out visitors, and the KYC gate, are the PAGE's job
   // (app/service-upload/page.jsx waits for auth to finish first). This hook used
   // to redirect to /login whenever currentUser was empty, which it is for the
   // first moments of every page load — so a signed-in user who refreshed the
   // page, or opened it directly, was sent to the login screen.
   useEffect(() => {
-    if (currentUser && !currentUser.isVerified) {
-      setOpenVerificationDialog(true);
-    }
     setIsLoading(false);
   }, [currentUser]);
 
@@ -208,8 +204,6 @@ export const useServiceForm = (currentUser) => {
   return {
     isLoading,
     saving,
-    openVerificationDialog,
-    setOpenVerificationDialog,
     category,
     serviceName,
     setServiceName,

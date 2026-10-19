@@ -1,6 +1,7 @@
 // app/api/kyc-upload/route.js
 export const runtime = "nodejs";
 
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/verifyRequestAuth";
 
@@ -15,8 +16,9 @@ const MAX_BYTES = 4 * 1024 * 1024;
  * Uploads a KYC ID photo to Cloudinary on the student's behalf. The KYC page
  * uploads straight to Cloudinary first and only falls back to this when the
  * browser can't reach api.cloudinary.com at all ("Failed to fetch") — some
- * students' networks reach our site but not Cloudinary. Same unsigned preset as
- * the browser upload, so the stored result is identical.
+ * students' networks reach our site but not Cloudinary. Same unsigned preset,
+ * and the same kyc/<uid>/<random> location (public_id), as the browser upload —
+ * /api/kyc-submit only accepts photos from the caller's own folder.
  *
  * Signed-in users only, images only, size-capped — so it can't be used as an
  * open upload relay into our Cloudinary account.
@@ -46,6 +48,7 @@ export async function POST(req) {
   const data = new FormData();
   data.append("file", file);
   data.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET);
+  data.append("public_id", `kyc/${auth.uid}/${crypto.randomUUID().replace(/-/g, "")}`);
 
   try {
     const response = await fetch(

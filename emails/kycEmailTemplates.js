@@ -88,7 +88,8 @@ export function kycSuccessTemplate({ name }) {
   `.trim();
 }
 
-export function kycRejectedTemplate({ name }) {
+/** `reason` must already be HTML-escaped (lib/kycEmail.js does it). */
+export function kycRejectedTemplate({ name, reason = null }) {
   return `
 <!DOCTYPE html>
 <html>
@@ -154,7 +155,9 @@ export function kycRejectedTemplate({ name }) {
       <p>We regret to inform you that your KYC (Know Your Customer) verification could not be completed at this time.</p>
 
       <p><strong>Name:</strong> ${name}</p>
-
+${reason ? `
+      <p><strong>Reason:</strong> ${reason}</p>
+` : ""}
       <p>
         Please ensure that all submitted documents are clear, valid, and meet the required standards. You may log in to your account and resubmit your KYC request with the correct documents.
       </p>

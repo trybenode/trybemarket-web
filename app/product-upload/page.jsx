@@ -51,6 +51,8 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { compressImage } from '@/utils/imageCompress';
 
 import Header from "@/components/Header";
+import KycRequiredPanel from "@/components/KycRequiredPanel";
+import { isKycCleared } from "@/lib/kycAccess";
 export default function SellPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -61,7 +63,6 @@ export default function SellPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [openVerificationDialog, setOpenVerificationDialog] = useState(false);
   const [product, setProduct] = useState(null);
   const [productName, setProductName] = useState("");
   const [category, setCategory] = useState([])
@@ -108,9 +109,6 @@ export default function SellPage() {
       if (!currentUser) {
         // console.log("No authenticated user, redirecting to login");
         router.push("/login");
-      } else if (!currentUser.isVerified) {
-        // console.log("User is not verified, showing KYC dialog");
-        setOpenVerificationDialog(true);
       }
       setLoading(false);
     }
@@ -429,6 +427,17 @@ export default function SellPage() {
     );
   }
 
+  // Listing needs KYC (firestore.rules enforces it) — say so instead of a form
+  // that can't be saved.
+  if (currentUser && !isKycCleared(currentUser)) {
+    return (
+      <div className='min-h-screen bg-slate-50'>
+        <Header title={isEditMode ? "Edit Product" : "Add New Product"} />
+        <KycRequiredPanel />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
       <Header title={isEditMode ? "Edit Product" : "Add New Product"} />
@@ -467,31 +476,6 @@ export default function SellPage() {
           </Alert>
         )}
 
-      <AlertDialog
-        open={openVerificationDialog}
-        onOpenChange={setOpenVerificationDialog}
-      >
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900">KYC Verification Required</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600">
-              You are not verified. Please complete KYC to continue.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => router.back()}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => router.push("/kyc")}
-              className="text-white"
-              style={{ backgroundColor: 'rgb(37,99,235)' }}
-            >
-              Complete KYC
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <form onSubmit={handleSubmit} className='space-y-6'>
         {/* VIP Toggle Section */}

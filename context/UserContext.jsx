@@ -139,25 +139,22 @@ export const UserProvider = ({ children }) => {
               try {
                 if (docSnap.exists()) {
                   const kycData = docSnap.data();
-                  const userSnap = await getDoc(userRef);
-                  const currentUserData = userSnap.exists()
-                    ? userSnap.data()
-                    : { isVerified: false };
 
-                  if (
-                    kycData.status === "verified" &&
-                    !currentUserData.isVerified
-                  ) {
-                    // isVerified is written server-side only (app/api/kyc-submit),
-                    // atomically with the one-time KYC credit award — never
-                    // client-written, so this just reflects it in local state
-                    // once the kycRequests status flip confirms it happened.
-                    const updatedUser = {
-                      ...currentUserData,
-                      isVerified: true,
-                    };
-                    await setUser(updatedUser); // Sync useUserStore
-                    setCurrentUser(updatedUser); // Sync UserContext
+                  // isVerified is written server-side only (app/api/kyc-submit,
+                  // /api/admin/kyc/decision), in the same transaction that marks
+                  // the request verified — never client-written. Once the request
+                  // flips, reflect the server's value in local state. This used to
+                  // fire only if the freshly read user doc was NOT yet verified,
+                  // which it always already was, so a student verified mid-session
+                  // kept seeing "verify" prompts until a reload. It also replaced
+                  // the user with the raw doc, dropping its id.
+                  if (kycData.status === "verified") {
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.data()?.isVerified === true) {
+                      setCurrentUser((prev) => (prev && !prev.isVerified ? { ...prev, isVerified: true } : prev));
+                      const stored = useUserStore.getState().user;
+                      if (stored && !stored.isVerified) await setUser({ ...stored, isVerified: true });
+                    }
                   }
 
                   // KYC result emails are sent by the server at decision time

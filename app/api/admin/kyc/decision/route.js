@@ -90,7 +90,13 @@ export async function POST(req) {
     try {
       const email = await resolveKycRecipient(userId);
       if (email) {
-        await sendKycEmail({ email, fullName: kyc.fullName, status: result.status });
+        await sendKycEmail({
+          email,
+          fullName: kyc.fullName,
+          status: result.status,
+          // The admin's note tells the student what to fix.
+          reason: decision === "reject" ? reason?.trim() || null : null,
+        });
         emailSent = true;
       }
     } catch (emailError) {
