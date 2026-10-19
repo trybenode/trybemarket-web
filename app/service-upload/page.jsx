@@ -18,16 +18,8 @@ import { useServiceForm } from "@/hooks/useServiceForm";
 import { useSubscription } from "@/hooks/useSubscription";
 import { canUserMarkServiceAsVip } from "@/hooks/UploadLimiter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import KycRequiredPanel from "@/components/KycRequiredPanel";
+import { isKycCleared } from "@/lib/kycAccess";
 
 export default function ServiceUpload() {
   const router = useRouter();
@@ -35,7 +27,6 @@ export default function ServiceUpload() {
   const form = useServiceForm(currentUser);
   const { limits, loading: subLoading } = useSubscription(currentUser?.uid);
   const [isVip, setIsVip] = useState(false);
-  const [openVerificationDialog, setOpenVerificationDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [vipCapInfo, setVipCapInfo] = useState(null); // { canMarkVip, currentVipCount, limit }
 
@@ -59,8 +50,6 @@ export default function ServiceUpload() {
     if (!authLoading) {
       if (!currentUser) {
         router.push("/login");
-      } else if (!currentUser.isVerified) {
-        setOpenVerificationDialog(true);
       }
       setLoading(false);
     }
@@ -70,6 +59,17 @@ export default function ServiceUpload() {
     return (
       <div className='flex items-center justify-center min-h-screen bg-white'>
         <div className='animate-spin rounded-full h-12 w-12 border-b-2' style={{ borderColor: 'rgb(37,99,235)' }} />
+      </div>
+    );
+  }
+
+  // Listing needs KYC (firestore.rules enforces it) — say so instead of a form
+  // that can't be saved.
+  if (currentUser && !isKycCleared(currentUser)) {
+    return (
+      <div className='min-h-screen bg-slate-50'>
+        <Header title="List a Service" />
+        <KycRequiredPanel />
       </div>
     );
   }
@@ -103,32 +103,6 @@ export default function ServiceUpload() {
           </Alert>
         )}
 
-        {/* KYC Verification Dialog */}
-        <AlertDialog
-          open={openVerificationDialog}
-          onOpenChange={setOpenVerificationDialog}
-        >
-          <AlertDialogContent className="bg-white">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-gray-900">KYC Verification Required</AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-600">
-                You are not verified. Please complete KYC to continue.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => router.back()}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={() => router.push("/kyc")}
-                className="text-white"
-                style={{ backgroundColor: 'rgb(37,99,235)' }}
-              >
-                Complete KYC
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
 
         <form
           className='space-y-6 flex flex-col flex-grow'

@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { isKycCleared } from "@/lib/kycAccess";
 
 const PaystackWrapper = dynamic(() => import("@/components/PaystackWrapper"), {
   ssr: false,
@@ -123,7 +124,7 @@ export default function SubscriptionPage() {
           
           if (userSnap.exists()) {
             const userData = userSnap.data();
-            setIsKycVerified(userData.isVerified || false);
+            setIsKycVerified(isKycCleared(userData));
           } else {
             setIsKycVerified(false);
           }
@@ -291,8 +292,26 @@ export default function SubscriptionPage() {
 
     const eligibility = getCreditEligibility(plan);
     if (!eligibility) {
-      // Nothing to reserve — identical to the pre-credit flow.
-      setCreditReservation({ applyCredit: false });
+      // Nothing to reserve — but check with the server (KYC, plan
+      // requirements) BEFORE Paystack opens, so nobody pays for a plan the
+      // server will refuse. Credit checkouts get the same check in reserve.
+      try {
+        setReserving(true);
+        const idToken = await user.getIdToken();
+        const res = await fetch("/api/subscription/precheck", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ planId: plan.id }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Couldn't start this checkout");
+        setCreditReservation({ applyCredit: false });
+      } catch (error) {
+        toast.error(error.message || "Couldn't start this checkout");
+        setSelectedPlan(null);
+      } finally {
+        setReserving(false);
+      }
       return;
     }
 
@@ -412,7 +431,7 @@ export default function SubscriptionPage() {
     if (creditReservation === null) {
       return (
         <Button size="lg" className="w-full" loading>
-          {reserving ? "Applying credit…" : "Loading…"}
+          {reserving ? (getCreditEligibility(plan) ? "Applying credit…" : "Checking…") : "Loading…"}
         </Button>
       );
     }
