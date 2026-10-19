@@ -2,17 +2,29 @@
 
 import { useRouter } from "next/navigation";
 import { getAuth } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, AlertCircle, BadgeCheck, Coins, Lock, Camera } from "lucide-react";
+import { CheckCircle, AlertCircle, BadgeCheck, Coins, Lock, Camera, Clock, Loader2 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import toast from "react-hot-toast";
-import convertToBase64 from "@/hooks/useConvertToBase64";
 import Header from "@/components/Header";
+import { isKycCheckRunning, isKycCleared, KYC_CHECK_STALE_MS } from "@/lib/kycAccess";
+
+const MATRIC_CONFLICT_MESSAGE =
+  "This matric number is already linked to another verified account. If you believe this is a mistake, please contact support.";
+
+// Where an ID photo is stored: the student's own kyc/<uid>/ folder.
+// /api/kyc-submit only accepts photos from the caller's own folder.
+const kycPhotoPublicId = (uid) => {
+  const random = globalThis.crypto?.randomUUID
+    ? crypto.randomUUID().replace(/-/g, "")
+    : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  return `kyc/${uid}/${random}`;
+};
 
 
 export default function KycPage() {
@@ -29,6 +41,29 @@ export default function KycPage() {
   const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif"];
   const router = useRouter();
   const { currentUser } = useUser() || {};
+  // The student's own request, live — it's written only by the server, which
+  // runs the automatic check and records the outcome here.
+  const [kycRequest, setKycRequest] = useState(null);
+  const [, setClock] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return undefined;
+    return onSnapshot(
+      doc(db, "kycRequests", currentUser.uid),
+      (snap) => setKycRequest(snap.exists() ? snap.data() : null),
+      (error) => console.error("Error loading your KYC request:", error)
+    );
+  }, [currentUser?.uid]);
+
+  // A running check that never reports back becomes "under review" once it's
+  // stale; re-render then so the page doesn't keep saying "checking".
+  const checkRunning = isKycCheckRunning(kycRequest);
+  useEffect(() => {
+    if (!checkRunning) return undefined;
+    const msLeft = kycRequest.autoCheck.startedAtMs + KYC_CHECK_STALE_MS - Date.now();
+    const timer = setTimeout(() => setClock((n) => n + 1), Math.max(msLeft, 0) + 1000);
+    return () => clearTimeout(timer);
+  }, [checkRunning, kycRequest]);
 
   // revoke object URLs when the component unmounts or when image previews change
   useEffect(() => {
@@ -131,7 +166,7 @@ export default function KycPage() {
     const data = new FormData();
     data.append("file", file);
     data.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET);
-    data.append("cloud_name", process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
+    data.append("public_id", kycPhotoPublicId(getAuth().currentUser.uid));
 
     let res;
     try {
@@ -219,97 +254,45 @@ export default function KycPage() {
         return;
       }
 
-      const kycDocRef = doc(db, "kycRequests", user.uid);
-      const kycDoc = await getDoc(kycDocRef);
-
-      if (kycDoc.exists()) {
-        const kycData = kycDoc.data();
-        // Allow resubmission only if status is "rejected"
-        if (kycData.status === "pending") {
-          setLoading(false);
-          setModalMessage("You already have a KYC request under review.");
-          setModalIconType("caution");
-          setModalVisible(true);
-          return;
-        }
-        if (kycData.status === "approved" || kycData.status === "verified") {
-          setLoading(false);
-          setModalMessage("Your KYC has already been approved.");
-          setModalIconType("success");
-          setModalVisible(true);
-          return;
-        }
-        // If status is "rejected", allow resubmission (continue to upload)
-      }
-
-      // Upload to Cloudinary as before
+      // Upload both photos to the student's own folder…
       step = "uploading the front of your ID";
-      const frontIDUrl = await uploadImageToCloudinary(frontID);
+      const frontUrl = await uploadImageToCloudinary(frontID);
       step = "uploading the back of your ID";
-      const backIDUrl = await uploadImageToCloudinary(backID);
+      const backUrl = await uploadImageToCloudinary(backID);
 
-      // Convert images to base64 (strip prefix)
-      step = "reading your photos";
-      const frontBase64Full = await convertToBase64(frontID);
-      const backBase64Full = await convertToBase64(backID);
-      const frontBase64 = frontBase64Full.split(",")[1];
-      const backBase64 = backBase64Full.split(",")[1];
-
-      // Store pending KYC as before
-      step = "saving your request";
-      await setDoc(doc(db, "kycRequests", user.uid), {
-        userId: user.uid,
-        fullName,
-        matricNumber,
-        frontID: frontIDUrl,
-        backID: backIDUrl,
-        status: "pending",
-        notificationSent: false,
-        submittedAt: new Date(),
-      });
-
-      // Both calls below prove who is asking with the ID token. kyc-notify reads
-      // the details from the request just stored above (nothing to send in the
-      // body), and a failure to notify the team must never block the submission.
+      // …then one call does the rest server-side: saves the request, checks
+      // both stored photos, and verifies or hands it to our team. Identity is
+      // proven by the ID token (see app/api/kyc-submit/route.js).
       step = "sending your request for verification";
       const idToken = await user.getIdToken();
-      await fetch("/api/kyc-notify", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${idToken}` },
-      }).catch((error) => console.error("Error notifying the team of a KYC request:", error));
-
-      // Send to background KYC verification — identity is proven by the ID
-      // token, not the userId in the body (see app/api/kyc-submit/route.js).
       const submitResponse = await fetch("/api/kyc-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({
-          userId: user.uid,
-          fullName,
-          matricNumber,
-          frontID: frontBase64,
-          backID: backBase64,
-        }),
+        body: JSON.stringify({ fullName, matricNumber, frontUrl, backUrl }),
       });
 
       const submitData = await submitResponse.json().catch(() => ({}));
       if (!submitResponse.ok) {
-        toast.error(submitData.error || "Failed to submit KYC, please try again.");
-        return;
-      }
-      if (submitData.rejectionReason === "matric_already_used") {
-        setModalMessage(
-          "This matric number is already linked to another verified account. If you believe this is a mistake, please contact support."
-        );
-        setModalIconType("caution");
-        setModalVisible(true);
+        // The server's message says what to fix (name, matric number, already verified…).
+        toast.error(submitData.error || "Failed to submit KYC, please try again.", { duration: 8000 });
         return;
       }
 
-      setModalMessage(
-        "Your KYC request has been submitted. Please wait for verification."
-      );
-      setModalIconType("success");
+      if (submitData.status === "verified") {
+        setModalMessage("You're verified! Your Verified Student badge and 150 App Credit have been added to your account.");
+        setModalIconType("success");
+      } else if (submitData.rejectionReason === "matric_already_used") {
+        setModalMessage(MATRIC_CONFLICT_MESSAGE);
+        setModalIconType("caution");
+      } else if (submitData.status === "pending") {
+        setModalMessage(
+          "Thanks! We couldn't confirm your ID automatically, so our team will review it. We'll email you as soon as it's done."
+        );
+        setModalIconType("caution");
+      } else {
+        setModalMessage("Your KYC request has been updated.");
+        setModalIconType("success");
+      }
       setModalVisible(true);
     } catch (error) {
       console.error(`Error in handleSubmit (${step}):`, error);
@@ -353,7 +336,7 @@ export default function KycPage() {
     <div className='min-h-screen bg-slate-50 pb-16'>
       <Header title="KYC Registration" />
       <div className='mx-auto max-w-xl px-4 py-5 space-y-4'>
-        {currentUser?.isVerified ? (
+        {isKycCleared(currentUser) ? (
           <div className='rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-center'>
             <BadgeCheck className='mx-auto h-12 w-12 text-emerald-500' />
             <h2 className='mt-3 text-lg font-bold text-slate-900'>You're already verified</h2>
@@ -373,7 +356,41 @@ export default function KycPage() {
               </ul>
             </div>
 
-            {/* Form */}
+            {/* Where their last request stands */}
+            {checkRunning ? (
+              <div className='flex gap-3 rounded-3xl border border-blue-200 bg-blue-50 p-5'>
+                <Loader2 className='h-5 w-5 shrink-0 animate-spin text-primary' />
+                <div>
+                  <p className='font-semibold text-slate-900'>Checking your ID…</p>
+                  <p className='mt-0.5 text-sm text-slate-600'>This usually takes under a minute.</p>
+                </div>
+              </div>
+            ) : kycRequest?.status === "pending" ? (
+              <div className='flex gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-5'>
+                <Clock className='h-5 w-5 shrink-0 text-amber-600' />
+                <div>
+                  <p className='font-semibold text-slate-900'>Your request is being reviewed</p>
+                  <p className='mt-0.5 text-sm text-slate-600'>
+                    Our team will email you when it's done. Made a mistake? You can submit again below.
+                  </p>
+                </div>
+              </div>
+            ) : kycRequest?.status === "rejected" ? (
+              <div className='flex gap-3 rounded-3xl border border-red-200 bg-red-50 p-5'>
+                <AlertCircle className='h-5 w-5 shrink-0 text-red-600' />
+                <div>
+                  <p className='font-semibold text-slate-900'>Your last request wasn't approved</p>
+                  <p className='mt-0.5 text-sm text-slate-600'>
+                    {kycRequest.rejectionReason === "matric_already_used"
+                      ? MATRIC_CONFLICT_MESSAGE
+                      : kycRequest.rejectionReason || "Check your details and photos, then submit again below."}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Form — hidden while a check is running (it can't be resubmitted until it finishes) */}
+            {!checkRunning && (
             <div className='space-y-5 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm'>
               <div className='space-y-2'>
                 <Label htmlFor='fullName'>Full name</Label>
@@ -416,6 +433,7 @@ export default function KycPage() {
                 {loading ? "Submitting…" : "Submit for verification"}
               </Button>
             </div>
+            )}
           </>
         )}
       </div>

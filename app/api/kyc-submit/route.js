@@ -1,11 +1,27 @@
 // app/api/kyc-submit/route.js
 export const runtime = "nodejs";
+// Downloads two photos and runs OCR on both; the internal deadlines below keep
+// it well inside this, so a slow check ends as "needs review", never as a
+// function killed mid-way.
+export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
 import vision from "@google-cloud/vision";
+import { adminDB } from "@/lib/firebaseAdmin";
 import { requireAuth } from "@/lib/verifyRequestAuth";
-import { finalizeKyc, normalizeMatric, isValidNormalizedMatric } from "@/lib/kycServer";
+import { isKycCleared } from "@/lib/kycAccess";
+import {
+  KycError,
+  claimKycSubmission,
+  evaluateIdText,
+  finalizeKyc,
+  isPlausibleMatric,
+  markKycForReview,
+  nameWords,
+  parseKycPhotoUrl,
+} from "@/lib/kycServer";
 import { sendKycEmail, resolveKycRecipient } from "@/lib/kycEmail";
+import { notifyTeamOfKycReview } from "@/lib/kycNotify";
 
 // Use environment variable for service account credentials
 let credentials;
@@ -20,104 +36,230 @@ const client = credentials
   ? new vision.ImageAnnotatorClient({ credentials })
   : new vision.ImageAnnotatorClient(); // Falls back to default credentials
 
-function normalize(str) {
-  return str.toLowerCase().replace(/[^a-zA-Z0-9]/g, "");
-}
+const PHOTO_FETCH_TIMEOUT_MS = 10_000;
+const OCR_TIMEOUT_MS = 20_000;
+const CHECK_DEADLINE_MS = 40_000;
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
+const MATRIC_CONFLICT_MESSAGE = "This matric number is already linked to another verified account.";
+
+/**
+ * POST /api/kyc-submit  { fullName, matricNumber, frontUrl, backUrl }
+ *
+ * The whole KYC submission, server-side. The browser only uploads the two ID
+ * photos (to its own kyc/<uid>/ folder) and calls this once. This route:
+ *   1. validates the input and that both photos are the caller's own uploads;
+ *   2. claims the request (lib/kycServer.js claimKycSubmission) — refusing if
+ *      already verified, still being checked, or past the daily limit;
+ *   3. OCRs BOTH stored photos — the same images an admin sees;
+ *   4. verifies on a match (finalizeKyc: isVerified, credit, badge, matric
+ *      claim, CRSA count, all in one transaction), or otherwise leaves the
+ *      request PENDING for an admin and emails the team. A genuine student is
+ *      never auto-rejected; only a matric already used by another verified
+ *      account is.
+ *
+ * It used to be the last of three client calls after the browser had already
+ * saved a "pending" request — any failure in between left the student stuck
+ * "under review" with nothing reviewing it — and it OCR'd base64 the browser
+ * sent rather than the stored photo the admin reviews.
+ */
 export async function POST(req) {
-  try {
-    // Identity comes from the verified ID token, never the request body —
-    // this route flips isVerified, awards credit, and (CRSA program) counts
-    // toward a referrer's leaderboard, so it can't act on a client-claimed uid.
-    const auth = await requireAuth(req);
-    if (auth.error) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
-    const userId = auth.uid;
+  // Identity comes from the verified ID token, never the request body —
+  // this route flips isVerified, awards credit, and (CRSA program) counts
+  // toward a referrer's leaderboard, so it can't act on a client-claimed uid.
+  const auth = await requireAuth(req);
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const userId = auth.uid;
 
-    const body = await req.json();
-    const {
-      userId: bodyUserId,
-      fullName,
-      matricNumber,
-      frontID,
-      backID,
-    } = body;
-    if (bodyUserId && bodyUserId !== userId) {
-      return NextResponse.json(
-        { error: "You can only submit KYC for your own account" },
-        { status: 403 }
-      );
-    }
-    if (!fullName || !matricNumber || !frontID || !backID) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
 
-    // Reject before any OCR work: an empty normalized matric would make the
-    // "includes" check below match anything.
-    const normalizedMatric = normalizeMatric(matricNumber);
-    if (!isValidNormalizedMatric(normalizedMatric)) {
-      return NextResponse.json(
-        { error: "Invalid matric number" },
-        { status: 400 }
-      );
-    }
-
-    // OCR only the front image
-    const [frontResult] = await client.textDetection({
-      image: { content: frontID },
-    });
-    const frontText = frontResult.textAnnotations?.[0]?.description || "";
-    const combinedText = frontText.toLowerCase();
-    const normalizedText = normalize(combinedText);
-
-    const nameParts = fullName.toLowerCase().split(" ").filter(Boolean); // split name into words
-
-    // Count how many name words are in the normalized text
-    let nameMatchCount = 0;
-    nameParts.forEach((word) => {
-      if (normalizedText.includes(word.toLowerCase())) {
-        nameMatchCount++;
-      }
-    });
-
-    const nameMatch = nameMatchCount >= 2;
-
-    // console.log("Front OCR Result:", frontResult);
-    console.log("Normalized OCR Text:", normalizedText);
-
-    const matricMatch = normalizedText.includes(normalizedMatric);
-    const ocrStatus = nameMatch && matricMatch ? "verified" : "rejected";
-
-    // Flips isVerified, awards the KYC credit + Verified Student badge, and
-    // enforces one-matric-one-account, all in one transaction — see
-    // lib/kycServer.js.
-    const { status, rejectionReason } = await finalizeKyc(userId, { ocrStatus, matricNumber });
-
-    // The recipient is the account's OWN email, resolved server-side — never a
-    // body field, which would let any signed-in user aim this KYC-branded email
-    // (with an attacker-chosen name) at any address. The verification above is
-    // already committed, so an email problem must not turn it into an error.
-    let emailSent = false;
-    try {
-      const email = await resolveKycRecipient(userId);
-      if (email) {
-        await sendKycEmail({ email, fullName, status });
-        emailSent = true;
-      }
-    } catch (emailError) {
-      console.error("Error sending KYC email:", emailError);
-    }
-
-    return NextResponse.json({ success: true, status, rejectionReason, emailSent });
-  } catch (error) {
-    console.error("KYC Submit Error:", error);
+  // A page loaded before this version sends base64 photos and no URLs.
+  if (!body.frontUrl && (body.frontID || body.backID)) {
     return NextResponse.json(
-      { error: "KYC processing failed" },
-      { status: 500 }
+      { error: "This page is out of date — please refresh it and try again." },
+      { status: 400 }
     );
   }
+
+  const fullName = typeof body.fullName === "string" ? body.fullName.trim().replace(/\s+/g, " ") : "";
+  const matricNumber = typeof body.matricNumber === "string" ? body.matricNumber.trim() : "";
+
+  if (!fullName || fullName.length > 100 || nameWords(fullName).length < 2) {
+    return NextResponse.json(
+      { error: "Enter your full name as it appears on your ID — at least two names." },
+      { status: 400 }
+    );
+  }
+  if (matricNumber.length > 60 || !isPlausibleMatric(matricNumber)) {
+    return NextResponse.json(
+      { error: "That doesn't look like a matric number — check it and try again." },
+      { status: 400 }
+    );
+  }
+  const frontUrl = parseKycPhotoUrl(body.frontUrl, userId);
+  const backUrl = parseKycPhotoUrl(body.backUrl, userId);
+  if (!frontUrl || !backUrl) {
+    return NextResponse.json(
+      { error: "Your photos didn't upload properly — pick them again and resubmit." },
+      { status: 400 }
+    );
+  }
+
+  let attemptId;
+  let university = "";
+  try {
+    const userSnap = await adminDB.collection("users").doc(userId).get();
+    if (!userSnap.exists) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
+    if (isKycCleared(userSnap.data())) {
+      return NextResponse.json({ error: "Your KYC is already verified." }, { status: 409 });
+    }
+    university = userSnap.data().selectedUniversity || "";
+
+    ({ attemptId } = await claimKycSubmission(userId, {
+      fullName,
+      matricNumber,
+      frontID: frontUrl,
+      backID: backUrl,
+    }));
+  } catch (error) {
+    if (error instanceof KycError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    console.error("KYC Submit Error (claim):", error);
+    return NextResponse.json({ error: "KYC processing failed" }, { status: 500 });
+  }
+
+  // From here a request exists, so every path must leave it decided or
+  // waiting for an admin — never "running".
+  try {
+    let autoCheck;
+    try {
+      const text = await withDeadline(readIdText(frontUrl, backUrl), CHECK_DEADLINE_MS);
+      const result = evaluateIdText(text, { fullName, matricNumber, university });
+      autoCheck = {
+        state: result.pass ? "passed" : "needs_review",
+        nameMatched: result.nameMatched,
+        nameWords: result.nameWords,
+        matricFound: result.matricFound,
+        institutionFound: result.institutionFound,
+      };
+    } catch (checkError) {
+      console.error("KYC automatic check failed to run:", checkError);
+      autoCheck = { state: "error", message: String(checkError?.message || checkError).slice(0, 200) };
+    }
+
+    if (autoCheck.state === "passed") {
+      const result = await finalizeKyc(userId, {
+        ocrStatus: "verified",
+        matricNumber,
+        autoCheck: { ...autoCheck, attemptId },
+      });
+      if (result.superseded) {
+        // An admin decided, or the student resubmitted, while this ran.
+        return NextResponse.json({ success: true, status: result.status, superseded: true });
+      }
+
+      // The recipient is the account's OWN email, resolved server-side. The
+      // decision is already committed, so an email problem must not turn it
+      // into an error.
+      let emailSent = false;
+      try {
+        const email = await resolveKycRecipient(userId);
+        if (email) {
+          await sendKycEmail({
+            email,
+            fullName,
+            status: result.status,
+            reason: result.rejectionReason === "matric_already_used" ? MATRIC_CONFLICT_MESSAGE : null,
+          });
+          emailSent = true;
+        }
+      } catch (emailError) {
+        console.error("Error sending KYC email:", emailError);
+      }
+      return NextResponse.json({
+        success: true,
+        status: result.status,
+        rejectionReason: result.rejectionReason,
+        emailSent,
+      });
+    }
+
+    // Couldn't confirm it (or couldn't run): an admin decides.
+    await sendForReview(userId, attemptId, autoCheck);
+    return NextResponse.json({ success: true, status: "pending", review: "manual" });
+  } catch (error) {
+    console.error("KYC Submit Error:", error);
+    await sendForReview(userId, attemptId, {
+      state: "error",
+      message: String(error?.message || error).slice(0, 200),
+    }).catch((reviewError) => console.error("KYC: couldn't hand the request to review:", reviewError));
+    return NextResponse.json({ success: true, status: "pending", review: "manual" });
+  }
+}
+
+/** Records why the check didn't decide, then tells the team (best-effort). */
+async function sendForReview(userId, attemptId, autoCheck) {
+  const recorded = await markKycForReview(userId, attemptId, autoCheck);
+  if (!recorded) return;
+  try {
+    await notifyTeamOfKycReview(userId, describeAutoCheck(autoCheck));
+  } catch (notifyError) {
+    console.error("Error notifying the team of a KYC request:", notifyError);
+  }
+}
+
+function describeAutoCheck(autoCheck) {
+  if (autoCheck.state === "error") {
+    return `The automatic check couldn't run (${autoCheck.message || "unknown error"}).`;
+  }
+  return [
+    `Name ${autoCheck.nameMatched}/${autoCheck.nameWords} words`,
+    autoCheck.matricFound ? "matric found" : "matric not found",
+    autoCheck.institutionFound ? "school found" : "school not found",
+  ].join(" · ");
+}
+
+/** OCR text of both ID photos, front then back. */
+async function readIdText(frontUrl, backUrl) {
+  const [front, back] = await Promise.all([fetchPhoto(frontUrl), fetchPhoto(backUrl)]);
+  const [frontText, backText] = await Promise.all([ocr(front), ocr(back)]);
+  return `${frontText}\n${backText}`;
+}
+
+async function fetchPhoto(url) {
+  const response = await fetch(url, {
+    redirect: "error",
+    signal: AbortSignal.timeout(PHOTO_FETCH_TIMEOUT_MS),
+  });
+  if (!response.ok) throw new Error(`Couldn't load a photo (${response.status})`);
+  if (Number(response.headers.get("content-length") || 0) > MAX_PHOTO_BYTES) {
+    throw new Error("A photo is too large");
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > MAX_PHOTO_BYTES) throw new Error("A photo is too large");
+  return bytes;
+}
+
+async function ocr(content) {
+  const [result] = await client.textDetection({ image: { content } }, { timeout: OCR_TIMEOUT_MS });
+  if (result.error?.message) throw new Error(`OCR: ${result.error.message}`);
+  return result.textAnnotations?.[0]?.description || "";
+}
+
+function withDeadline(promise, ms) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`The check took longer than ${ms / 1000}s`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
 }
