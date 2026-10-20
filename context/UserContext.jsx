@@ -140,20 +140,26 @@ export const UserProvider = ({ children }) => {
                 if (docSnap.exists()) {
                   const kycData = docSnap.data();
 
-                  // isVerified is written server-side only (app/api/kyc-submit,
-                  // /api/admin/kyc/decision), in the same transaction that marks
-                  // the request verified — never client-written. Once the request
-                  // flips, reflect the server's value in local state. This used to
-                  // fire only if the freshly read user doc was NOT yet verified,
-                  // which it always already was, so a student verified mid-session
-                  // kept seeing "verify" prompts until a reload. It also replaced
-                  // the user with the raw doc, dropping its id.
-                  if (kycData.status === "verified") {
-                    const userSnap = await getDoc(userRef);
-                    if (userSnap.data()?.isVerified === true) {
-                      setCurrentUser((prev) => (prev && !prev.isVerified ? { ...prev, isVerified: true } : prev));
-                      const stored = useUserStore.getState().user;
-                      if (stored && !stored.isVerified) await setUser({ ...stored, isVerified: true });
+                  // isVerified / kycLevel and the provisional deadline are written
+                  // server-side only (app/api/kyc-submit, /api/admin/kyc/decision),
+                  // in the same transaction that decides the request — never
+                  // client-written. Once a request is decided (verified,
+                  // provisional, or rejected — which a revoke also sets), mirror the
+                  // server's values into local state, so a student verified (or
+                  // revoked) mid-session doesn't see stale prompts until a reload.
+                  if (["verified", "provisional", "rejected"].includes(kycData.status)) {
+                    const fresh = (await getDoc(userRef)).data() || {};
+                    const kycFields = {
+                      isVerified: fresh.isVerified === true,
+                      kycLevel: fresh.kycLevel ?? null,
+                      provisionalExpiresAt: fresh.provisionalExpiresAt ?? null,
+                      kycExpiredAt: fresh.kycExpiredAt ?? null,
+                      kycRevokedAt: fresh.kycRevokedAt ?? null,
+                    };
+                    setCurrentUser((prev) => (prev ? { ...prev, ...kycFields } : prev));
+                    const stored = useUserStore.getState().user;
+                    if (stored && stored.isVerified !== kycFields.isVerified) {
+                      await setUser({ ...stored, isVerified: kycFields.isVerified });
                     }
                   }
 

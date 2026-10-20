@@ -194,7 +194,9 @@ export default React.memo(function UserProfile() {
                       {isMessages && hasUnreadMessages && (
                         <span className="-ml-6 mb-2 inline-block h-2 w-2 rounded-full bg-blue-500 align-middle" />
                       )}
-                      {item.label}
+                      {item.requiresVerification && currentUser?.kycLevel === "provisional"
+                        ? "Complete verification"
+                        : item.label}
                     </Link>
                   </DropdownMenuItem>
                 );

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { notFound } from "next/navigation";
+import ListingUnavailable from "@/components/listing/ListingUnavailable";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -310,7 +310,14 @@ export default function ListingDetailsPage({ params }) {
   }
 
   if (!product) {
-    notFound();
+    // Deleted, or held while the seller's verification isn't cleared — chats
+    // and shared links still lead here, so explain rather than 404.
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <ProductDetailsHeader id={id} currentUserId={currentUserId} title="Listing" />
+        <ListingUnavailable kind="listing" />
+      </div>
+    );
   }
 
   const {

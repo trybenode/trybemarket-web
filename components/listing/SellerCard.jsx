@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isUserRecentlyActive } from "@/hooks/useLastSeen";
+import { isProvisionalActive } from "@/lib/kycAccess";
 
 /** Who you're buying from: photo, name, verified tick, activity, and a link to their shop. */
 export default function SellerCard({ seller, sellerId }) {
@@ -38,9 +39,15 @@ export default function SellerCard({ seller, sellerId }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <p className="truncate font-semibold text-slate-900">{name}</p>
-          {seller.isVerified && (
+          {seller.isVerified ? (
             <MdVerified className="h-4 w-4 shrink-0 text-emerald-500" title="Verified student" aria-label="Verified student" />
-          )}
+          ) : isProvisionalActive(seller) ? (
+            // A fresher verified with a portal screenshot or library card; not
+            // the Verified badge, which needs a student ID.
+            <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+              Student (provisional)
+            </span>
+          ) : null}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
           {active && (
