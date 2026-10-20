@@ -39,17 +39,19 @@ export default function SellerCard({ seller, sellerId }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <p className="truncate font-semibold text-slate-900">{name}</p>
-          {seller.isVerified ? (
+          {seller.isVerified && (
             <MdVerified className="h-4 w-4 shrink-0 text-emerald-500" title="Verified student" aria-label="Verified student" />
-          ) : isProvisionalActive(seller) ? (
-            // A fresher verified with a portal screenshot or library card; not
-            // the Verified badge, which needs a student ID.
-            <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-              Student (provisional)
-            </span>
-          ) : null}
+          )}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
+          {!seller.isVerified && isProvisionalActive(seller) && (
+            // A fresher verified with a portal screenshot or library card — not
+            // the Verified badge, which needs a student ID. On this second line
+            // so it never squeezes the seller's name on a phone.
+            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+              Student (provisional)
+            </span>
+          )}
           {active && (
             <span className="flex items-center gap-1 font-medium text-emerald-600">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Active now
