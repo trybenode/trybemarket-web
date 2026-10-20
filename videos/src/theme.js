@@ -24,6 +24,8 @@ export const C = {
   amber600: "#d97706",
   brandYellow: "#f7ec8f",
   white: "#ffffff",
+  navy: "#0b1330",
+  cream: "#fbf8ee",
 };
 
 export const FPS = 30;

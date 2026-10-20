@@ -174,126 +174,6 @@ export function DetailsScreen() {
 // The example portal screenshot (684×1496) shown full-bleed; y positions are in image pixels.
 const IMG_W = 684;
 const IMG_H = 1496;
-const FOCUS = [
-  // [frame, image y to centre, zoom, image x to keep in view (0 = left edge)]
-  [0, IMG_H / 2, 1, IMG_W / 2],
-  [22, IMG_H / 2, 1, IMG_W / 2],
-  [40, 1292, 1.6, IMG_W / 2],
-  [78, 1292, 1.6, IMG_W / 2],
-  [96, 640, 1.42, 0],
-  [134, 640, 1.42, 0],
-  [150, 918, 1.42, 0],
-  [184, 918, 1.42, 0],
-  [204, IMG_H / 2, 1, IMG_W / 2],
-];
-const CALLOUTS = [
-  [30, 82, "portal.lcu.edu.ng in the address bar"],
-  [88, 138, "Session, matriculation number and name"],
-  [142, 190, "Your level — 100 or 200"],
-];
-
-/** Step 3a — what to screenshot: pans over the example portal dashboard, then "takes" the screenshot. */
-export function GuideScreen() {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const frames = FOCUS.map((f) => f[0]);
-  const ease = { ...clamp, easing: Easing.inOut(Easing.cubic) };
-  const zoom = interpolate(frame, frames, FOCUS.map((f) => f[2]), ease);
-  const focusY = interpolate(frame, frames, FOCUS.map((f) => f[1]), ease);
-  const k = SCREEN_W / IMG_W;
-  const height = IMG_H * k * zoom;
-  const ty = Math.min(0, Math.max(SCREEN_H - height, SCREEN_H / 2 - focusY * k * zoom));
-  const focusX = interpolate(frame, frames, FOCUS.map((f) => f[3]), ease);
-  const tx = Math.min(0, Math.max(SCREEN_W - SCREEN_W * zoom, SCREEN_W / 2 - focusX * k * zoom));
-  const callout = CALLOUTS.find(([from, to]) => frame >= from && frame <= to);
-  const calloutOpacity = callout ? interpolate(frame, [callout[0], callout[0] + 6, callout[1] - 6, callout[1]], [0, 1, 1, 0], clamp) : 0;
-
-  // The screenshot: a white flash, then the screen shrinks into a thumbnail.
-  const shotAt = 214;
-  const flash = interpolate(frame, [shotAt, shotAt + 3, shotAt + 12], [0, 0.9, 0], clamp);
-  const shrink = spring({ frame: frame - shotAt - 6, fps, config: { damping: 18, stiffness: 120 } });
-  const thumbScale = interpolate(shrink, [0, 1], [1, 0.32]);
-  const toastIn = spring({ frame: frame - shotAt - 14, fps, config: { damping: 200 } });
-
-  return (
-    <Screen background="#0b1020">
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          width: SCREEN_W,
-          height: SCREEN_H,
-          transform: `translate(${interpolate(shrink, [0, 1], [0, 128])}px, ${interpolate(shrink, [0, 1], [0, 520])}px) scale(${thumbScale})`,
-          transformOrigin: "top left",
-          borderRadius: interpolate(shrink, [0, 1], [0, 40]),
-          overflow: "hidden",
-          border: shrink > 0.05 ? "6px solid white" : "none",
-        }}
-      >
-        <Img
-          src={PORTAL}
-          style={{
-            position: "absolute",
-            width: SCREEN_W * zoom,
-            height: IMG_H * k * zoom,
-            transform: `translate(${tx}px, ${ty}px)`,
-          }}
-        />
-      </div>
-      {callout && (
-        <div
-          style={{
-            position: "absolute",
-            left: 20,
-            right: 20,
-            top: 64,
-            opacity: calloutOpacity,
-            transform: `translateY(${(1 - calloutOpacity) * -10}px)`,
-            padding: "12px 14px",
-            borderRadius: 14,
-            background: C.slate900,
-            color: C.white,
-            fontSize: 15,
-            fontWeight: 600,
-            textAlign: "center",
-            boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
-          }}
-        >
-          {callout[2]}
-        </div>
-      )}
-      <div style={{ position: "absolute", inset: 0, background: "white", opacity: flash }} />
-      {frame > shotAt + 10 && (
-        <div
-          style={{
-            position: "absolute",
-            left: 40,
-            right: 40,
-            top: 150,
-            opacity: toastIn,
-            transform: `translateY(${(1 - toastIn) * 20}px)`,
-            padding: "14px 16px",
-            borderRadius: 16,
-            background: C.white,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            fontSize: 15,
-            fontWeight: 600,
-            color: C.slate900,
-          }}
-        >
-          <span style={{ width: 28, height: 28, borderRadius: 14, background: C.emerald600, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Check size={16} color="white" strokeWidth={3} />
-          </span>
-          Screenshot saved
-        </div>
-      )}
-    </Screen>
-  );
-}
-
 const LEGEND = [
   "portal.lcu.edu.ng in the address bar",
   "Student Dashboard",
@@ -307,7 +187,7 @@ const LEGEND = [
 export function UploadScreen() {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const addedAt = 52;
+  const addedAt = 50;
   const added = frame >= addedAt;
   const pop = spring({ frame: frame - addedAt, fps, config: { damping: 12, stiffness: 160 } });
   return (
@@ -344,7 +224,7 @@ export function UploadScreen() {
             alignItems: "center",
             gap: 12,
             padding: "0 11px",
-            transform: `scale(${frame >= 34 && frame < 39 ? 0.98 : 1})`,
+            transform: `scale(${frame >= 28 && frame < 33 ? 0.98 : 1})`,
           }}
         >
           {added ? (
@@ -370,9 +250,9 @@ export function UploadScreen() {
           </span>
         </div>
       </div>
-      <BottomBar enabled={added} pressed={frame >= 120 && frame < 125} />
-      <Tap at={34} x={195} y={440} />
-      <Tap at={120} x={195} y={786} />
+      <BottomBar enabled={added} pressed={frame >= 100 && frame < 105} />
+      <Tap at={28} x={195} y={440} />
+      <Tap at={100} x={195} y={786} />
     </Screen>
   );
 }
@@ -394,15 +274,66 @@ function Face({ size = 300, tint = "#d9a273" }) {
   );
 }
 
+/** Face-detection brackets closing in, a scan line, then "Face found". */
+function FaceFinder({ start }) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const lock = spring({ frame: frame - start, fps, config: { damping: 14, stiffness: 120 } });
+  const inset = interpolate(lock, [0, 1], [8, 52]);
+  const scanY = 40 + ((frame - start) * 6) % 220;
+  const found = frame >= start + 30;
+  const corner = (rot, pos) => (
+    <div
+      style={{
+        position: "absolute",
+        width: 40,
+        height: 40,
+        borderTop: `5px solid ${found ? "#34d399" : "white"}`,
+        borderLeft: `5px solid ${found ? "#34d399" : "white"}`,
+        borderTopLeftRadius: 12,
+        transform: `rotate(${rot}deg)`,
+        ...pos,
+      }}
+    />
+  );
+  return (
+    <>
+      {frame >= start && !found && (
+        <div style={{ position: "absolute", left: 50, right: 50, top: scanY, height: 3, background: "rgba(52,211,153,0.9)", boxShadow: "0 0 18px 4px rgba(52,211,153,0.6)" }} />
+      )}
+      <div style={{ position: "absolute", inset: inset - 4, top: inset - 18, opacity: Math.min(1, lock * 2) }}>
+        {corner(0, { left: 0, top: 0 })}
+        {corner(90, { right: 0, top: 0 })}
+        {corner(270, { left: 0, bottom: 0 })}
+        {corner(180, { right: 0, bottom: 0 })}
+      </div>
+      {found && (
+        <div style={{ position: "absolute", left: "50%", bottom: 14, transform: `translateX(-50%) scale(${spring({ frame: frame - start - 30, fps, config: { damping: 10 } })})`, padding: "5px 12px", borderRadius: 20, background: "#10b981", color: "white", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+          ✓ Face found
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Step 3 (fresher) — the example portal dashboard, full screen. */
+export function PortalScreen() {
+  return (
+    <Screen background="#0b1020">
+      <Img src={PORTAL} style={{ position: "absolute", left: 0, top: 0, width: SCREEN_W, height: (SCREEN_W * IMG_H) / IMG_W }} />
+    </Screen>
+  );
+}
+
 /** Step 4 — selfie, consent and submit, ending on the "Submitted" sheet. */
 export function SelfieScreen() {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const cameraAt = 26;
-  const shotAt = 104;
-  const tickAt = 168;
-  const submitAt = 204;
-  const sheetAt = 226;
+  const cameraAt = 30;
+  const shotAt = 140;
+  const tickAt = 228;
+  const submitAt = 262;
+  const sheetAt = 282;
   const live = frame >= cameraAt + 4 && frame < shotAt + 8;
   const taken = frame >= shotAt + 8;
   const flash = interpolate(frame, [shotAt, shotAt + 3, shotAt + 12], [0, 0.85, 0], clamp);
@@ -423,7 +354,7 @@ export function SelfieScreen() {
               <div style={{ transform: `scale(${breathe})` }}>
                 <Face />
               </div>
-              <div style={{ position: "absolute", left: 70, top: 40, width: 160, height: 200, borderRadius: "50%", border: "2.5px dashed rgba(255,255,255,0.7)" }} />
+              <FaceFinder start={cameraAt + 20} />
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
               <div style={{ flex: 1, height: 44, borderRadius: 10, background: C.primary, color: "white", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 14, fontWeight: 600, transform: `scale(${frame >= shotAt && frame < shotAt + 5 ? 0.97 : 1})` }}>

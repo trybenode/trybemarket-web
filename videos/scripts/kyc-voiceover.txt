@@ -1,0 +1,65 @@
+TrybeMarket — "How to verify" (KYC walkthrough)
+Voiceover script · 55 seconds · vertical 1080×1920
+================================================
+
+Tone: friendly, upbeat, like telling a coursemate. Clear and not rushed.
+Pace: about 2.5 words a second. Each line fits its time slot; if you
+speak slower, drop the words in (brackets).
+Say "TrybeMarket" as "tribe market".
+Say "portal.lcu.edu.ng" as "portal dot L-C-U dot E-D-U dot N-G".
+
+TIME         ON SCREEN                       VOICEOVER
+-----------  ------------------------------  ---------------------------------------------
+0:00 – 0:05  "Want to SELL on campus?"       Want to sell on campus? Get verified on
+             → "Get verified in 1 minute"    TrybeMarket in about a minute.
+
+0:05 – 0:10  Two ways to verify:             Student ID? Use it. Fresher with no ID yet?
+             ID card / Fresher               Use your portal or library card.
+
+0:10 – 0:15  01 Pick your route              Open Verification on TrybeMarket and pick
+                                             your route — (we'll do) the fresher one.
+
+0:15 – 0:22  02 Type your details            Choose "portal screenshot", then type your
+                                             name and your seven-digit matric number —
+                                             exactly as they appear on your portal.
+
+0:22 – 0:32  03 Screenshot your portal       Now open portal.lcu.edu.ng and screenshot
+             (callouts: address bar, name,   your Student Dashboard. Make sure the address
+             matric number, level)           bar, your name, your matric number and your
+                                             level all show.
+
+0:32 – 0:36  Add the screenshot              Back in the app, tap the box and add your
+                                             screenshot.
+
+0:36 – 0:43  04 Snap a quick selfie          Next, a quick selfie. (Find) good light, no
+                                             sunglasses or cap — and snap.
+
+0:43 – 0:48  Tick. Submit. Done.             Tick the box, hit submit — and you're done!
+
+0:48 – 0:55  "We'll email you once you're    We'll email you once you're approved. Then
+             approved" → "Then start         start selling to students on your campus.
+             selling" → logo                 Verify today on trybemarket dot online.
+
+
+SOUND CUES (optional, for the editor)
+-------------------------------------
+Music: upbeat instrumental (afrobeats / amapiano), lowered under the voice.
+0:05.0, 0:10.0, 0:48.0   whoosh (colour wipes)
+0:00.5                   bass hit on "SELL"
+0:14.2, 0:15.9, 0:20.9,  soft pop on each on-screen tap
+0:32.9, 0:35.3, 0:37.0,
+0:43.6, 0:44.7
+0:24.3 – 0:27.5          four light "ticks" as each callout appears
+0:29.1                   camera shutter (portal screenshot)
+0:40.7                   camera shutter (selfie)
+0:45.4                   chime + confetti
+0:48.3                   "ding" on the green check
+
+
+POST CAPTION (WhatsApp Status / Instagram / TikTok)
+---------------------------------------------------
+Selling on campus? 🛍️ Get verified on TrybeMarket in about a minute —
+even if you're a fresher without an ID card yet. Student ID, portal
+screenshot or library card + a quick selfie, and you're in.
+👉 trybemarket.online
+#TrybeMarket #LeadCity #LCU #StudentBusiness #CampusMarket
