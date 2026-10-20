@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter, notFound } from "next/navigation";
+import { useRouter } from "next/navigation";
+import ListingUnavailable from "@/components/listing/ListingUnavailable";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,11 +80,8 @@ export default function ServicePage({ params }) {
       if (!id) return;
       try {
         const serviceData = await getServiceById(id);
-        if (serviceData) {
-          setService(serviceData);
-        } else {
-          toast.error("Service not found");
-        }
+        // A missing service renders the "no longer available" state below.
+        if (serviceData) setService(serviceData);
       } catch (error) {
         toast.error("Error fetching service");
       } finally {
@@ -293,7 +291,14 @@ export default function ServicePage({ params }) {
   }
 
   if (!service) {
-    notFound();
+    // Deleted, or held while the seller's verification isn't cleared — chats
+    // and shared links still lead here, so explain rather than 404.
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <ProductDetailsHeader id={id} currentUserId={currentUser} title="Service" />
+        <ListingUnavailable kind="service" />
+      </div>
+    );
   }
 
   const images = (service.images || []).filter(Boolean);

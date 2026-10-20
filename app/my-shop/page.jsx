@@ -10,7 +10,7 @@ import { isSubscriptionActive } from "@/lib/subscriptionStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Crown, Sparkles, Shield, PackageOpen } from "lucide-react";
+import { Plus, Crown, Sparkles, Shield, PackageOpen, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 import { getServices} from "@/hooks/servicesHooks";
 import dynamic from "next/dynamic";
@@ -116,15 +116,27 @@ export default function MyShopPage() {
     }));
   };
 
+  // Listings held while the seller's KYC isn't cleared (provisional deadline
+  // passed, or revoked) — moved out of products/services by the server
+  // (lib/kycHold.js) and back when they verify. Read-only here.
+  const [heldListings, setHeldListings] = useState([]);
+  const fetchHeldListings = async () => {
+    if (!currentUser) return [];
+    const heldDocs = await getDocs(query(collection(db, "heldListings"), where("userId", "==", currentUser.uid)));
+    return heldDocs.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  };
+
   useEffect(() => {
     let isActive = true;
     const load = async () => {
       try {
         const products = await fetchUserProducts();
         const services = await getServices(currentUser?.uid);
+        const held = await fetchHeldListings().catch(() => []);
         if (isActive) {
           setUserProducts(products);
           setUserServices(services || []);
+          setHeldListings(held);
         }
       } catch (err) {
         toast.error("Failed to fetch listings");
@@ -207,6 +219,34 @@ export default function MyShopPage() {
             <Plus /> Add service
           </Button>
         </div>
+
+        {heldListings.length > 0 && (
+          <div className="space-y-4 rounded-3xl border border-amber-200 bg-amber-50 p-5">
+            <div className="flex gap-3">
+              <EyeOff className="h-5 w-5 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-semibold text-slate-900">
+                  {heldListings.length} listing{heldListings.length === 1 ? " is" : "s are"} unavailable
+                </p>
+                <p className="mt-0.5 text-sm text-slate-600">
+                  {heldListings.some((h) => h.reason === "kyc_revoked")
+                    ? "Your verification was withdrawn, so buyers can't see these. Verify again to make them available."
+                    : "Your provisional verification has ended, so buyers can't see these. Submit your student ID to make them available again."}
+                </p>
+                <Button size="sm" className="mt-3" onClick={() => router.push("/kyc")}>
+                  Go to verification
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 opacity-60 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
+              {heldListings.map((held) => (
+                <div key={held.id} className="pointer-events-none h-full" aria-disabled="true">
+                  <ListingCard product={{ ...held.data, id: held.listingId }} btnName="Unavailable" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <Tabs defaultValue="products" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-5 grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
