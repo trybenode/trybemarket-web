@@ -245,3 +245,36 @@ export function kycRevokedTemplate({ name, reason }) {
     buttonHref: `${SITE_URL}/kyc`,
   });
 }
+
+/** A reminder before the provisional deadline. Values already escaped. */
+export function kycProvisionalReminderTemplate({ name, daysLeft, expiresOn }) {
+  const when = Number(daysLeft) === 1 ? "tomorrow" : `in ${daysLeft} days`;
+  return simpleLayout({
+    title: "Add your student ID to keep selling",
+    heading: `Your provisional verification ends ${when}`,
+    accent: "#2563eb",
+    body: `
+      <p>Hi ${name},</p>
+      <p>You're provisionally verified on TrybeMarket until <strong>${expiresOn}</strong>.</p>
+      <p><strong>Unless you complete verification with your student ID card by then, your listings will become unavailable and your plan will be paused — you may lose your subscription.</strong></p>
+      <p>It takes a minute, and you'll also get the Verified Student badge and 150 App Credit.</p>`,
+    buttonText: "Add my student ID",
+    buttonHref: `${SITE_URL}/kyc`,
+  });
+}
+
+/** The provisional deadline has passed. Values already escaped. */
+export function kycProvisionalExpiredTemplate({ name, expiresOn }) {
+  return simpleLayout({
+    title: "Your provisional verification has ended",
+    heading: "Your provisional verification has ended",
+    accent: "#dc2626",
+    body: `
+      <p>Hi ${name},</p>
+      <p>Your provisional verification ended on <strong>${expiresOn}</strong>.</p>
+      <p>Your listings are now unavailable to buyers and your plan is paused. If you don't complete verification with your student ID card, you may lose your subscription.</p>
+      <p>Submit your student ID and your listings come back straight away, and your plan resumes with the time it had left.</p>`,
+    buttonText: "Submit my student ID",
+    buttonHref: `${SITE_URL}/kyc`,
+  });
+}
