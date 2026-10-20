@@ -32,7 +32,10 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
 
   useEffect(() => stopCamera, []);
   useEffect(() => {
-    if (!value) return setPreview(null);
+    if (!value) {
+      setPreview(null);
+      return undefined;
+    }
     const url = URL.createObjectURL(value);
     setPreview(url);
     return () => URL.revokeObjectURL(url);
@@ -90,9 +93,9 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
   };
 
   const browserHint = (
-    <p className="text-xs leading-relaxed text-slate-600">
-      If the camera won't open, you may be in WhatsApp's or Instagram's built-in browser. Open this page in{" "}
-      <strong>Chrome</strong> or <strong>Safari</strong> instead (tap ⋮ or the share icon, then "Open in browser").
+    <p className="text-[11px] leading-relaxed text-slate-600">
+      In WhatsApp or Instagram? Open this page in <strong>Chrome</strong> or <strong>Safari</strong> (tap ⋮ or the
+      share icon, then "Open in browser").
     </p>
   );
 
@@ -104,7 +107,7 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
             ref={videoRef}
             playsInline
             muted
-            className="aspect-square w-full rounded-2xl bg-slate-900 object-cover [transform:scaleX(-1)]"
+            className="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-slate-900 object-cover [transform:scaleX(-1)]"
           />
           <div className="flex gap-2">
             <Button type="button" className="flex-1" onClick={capture}>
@@ -123,37 +126,47 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
           </div>
         </div>
       ) : preview ? (
-        <div className="flex items-center gap-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/50 p-3">
-          <img src={preview} alt="Your selfie" className="h-20 w-20 shrink-0 rounded-xl object-cover" />
+        <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-2.5">
+          <img src={preview} alt="Your selfie" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900">Selfie taken</p>
-            <Button
+            <p className="text-sm font-medium text-slate-900">Selfie taken</p>
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               disabled={disabled}
               onClick={() => {
                 onChange(null, null);
                 startCamera();
               }}
+              className="mt-0.5 flex items-center gap-1 text-xs font-medium text-primary disabled:opacity-50"
             >
-              <RefreshCw /> Retake
-            </Button>
+              <RefreshCw className="h-3 w-3" /> Retake
+            </button>
           </div>
         </div>
-      ) : (
-        <Button type="button" variant="outline" className="h-14 w-full" disabled={disabled} onClick={startCamera}>
-          <Camera /> Open camera for a selfie
-        </Button>
+      ) : mode === "blocked" ? null : (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={startCamera}
+          className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white p-2.5 text-left transition hover:border-primary/50 active:scale-[0.99] disabled:opacity-60"
+        >
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+            <Camera className="h-5 w-5" />
+          </span>
+          <span>
+            <span className="block text-sm font-medium text-slate-900">Take a selfie</span>
+            <span className="block text-[11px] text-slate-500">Opens your front camera</span>
+          </span>
+        </button>
       )}
 
       {mode === "blocked" && (
-        <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="flex items-start gap-2 text-sm text-slate-800">
+        <div className="space-y-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <p className="flex items-start gap-2 text-xs text-slate-800">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             We couldn't open your camera here.
           </p>
-          <Button type="button" variant="outline" className="w-full" disabled={disabled} onClick={useFileFallback}>
+          <Button type="button" variant="outline" size="sm" className="w-full" disabled={disabled} onClick={useFileFallback}>
             <Camera /> Use your phone's camera instead
           </Button>
           {browserHint}
@@ -161,8 +174,8 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
       )}
       {inAppBrowser && mode !== "blocked" && !preview && browserHint}
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <p className="text-xs text-slate-500">
-        Face the camera in good light, without sunglasses or a cap. Our team compares it with the photo on your document.
+      <p className="text-[11px] text-slate-500">
+        Good light, no sunglasses or cap. We compare it with the photo on your document.
       </p>
     </div>
   );
