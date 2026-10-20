@@ -31,6 +31,10 @@
     {
       "path": "/api/badges/evaluate-top-seller",
       "schedule": "0 5 1 * *"
+    },
+    {
+      "path": "/api/kyc/daily-maintenance",
+      "schedule": "0 7 * * *"
     }
   ]
 }
