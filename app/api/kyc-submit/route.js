@@ -323,7 +323,8 @@ async function decideFresher(userId, attemptId, submission, { university }) {
     return NextResponse.json({ success: true, status: "pending", review: "manual" });
   }
 
-  if (autoPass && config.portalAutopass && !(await takeAutopassReviewSample(config))) {
+  const inReviewSample = autoPass && config.portalAutopass && (await takeAutopassReviewSample(config));
+  if (autoPass && config.portalAutopass && !inReviewSample) {
     const result = await finalizeKyc(userId, {
       level: "provisional",
       claimKey,
@@ -339,12 +340,10 @@ async function decideFresher(userId, attemptId, submission, { university }) {
 
   // Launch mode (auto-pass off), a library card, the first-N sample, or a
   // check that didn't fully pass: an admin decides.
-  await sendForReview(
-    userId,
-    attemptId,
-    { state: autoPass ? "passed_review_sample" : "needs_review", checks },
-    extra
-  );
+  // passed_launch_review: passed every check, but auto-pass is off (launch mode).
+  // passed_review_sample: passed, auto-pass is on, but it's in the first-N sample.
+  const state = !autoPass ? "needs_review" : inReviewSample ? "passed_review_sample" : "passed_launch_review";
+  await sendForReview(userId, attemptId, { state, checks }, extra);
   return NextResponse.json({ success: true, status: "pending", review: "manual" });
 }
 
@@ -404,7 +403,13 @@ function describeForTeam(autoCheck, extra) {
     parts.push(
       `Fresher portal screenshot · level ${c.level ?? "?"} · session ${c.session ?? "?"} · number ${
         autoCheck.checks?.numberMatches ? "matches" : "doesn't match"
-      }${autoCheck.state === "passed_review_sample" ? " · passed all checks (review sample)" : ""}`
+      }${
+        autoCheck.state === "passed_review_sample"
+          ? " · passed every check (auto-pass review sample)"
+          : autoCheck.state === "passed_launch_review"
+            ? " · passed every check (auto-pass is off)"
+            : ""
+      }`
     );
   } else if (extra.ocrSummary?.library) {
     const l = extra.ocrSummary.library;
