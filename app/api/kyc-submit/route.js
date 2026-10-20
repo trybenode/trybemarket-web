@@ -128,7 +128,8 @@ export async function POST(req) {
       return NextResponse.json({ error: "Your KYC is already verified." }, { status: 409 });
     }
     university = userSnap.data().selectedUniversity || "";
-    ({ attemptId, upgrade, provisionalName } = await claimKycSubmission(userId, submission));
+    const accountEmail = await resolveKycRecipient(userId).catch(() => null);
+    ({ attemptId, upgrade, provisionalName } = await claimKycSubmission(userId, submission, { accountEmail }));
   } catch (error) {
     if (error instanceof KycError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
