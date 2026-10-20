@@ -1,0 +1,19 @@
+{
+  "name": "trybemarket-videos",
+  "private": true,
+  "description": "Instructional videos (Remotion). Not part of the website build — see README.",
+  "scripts": {
+    "studio": "remotion studio src/index.js",
+    "render:kyc": "remotion render src/index.js KycWalkthrough out/kyc-walkthrough.mp4",
+    "still:kyc": "remotion still src/index.js KycWalkthrough"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.533",
+    "@remotion/google-fonts": "4.0.533",
+    "@remotion/transitions": "4.0.533",
+    "lucide-react": "0.454.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.533"
+  }
+}

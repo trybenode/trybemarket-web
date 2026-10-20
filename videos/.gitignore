@@ -1,0 +1,4 @@
+node_modules
+out
+# The repo root ignores npm lockfiles (the website uses pnpm); this folder uses npm.
+!package-lock.json
