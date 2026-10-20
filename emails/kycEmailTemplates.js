@@ -189,3 +189,59 @@ ${reason ? `
 </html>
   `.trim();
 }
+
+// Shared layout for the newer KYC emails. Every interpolated value must
+// already be HTML-escaped (lib/kycEmail.js does it).
+function simpleLayout({ title, heading, accent, body, buttonText, buttonHref }) {
+  return `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>${title}</title>
+  </head>
+  <body style="font-family: Arial, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 20px;">
+    <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; max-width: 600px; margin: auto; border: 1px solid #e2e8f0;">
+      <h1 style="color: ${accent}; font-size: 22px; margin: 0 0 20px;">${heading}</h1>
+      ${body}
+      <a href="${buttonHref}" style="display: inline-block; background-color: ${accent}; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px; font-weight: bold;">${buttonText}</a>
+      <p style="margin-top: 30px; font-size: 14px; color: #64748b;">Best regards,<br />The TrybeMarket Team</p>
+    </div>
+  </body>
+</html>
+  `.trim();
+}
+
+/** A fresher's provisional approval. `expiresOn` is a readable date, already escaped. */
+export function kycProvisionalTemplate({ name, expiresOn }) {
+  return simpleLayout({
+    title: "You're provisionally verified",
+    heading: "You're provisionally verified 🎓",
+    accent: "#2563eb",
+    body: `
+      <p>Hi ${name},</p>
+      <p>Your fresher documents have been approved. You can now list items and services and subscribe to a plan on TrybeMarket.</p>
+      <p><strong>One thing left:</strong> once you get your student ID card, submit it to complete your verification. You have until <strong>${expiresOn}</strong>.</p>
+      <p>If you don't complete verification with your student ID by then, your listings will become unavailable, your plan will be paused, and you may lose your subscription.</p>
+      <p>When you complete it, you'll also get the Verified Student badge and 150 App Credit.</p>`,
+    buttonText: "Go to verification",
+    buttonHref: `${SITE_URL}/kyc`,
+  });
+}
+
+/** An admin took back a student's verification. `reason` already escaped. */
+export function kycRevokedTemplate({ name, reason }) {
+  return simpleLayout({
+    title: "Your verification has been withdrawn",
+    heading: "Your verification has been withdrawn",
+    accent: "#dc2626",
+    body: `
+      <p>Hi ${name},</p>
+      <p>Our team has withdrawn your TrybeMarket verification.</p>
+      ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+      <p>While you're not verified, your listings are unavailable and any plan you have is paused. You can submit your verification again at any time.</p>
+      <p>If you think this is a mistake, reply to this email or contact <a href="mailto:contact@trybemarket.online">contact@trybemarket.online</a>.</p>`,
+    buttonText: "Verify again",
+    buttonHref: `${SITE_URL}/kyc`,
+  });
+}
