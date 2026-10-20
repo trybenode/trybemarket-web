@@ -21,6 +21,8 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [mode, setMode] = useState("idle"); // idle | live | blocked
+  const [ready, setReady] = useState(false); // the live preview is showing frames
+  const [slow, setSlow] = useState(false); // live, but no frames after a few seconds
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState(null);
   const inAppBrowser = typeof navigator !== "undefined" && IN_APP_BROWSER.test(navigator.userAgent);
@@ -43,6 +45,8 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
 
   const startCamera = async () => {
     setError(null);
+    setReady(false);
+    setSlow(false);
     if (!navigator.mediaDevices?.getUserMedia) {
       setMode("blocked");
       return;
@@ -54,18 +58,50 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
       });
       streamRef.current = stream;
       setMode("live");
-      // The <video> mounts on the "live" render.
-      requestAnimationFrame(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
-        }
-      });
     } catch (cameraError) {
       reportKycClientError("opening the selfie camera", cameraError);
       setMode("blocked");
     }
   };
+
+  // Attach the stream once the <video> is actually in the page. (Doing it in a
+  // requestAnimationFrame after setMode raced React's render: on iPhone Safari
+  // the frame often ran first, the stream was never attached, and the preview
+  // stayed black.) iOS also needs muted + playsinline set on the element
+  // itself before play() — React's `muted` prop only sets the property.
+  useEffect(() => {
+    if (mode !== "live") return undefined;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return undefined;
+    video.muted = true;
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("autoplay", "");
+    video.srcObject = stream;
+    const play = () =>
+      video.play().catch((playError) => reportKycClientError("starting the selfie preview", playError));
+    const markReady = () => {
+      if (video.videoWidth > 0) setReady(true);
+    };
+    video.addEventListener("loadedmetadata", play);
+    video.addEventListener("playing", markReady);
+    video.addEventListener("loadeddata", markReady);
+    play();
+    const slowTimer = setTimeout(() => {
+      if (!video.videoWidth) {
+        setSlow(true);
+        reportKycClientError("selfie preview showed no picture", new Error(`readyState ${video.readyState}`));
+      }
+    }, 5000);
+    return () => {
+      clearTimeout(slowTimer);
+      video.removeEventListener("loadedmetadata", play);
+      video.removeEventListener("playing", markReady);
+      video.removeEventListener("loadeddata", markReady);
+      video.srcObject = null;
+    };
+  }, [mode]);
 
   const capture = async () => {
     const video = videoRef.current;
@@ -103,14 +139,41 @@ export default function SelfieCapture({ value, onChange, disabled = false }) {
     <div className="space-y-3">
       {mode === "live" ? (
         <div className="space-y-3">
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            className="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-slate-900 object-cover [transform:scaleX(-1)]"
-          />
+          <div className="relative mx-auto w-full max-w-xs">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="aspect-square w-full rounded-2xl bg-slate-900 object-cover [transform:scaleX(-1)]"
+            />
+            {!ready && (
+              <p className="absolute inset-0 flex items-center justify-center text-xs text-slate-300">
+                Starting camera…
+              </p>
+            )}
+          </div>
+          {slow && !ready && (
+            <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs text-slate-800">The camera preview isn't showing.</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                disabled={disabled}
+                onClick={() => {
+                  stopCamera();
+                  setMode("idle");
+                  useFileFallback();
+                }}
+              >
+                <Camera /> Use your phone's camera instead
+              </Button>
+            </div>
+          )}
           <div className="flex gap-2">
-            <Button type="button" className="flex-1" onClick={capture}>
+            <Button type="button" className="flex-1" onClick={capture} disabled={!ready}>
               <Camera /> Take selfie
             </Button>
             <Button
