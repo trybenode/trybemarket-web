@@ -16,6 +16,7 @@
 
 import admin from "firebase-admin";
 import dotenv from "dotenv";
+import { computeSearchKeywords } from "../lib/rankScoreShared.js";
 
 dotenv.config({ path: ".env" });
 
@@ -78,16 +79,6 @@ function computeRankScore({ sellerTier, isVip, isBoosted, boostEndDate }) {
   return tierWeight + vipTagBonus + boostBonus;
 }
 
-function tokenizeText(text) {
-  if (!text) return [];
-  const tokens = String(text).toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length >= 2);
-  return [...new Set(tokens)];
-}
-
-function computeSearchKeywords({ name, description, categoryId }) {
-  return tokenizeText([name, description, categoryId].filter(Boolean).join(" "));
-}
-
 async function backfillCollection(collectionName, category) {
   console.log(`\n--- ${collectionName} ---`);
   const snap = await db.collection(collectionName).get();
@@ -127,6 +118,8 @@ async function backfillCollection(collectionName, category) {
         name: data.name,
         description: data.description,
         categoryId: data.categoryId,
+        subcategory: data.subcategory,
+        brand: data.brand,
       });
 
       if (APPLY) {

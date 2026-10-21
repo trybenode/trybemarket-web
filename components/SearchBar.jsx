@@ -3,7 +3,7 @@
 import React,{ useState, useEffect } from "react";
 import { collection, getDocs, query as fsQuery, orderBy, limit, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { tokenizeText } from "@/lib/rankScoreShared";
+import { matchesAllTokens, searchVariants, tokenizeText } from "@/lib/rankScoreShared";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 
@@ -27,15 +27,18 @@ async function fetchRankedBrowse() {
   }));
 }
 
-// Indexed on the FIRST query token via array-contains-any (Firestore's OR
-// match across up to 10 values, already ordered by rankScore), then a
-// client-side AND-filter over the remaining tokens on that bounded result
-// set — not the whole collection. "Good enough for now," per the spec, not
-// a real search engine.
+// Indexed on the longest (most specific) searched word, in any of its forms
+// (searchVariants — "laptops" also tries "laptop"), via array-contains-any,
+// already ordered by rankScore; then a client-side filter keeps listings that
+// match every searched word, over that bounded result set — not the whole
+// collection. searchKeywords holds whole words plus the leading parts of the
+// title words (lib/rankScoreShared.js), so "ijebu" finds "Ijebufix". Still
+// "good enough for now", not a real search engine: no typo tolerance.
 async function fetchRankedSearch(tokens) {
+  const anchor = [...tokens].sort((a, b) => b.length - a.length)[0];
   const q = fsQuery(
     collection(db, "products"),
-    where("searchKeywords", "array-contains-any", tokens.slice(0, 10)),
+    where("searchKeywords", "array-contains-any", searchVariants(anchor)),
     orderBy("rankScore", "desc"),
     orderBy("createdAt", "desc"),
     limit(SEARCH_LIMIT)
@@ -45,8 +48,7 @@ async function fetchRankedSearch(tokens) {
     id: doc.id,
     product: { ...doc.data(), createdAt: doc.data().createdAt?.toDate(), updatedAt: doc.data().updatedAt?.toDate() },
   }));
-  if (tokens.length <= 1) return docs;
-  return docs.filter((d) => tokens.every((t) => (d.product.searchKeywords || []).includes(t)));
+  return docs.filter((d) => matchesAllTokens(d.product.searchKeywords, tokens));
 }
 
 export default React.memo(function SearchBar({ onResults }) {
