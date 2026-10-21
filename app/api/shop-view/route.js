@@ -2,6 +2,7 @@ import { adminDB } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 import { checkShopViewNotificationQuota, incrementShopViewNotified } from "@/lib/notifications";
 import { sendShopViewWhatsAppNotification } from "@/lib/whatsapp";
+import { isPlanActive } from "@/lib/planStatus";
 
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // matches hooks/useLastSeen.js
 const NOTIFY_DEBOUNCE_MS = 5 * 60 * 1000; // matches message-notification debounce
@@ -18,11 +19,9 @@ async function isPremiumOrVipSeller(sellerId) {
   if (!subSnap.exists) return false;
 
   const data = subSnap.data();
-  const isActive = (sub) => sub?.isActive && (!sub?.expiryDate || sub.expiryDate.toDate?.() > new Date());
-
-  if (isActive(data.bundle)) return true;
-  if (isActive(data.product) && PREMIUM_PLAN_IDS.includes(data.product.planId)) return true;
-  if (isActive(data.service) && PREMIUM_PLAN_IDS.includes(data.service.planId)) return true;
+  if (isPlanActive(data.bundle)) return true;
+  if (isPlanActive(data.product) && PREMIUM_PLAN_IDS.includes(data.product.planId)) return true;
+  if (isPlanActive(data.service) && PREMIUM_PLAN_IDS.includes(data.service.planId)) return true;
   return false;
 }
 

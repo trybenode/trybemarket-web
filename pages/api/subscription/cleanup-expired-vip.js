@@ -1,28 +1,17 @@
 import { adminDB } from "@/lib/firebaseAdmin";
-
-/**
- * Converts any Firestore Timestamp format or ISO string to a JavaScript Date.
- * Handles: Timestamp instance, plain { _seconds }, plain { seconds }, ISO string.
- */
-function parseExpiryDate(expiryDate) {
-  if (!expiryDate) return null;
-  if (typeof expiryDate?.toDate === "function") return expiryDate.toDate();
-  if (typeof expiryDate?.toMillis === "function") return new Date(expiryDate.toMillis());
-  if (expiryDate?._seconds !== undefined) return new Date(expiryDate._seconds * 1000);
-  if (expiryDate?.seconds !== undefined) return new Date(expiryDate.seconds * 1000);
-  return new Date(expiryDate);
-}
+import { planExpiryMs } from "@/lib/planStatus";
 
 /**
  * Returns true only if the subscription is currently marked active but its
- * expiryDate has already passed — i.e. it needs to be cleaned up.
+ * expiryDate has already passed — i.e. it needs to be cleaned up. (Benefits
+ * already stopped at expiry — every entitlement check uses
+ * lib/planStatus.js — so this job tidies up: VIP tags, listing tiers and
+ * the isActive flag.) An unreadable expiryDate is left alone.
  */
 function isExpiredAndStillActive(subscription) {
   if (!subscription?.isActive) return false; // already marked inactive — skip
-  if (!subscription?.expiryDate) return false;
-  const expiry = parseExpiryDate(subscription.expiryDate);
-  if (!expiry || isNaN(expiry.getTime())) return false;
-  return expiry < new Date();
+  const expiry = planExpiryMs(subscription);
+  return expiry !== null && expiry < Date.now();
 }
 
 /**
