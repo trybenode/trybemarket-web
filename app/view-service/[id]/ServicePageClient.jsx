@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ListingUnavailable from "@/components/listing/ListingUnavailable";
 import Image from "next/image";
+import { cloudinaryImage } from "@/lib/cloudinaryImage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PriceTag } from "@/components/ui/price-tag";
@@ -471,7 +472,7 @@ export default function ServicePage({ params }) {
                 {service?.images[currentImageIndex] ? (
                   <div className='relative w-full h-full flex items-center justify-center p-4 md:p-8'>
                     <Image
-                      src={service.images[currentImageIndex]}
+                      src={cloudinaryImage(service.images[currentImageIndex], "zoom")}
                       alt={`${service.name} image ${currentImageIndex + 1}`}
                       width={1200}
                       height={800}
@@ -538,7 +539,7 @@ export default function ServicePage({ params }) {
                       onClick={() => setCurrentImageIndex(index)}
                     >
                       <Image
-                        src={image}
+                        src={cloudinaryImage(image, "thumb")}
                         alt={`Thumbnail ${index + 1}`}
                         fill
                         className='object-cover'

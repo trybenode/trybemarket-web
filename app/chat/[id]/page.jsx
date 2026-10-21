@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
+import { cloudinaryImage } from "@/lib/cloudinaryImage";
 import { auth, db } from "@/lib/firebase";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
@@ -416,7 +417,7 @@ export default function ChatPage() {
         <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-3 py-2">
           <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-slate-100">
             <Image
-              src={product.imageUrl || "/placeholder.svg?height=44&width=44"}
+              src={cloudinaryImage(product.imageUrl, "thumb") || "/placeholder.svg?height=44&width=44"}
               alt={product.name || "Listing"}
               fill
               className="object-cover"
