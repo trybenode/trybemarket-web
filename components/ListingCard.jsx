@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import Image from "next/image";
+import { cloudinaryImage } from "@/lib/cloudinaryImage";
 import { Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ function ListingCard({ product = {}, btnName = "View Details", overlay = null })
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {imageUri ? (
           <Image
-            src={imageUri}
+            src={cloudinaryImage(imageUri, "card")}
             alt={product.name ? `${product.name} image` : "Product image"}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"

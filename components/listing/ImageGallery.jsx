@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import Image from "next/image";
+import { cloudinaryImage } from "@/lib/cloudinaryImage";
 import { ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +65,7 @@ export default function ImageGallery({ images = [], name = "", activeIndex = 0, 
               className="relative h-full w-full shrink-0 snap-center cursor-zoom-in"
             >
               <Image
-                src={src}
+                src={cloudinaryImage(src, "full")}
                 alt={i === 0 ? name : `${name} — photo ${i + 1}`}
                 fill
                 priority={i === 0}
@@ -131,7 +132,7 @@ export default function ImageGallery({ images = [], name = "", activeIndex = 0, 
                   i === activeIndex ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
                 )}
               >
-                <Image src={src} alt="" fill sizes="64px" className="object-cover" />
+                <Image src={cloudinaryImage(src, "thumb")} alt="" fill sizes="64px" className="object-cover" />
               </button>
             ))}
           </div>

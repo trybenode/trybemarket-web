@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ListingUnavailable from "@/components/listing/ListingUnavailable";
 import Image from "next/image";
+import { cloudinaryImage } from "@/lib/cloudinaryImage";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useInView } from "react-intersection-observer";
@@ -519,7 +520,7 @@ export default function ListingDetailsPage({ params }) {
                 {selectedImage ? (
                   <div className='relative w-full h-full flex items-center justify-center p-4 md:p-8'>
                     <Image
-                      src={selectedImage}
+                      src={cloudinaryImage(selectedImage, "zoom")}
                       alt={name}
                       width={1200}
                       height={800}
@@ -588,7 +589,7 @@ export default function ListingDetailsPage({ params }) {
                         onClick={() => setSelectedImage(imgSrc)}
                       >
                         <Image
-                          src={imgSrc}
+                          src={cloudinaryImage(imgSrc, "thumb")}
                           alt={`Thumbnail ${index + 1}`}
                           fill
                           className='object-cover'

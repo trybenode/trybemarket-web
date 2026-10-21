@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { cloudinaryImage } from "@/lib/cloudinaryImage";
 import { Badge } from "@/components/ui/badge";
 
 /**
@@ -28,7 +29,7 @@ export default function ServiceCard({ service }) {
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
         {image ? (
           <Image
-            src={image}
+            src={cloudinaryImage(image, "card")}
             alt={service.name || "Service"}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"

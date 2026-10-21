@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Image from "next/image";
+import { cloudinaryImage } from "@/lib/cloudinaryImage";
 import toast from "react-hot-toast";
 
 export default function SelectBoostItemPage() {
@@ -245,7 +246,7 @@ export default function SelectBoostItemPage() {
         <div className="relative h-48 bg-gray-100">
           {imageUri ? (
             <Image
-              src={imageUri}
+              src={cloudinaryImage(imageUri, "card")}
               alt={item.name || "Item"}
               fill
               className="object-cover"
