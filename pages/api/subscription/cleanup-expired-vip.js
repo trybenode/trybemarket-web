@@ -1,5 +1,6 @@
 import { adminDB } from "@/lib/firebaseAdmin";
 import { planExpiryMs } from "@/lib/planStatus";
+import { recomputeRankForItem } from "@/lib/rankScoreServer";
 
 /**
  * Returns true only if the subscription is currently marked active but its
@@ -52,7 +53,7 @@ async function getVipItemsByUserIds(collectionName, userIds) {
 
 /**
  * Fetches all items from a collection whose userId is in the given list,
- * regardless of isVip status (used to reset sellerTier on expiry).
+ * regardless of isVip status (used to re-rank them on expiry).
  * Firestore 'in' operator supports max 30 values, so we chunk.
  */
 async function getItemsByUserIds(collectionName, userIds) {
@@ -70,20 +71,24 @@ async function getItemsByUserIds(collectionName, userIds) {
 }
 
 /**
- * Writes sellerTier: "free" in chunks of 400 (safely under Firestore's
- * 500-writes-per-batch limit).
+ * Recomputes sellerTier AND rankScore for each listing through the one
+ * recompute path (lib/rankScoreServer.js). Writing sellerTier: "free" alone
+ * left rankScore — what the feed is ordered by — at the VIP/premium level
+ * until the nightly reshuffle, and wrongly downgraded a seller whose bundle
+ * was still running. A few at a time, to stay gentle on Firestore.
  */
-async function resetSellerTierInBatches(docs) {
-  const BATCH_SIZE = 400;
-  let reset = 0;
-  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
-    const chunk = docs.slice(i, i + BATCH_SIZE);
-    const batch = adminDB.batch();
-    chunk.forEach((doc) => batch.update(doc.ref, { sellerTier: "free" }));
-    await batch.commit();
-    reset += chunk.length;
+async function rerankItems(itemType, docs) {
+  const CONCURRENCY = 10;
+  let reranked = 0;
+  for (let i = 0; i < docs.length; i += CONCURRENCY) {
+    const chunk = docs.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(chunk.map((doc) => recomputeRankForItem(itemType, doc.id)));
+    results.forEach((result, j) => {
+      if (result.status === "fulfilled") reranked++;
+      else console.error(`VIP cleanup: couldn't re-rank ${itemType} ${chunk[j].id}:`, result.reason);
+    });
   }
-  return reset;
+  return reranked;
 }
 
 /**
@@ -157,8 +162,8 @@ export default async function handler(req, res) {
       stripVipInBatches(vipServices),
     ]);
 
-    // Reset sellerTier to "free" for ALL of these users' listings (not just
-    // VIP-tagged ones), since their premium/vip ranking boost no longer applies.
+    // Re-rank ALL of these users' listings (not just VIP-tagged ones): their
+    // premium/vip ranking boost no longer applies.
     const [allExpiredProducts, allExpiredServices] = await Promise.all([
       expiredProductUserIds.size > 0
         ? getItemsByUserIds("products", [...expiredProductUserIds])
@@ -169,8 +174,8 @@ export default async function handler(req, res) {
     ]);
 
     const [productsTierReset, servicesTierReset] = await Promise.all([
-      resetSellerTierInBatches(allExpiredProducts),
-      resetSellerTierInBatches(allExpiredServices),
+      rerankItems("product", allExpiredProducts),
+      rerankItems("service", allExpiredServices),
     ]);
 
     // Mark expired subscriptions as inactive (prevents double-processing on next run)
