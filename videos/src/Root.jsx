@@ -2,9 +2,11 @@ import React from "react";
 import { Composition } from "remotion";
 import { KycWalkthrough, KYC_WALKTHROUGH_FRAMES } from "./KycWalkthrough.jsx";
 import { FPS } from "./theme.js";
+import { PremiumOffer, PREMIUM_OFFER_FRAMES } from "./PremiumOffer.jsx";
 
 export function Root() {
   return (
+    <>
     <Composition
       id="KycWalkthrough"
       component={KycWalkthrough}
@@ -13,5 +15,7 @@ export function Root() {
       width={1080}
       height={1920}
     />
+    <Composition id="PremiumOffer" component={PremiumOffer} durationInFrames={PREMIUM_OFFER_FRAMES} fps={FPS} width={1080} height={1920} />
+    </>
   );
 }

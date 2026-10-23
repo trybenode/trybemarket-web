@@ -1,7 +1,7 @@
 import { loadFont } from "@remotion/google-fonts/Inter";
 
 // The app's font and colours (app/layout.jsx, app/globals.css).
-export const { fontFamily } = loadFont("normal", { weights: ["400", "500", "600", "700", "800"], subsets: ["latin"] });
+export const { fontFamily } = loadFont("normal", { weights: ["400", "500", "600", "700", "800"], subsets: ["latin", "latin-ext"] });
 
 export const C = {
   primary: "#2463eb",

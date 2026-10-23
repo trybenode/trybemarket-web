@@ -1,11 +1,12 @@
 {
   "name": "trybemarket-videos",
   "private": true,
-  "description": "Instructional videos (Remotion). Not part of the website build — see README.",
+  "description": "Instructional videos (Remotion). Not part of the website build \u2014 see README.",
   "scripts": {
     "studio": "remotion studio src/index.js",
     "render:kyc": "remotion render src/index.js KycWalkthrough out/kyc-walkthrough.mp4",
-    "still:kyc": "remotion still src/index.js KycWalkthrough"
+    "still:kyc": "remotion still src/index.js KycWalkthrough",
+    "render:premium": "remotion render src/index.js PremiumOffer out/premium-offer.mp4"
   },
   "dependencies": {
     "@remotion/cli": "4.0.533",
