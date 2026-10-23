@@ -10,10 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { FiCamera } from "react-icons/fi";
-import { ChevronLeft, Bell, Mail, MessageSquare, Check } from "lucide-react";
+import { Bell, Camera, Check, Mail, MessageSquare } from "lucide-react";
 import { useUser } from "../../context/UserContext";
 import toast from "react-hot-toast"; // Using react-hot-toast
 import Header from "@/components/Header";
@@ -259,285 +256,215 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className='min-h-screen bg-slate-50 pb-12'>
-     <Header title="Profile & Settings" />
+    <div className="min-h-screen bg-slate-50">
+      <Header title="Profile & Settings" />
 
-     <div className='container mx-auto px-4 py-5 max-w-3xl'>
-      <Card className='rounded-3xl border border-slate-200/80 shadow-sm'>
-        
-        <CardContent className='space-y-4 mt-8 mb-4'>
-          {/* Profile Image Picker */}
-          <div className='flex flex-col items-center mb-6 relative'>
-            <div className='w-24 h-24 rounded-full overflow-hidden bg-brand-yellow-soft ring-4 ring-white shadow-md flex items-center justify-center'>
-              {previewImage ? (
-                <img
-                  src={previewImage}
-                  alt='Profile'
-                  className='w-full h-full object-cover'
-                />
-              ) : (
-                <span className='text-3xl font-bold text-slate-700'>
-                  {(name || "?").trim().charAt(0).toUpperCase()}
-                </span>
-              )}
+      <div className="mx-auto max-w-md space-y-4 px-4 pb-10 pt-4">
+        {/* Profile */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="relative shrink-0">
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-brand-yellow-soft shadow ring-2 ring-white">
+                {previewImage ? (
+                  <img src={previewImage} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xl font-bold text-slate-700">{(name || "?").trim().charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <label
+                className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-white ring-2 ring-white transition hover:bg-primary/90"
+                aria-label="Change profile photo"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} disabled={loading} />
+              </label>
             </div>
-            <label className='absolute bottom-0 right-0 bg-blue-500 text-white p-2 rounded-full cursor-pointer hover:bg-blue-600 transition'>
-              <FiCamera size={20} />
-              <input
-                type='file'
-                accept='image/*'
-                className='hidden'
-                onChange={handleImageChange}
-                disabled={loading}
-              />
-            </label>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900">{name || "Your name"}</p>
+              <p className="truncate text-xs text-slate-500">{currentUser?.email}</p>
+            </div>
           </div>
 
-          {/* Inputs Section */}
-          <div className='space-y-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='fullName'>Full Name</Label>
+          <div className="mt-4 space-y-3">
+            <Field id="fullName" label="Full name">
+              <Input id="fullName" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" disabled={loading} />
+            </Field>
+            <Field id="matricNumber" label="Matric number">
               <Input
-                id='fullName'
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder='Full Name'
-                disabled={loading}
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='matricNumber'>Matric Number</Label>
-              <Input
-                id='matricNumber'
+                id="matricNumber"
                 value={matricNum}
                 onChange={(e) => setMatricNum(e.target.value)}
-                placeholder='LCU/UG/XX/XXXX'
+                placeholder="LCU/UG/XX/XXXX"
                 disabled={loading}
               />
-            </div>
-
-            <div className='space-y-2'>
-              <Label>Location</Label>
-              <div className='flex space-x-4'>
-                <div className='flex items-center'>
-                  <input
-                    type='radio'
-                    id='hostelite'
-                    value='hostelite'
-                    checked={selected === "hostelite"}
-                    onChange={() => setSelected("hostelite")}
-                    className='mr-2'
+            </Field>
+            <Field label="Where you stay">
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ["hostelite", "Hostel"],
+                  ["non-hostelite", "Off campus"],
+                ].map(([value, text]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setSelected(value)}
                     disabled={loading}
-                  />
-                  <label
-                    htmlFor='hostelite'
-                    className='text-sm font-medium text-gray-600'
+                    aria-pressed={selected === value}
+                    className={`h-10 rounded-xl border text-sm font-medium transition ${
+                      selected === value ? "border-primary bg-blue-50 text-primary" : "border-slate-200 bg-white text-slate-700"
+                    }`}
                   >
-                    Hostelite
-                  </label>
-                </div>
-                <div className='flex items-center'>
-                  <input
-                    type='radio'
-                    id='non-hostelite'
-                    value='non-hostelite'
-                    checked={selected === "non-hostelite"}
-                    onChange={() => setSelected("non-hostelite")}
-                    className='mr-2'
-                    disabled={loading}
-                  />
-                  <label
-                    htmlFor='non-hostelite'
-                    className='text-sm font-medium text-gray-600'
-                  >
-                    Non-Hostelite
-                  </label>
-                </div>
+                    {text}
+                  </button>
+                ))}
               </div>
-            </div>
-
-            <div className='space-y-2'>
-              <Label htmlFor='moreInfo'>More Information</Label>
+            </Field>
+            <Field id="moreInfo" label="Address details" hint="So buyers know where to meet you.">
               <Input
-                id='moreInfo'
+                id="moreInfo"
                 value={moreInfo}
                 onChange={(e) => setMoreInfo(e.target.value)}
-                placeholder='Room Number, Hostel Name, etc.'
+                placeholder={selected === "hostelite" ? "Hostel name and room number" : "Area or nearest landmark"}
                 disabled={loading}
               />
-            </div>
+            </Field>
           </div>
 
-          <Button onClick={handleSaveProfile} disabled={loading} className='w-full'>
+          <Button onClick={handleSaveProfile} disabled={loading} className="mt-4 w-full">
             {loading ? (
               <>
-                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
-                Saving...
+                <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                Saving…
               </>
             ) : (
-              "Save Profile"
+              "Save profile"
             )}
           </Button>
-        </CardContent>
-      </Card>
+        </section>
 
-      {/* Notification Settings Card */}
-      <Card className='border border-gray-200 mt-6'>
-        <CardHeader>
-          <div className='flex items-center gap-2'>
-            <Bell className='h-5 w-5 text-blue-600' />
-            <CardTitle>Notification Preferences</CardTitle>
-          </div>
-          <CardDescription>
-            Choose how you want to receive notifications when you get new messages
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='space-y-6'>
-          {/* Email Notifications */}
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-3'>
-              <Mail className='h-5 w-5 text-blue-600' />
-              <div>
-                <Label htmlFor='email-notifications' className='text-base font-medium'>
-                  Email Notifications
-                </Label>
-                <p className='text-sm text-gray-500'>Receive notifications via email</p>
-              </div>
-            </div>
-            <Switch
-              id='email-notifications'
+        {/* Notifications */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+            <Bell className="h-4 w-4 text-primary" /> Message alerts
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-500">How we tell you about new messages while you're away.</p>
+
+          <div className="mt-2 divide-y divide-slate-100">
+            <ToggleRow
+              id="email-notifications"
+              Icon={Mail}
+              title="Email"
+              text="To your account email"
               checked={emailNotifications}
-              onCheckedChange={setEmailNotifications}
+              onChange={setEmailNotifications}
+              disabled={savingNotifications}
+            />
+            <ToggleRow
+              id="whatsapp-notifications"
+              Icon={MessageSquare}
+              iconClass="text-green-600"
+              title="WhatsApp"
+              text="To the number below"
+              checked={whatsappNotifications}
+              onChange={setWhatsappNotifications}
               disabled={savingNotifications}
             />
           </div>
 
-          <Separator />
+          <Field id="phone" label="WhatsApp number" hint={phoneError ? null : "Nigerian number, e.g. 08012345678"} className="mt-2">
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              placeholder="08012345678"
+              value={phone}
+              onChange={handlePhoneChange}
+              className={phoneError ? "border-red-500" : ""}
+              disabled={savingNotifications}
+            />
+            {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
+          </Field>
 
-          {/* WhatsApp Notifications */}
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-3'>
-                <MessageSquare className='h-5 w-5 text-green-600' />
-                <div>
-                  <Label htmlFor='whatsapp-notifications' className='text-base font-medium'>
-                    WhatsApp Notifications
-                  </Label>
-                  <p className='text-sm text-gray-500'>Receive notifications via WhatsApp</p>
-                </div>
-              </div>
-              <Switch
-                id='whatsapp-notifications'
-                checked={whatsappNotifications}
-                onCheckedChange={setWhatsappNotifications}
-                disabled={savingNotifications}
-              />
-            </div>
-
-            {/* Phone Number Input */}
-            <div className='pl-8 space-y-2'>
-              <Label htmlFor='phone'>Phone Number</Label>
-              <Input
-                id='phone'
-                type='tel'
-                placeholder='08012345678'
-                value={phone}
-                onChange={handlePhoneChange}
-                className={phoneError ? 'border-red-500' : ''}
-                disabled={savingNotifications}
-              />
-              {phoneError && (
-                <p className='text-sm text-red-600'>{phoneError}</p>
-              )}
-              <p className='text-xs text-gray-500'>
-                Enter your Nigerian phone number (e.g., 08012345678)
-              </p>
-            </div>
+          <h3 className="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">Offers &amp; updates</h3>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Campus deals, new features and news from TrybeMarket. Separate from message alerts. Turn off any time.
+          </p>
+          <div className="mt-1 divide-y divide-slate-100">
+            <ToggleRow
+              id="whatsapp-marketing"
+              Icon={MessageSquare}
+              iconClass="text-green-600"
+              title="On WhatsApp"
+              text="To the number above"
+              checked={whatsappMarketing}
+              onChange={setWhatsappMarketing}
+              disabled={savingNotifications}
+            />
+            <ToggleRow
+              id="email-marketing"
+              Icon={Mail}
+              title="By email"
+              text="To your account email"
+              checked={emailMarketing}
+              onChange={setEmailMarketing}
+              disabled={savingNotifications}
+            />
           </div>
 
-          <Separator />
-
-          {/* Offers & updates — promotional messages, separate from message alerts */}
-          <div className='space-y-4'>
-            <div>
-              <p className='text-base font-medium'>Offers &amp; updates</p>
-              <p className='text-sm text-gray-500'>
-                Campus deals, new features and news from TrybeMarket. Separate from message alerts. Turn off anytime.
-              </p>
-            </div>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-3'>
-                <MessageSquare className='h-5 w-5 text-green-600' />
-                <div>
-                  <Label htmlFor='whatsapp-marketing' className='text-base font-medium'>
-                    On WhatsApp
-                  </Label>
-                  <p className='text-sm text-gray-500'>Sent to the phone number above</p>
-                </div>
-              </div>
-              <Switch
-                id='whatsapp-marketing'
-                checked={whatsappMarketing}
-                onCheckedChange={setWhatsappMarketing}
-                disabled={savingNotifications}
-              />
-            </div>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-3'>
-                <Mail className='h-5 w-5 text-blue-600' />
-                <div>
-                  <Label htmlFor='email-marketing' className='text-base font-medium'>
-                    By email
-                  </Label>
-                  <p className='text-sm text-gray-500'>Sent to your account email</p>
-                </div>
-              </div>
-              <Switch
-                id='email-marketing'
-                checked={emailMarketing}
-                onCheckedChange={setEmailMarketing}
-                disabled={savingNotifications}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Save Notification Settings Button */}
           <Button
             onClick={handleSaveNotifications}
             disabled={savingNotifications || ((whatsappNotifications || whatsappMarketing) && phoneError)}
-            className='w-full'
+            className="mt-4 w-full"
           >
             {savingNotifications ? (
-              <div className='flex items-center gap-2'>
-                <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white' />
-                <span>Saving...</span>
-              </div>
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                Saving…
+              </>
             ) : (
-              <div className='flex items-center gap-2'>
-                <Check className='h-4 w-4' />
-                <span>Save Notification Settings</span>
-              </div>
+              <>
+                <Check /> Save notification settings
+              </>
             )}
           </Button>
 
-          {/* Info about notifications */}
-          <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
-            <div className='space-y-2 text-sm text-gray-600'>
-              <p className='font-medium text-blue-800'>📱 About Notifications:</p>
-              <ul className='list-disc list-inside space-y-1 ml-2'>
-                <li>Notifications are sent when your messages reach offline users</li>
-                <li>Daily sending limits apply based on your subscription plan</li>
-                <li>Each notification you send counts toward your daily quota</li>
-                <li>Upgrade your plan to send more notifications per day</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-     </div>
+          <p className="mt-3 rounded-xl bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-500">
+            Alerts go out when you message someone who's offline, and each one counts toward your daily limit: 5 a day
+            on the free plan, more on paid plans.
+          </p>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function Field({ id, label, hint, className = "", children }) {
+  return (
+    <div className={className}>
+      <Label htmlFor={id} className="text-xs font-medium text-slate-700">
+        {label}
+      </Label>
+      <div className="mt-1.5">{children}</div>
+      {hint && <p className="mt-1 text-[11px] text-slate-500">{hint}</p>}
+    </div>
+  );
+}
+
+function ToggleRow({ id, Icon, iconClass = "text-primary", title, text, checked, onChange, disabled }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50">
+          <Icon className={`h-4 w-4 ${iconClass}`} />
+        </span>
+        <div className="min-w-0">
+          <Label htmlFor={id} className="text-sm font-medium text-slate-900">
+            {title}
+          </Label>
+          <p className="text-xs text-slate-500">{text}</p>
+        </div>
+      </div>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} disabled={disabled} />
     </div>
   );
 }
