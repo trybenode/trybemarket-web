@@ -50,15 +50,18 @@ const useUniversitySelection = () => {
     uni.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  /** @returns {Promise<boolean>} true if the choice was saved (and we're heading home), false if it failed */
-  const handleSelectUniversity = async (university) => {
+  /**
+   * @param {string} [next] where to go after saving (default home); callers pass only safe internal paths
+   * @returns {Promise<boolean>} true if the choice was saved (and we're navigating away), false if it failed
+   */
+  const handleSelectUniversity = async (university, next = "/") => {
     if (isSelecting) return false;
 
     setIsSelecting(true);
     try {
       await withTimeout(setUniversity(university), SAVE_TIMEOUT_MS);
       toast.success(`Selected ${university}`);
-      router.push("/");
+      router.push(next);
       return true;
     } catch (err) {
       console.error(err);

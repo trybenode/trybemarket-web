@@ -12,6 +12,7 @@ import {
   IdCard, Loader2, Monitor, Store,
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
+import useUserStore from "@/lib/userStore";
 import toast from "react-hot-toast";
 import Header from "@/components/Header";
 import DocumentGuide from "@/components/kyc/DocumentGuide";
@@ -47,6 +48,26 @@ const formatDate = (ms) =>
 export default function KycPage() {
   const router = useRouter();
   const { currentUser } = useUser() || {};
+
+  // A school comes first: automatic ID checks compare the card against it, and
+  // campus promotions are given on verification (09-offers.md). Read from the
+  // user store — the same source as the campus picker — so the two pages can't
+  // disagree and bounce between each other; both it and the profile must say
+  // "no school" before we redirect.
+  const storeReady = useUserStore((s) => s.isInitialized);
+  const storeError = useUserStore((s) => s.initError);
+  const storeUniversity = useUserStore((s) => s.selectedUniversity);
+  useEffect(() => {
+    const store = useUserStore.getState();
+    if (!store.isInitialized) store.loadUser();
+  }, []);
+  const needsSchool =
+    Boolean(currentUser) && storeReady && !storeError && !storeUniversity && !currentUser.selectedUniversity;
+  useEffect(() => {
+    if (!needsSchool) return;
+    toast("Choose your school first, then you'll come back here to verify.", { id: "kyc-needs-school" });
+    router.replace("/select-university?next=/kyc");
+  }, [needsSchool, router]);
 
   const [track, setTrack] = useState(null);
   const [step, setStep] = useState("start"); // start | details | photos | selfie
