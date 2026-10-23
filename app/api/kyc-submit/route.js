@@ -128,6 +128,11 @@ export async function POST(req) {
       return NextResponse.json({ error: "Your KYC is already verified." }, { status: 409 });
     }
     university = userSnap.data().selectedUniversity || "";
+    // A school comes first (the KYC page sends students to choose one): ID
+    // checks compare the card against it, and campus promotions depend on it.
+    if (!university) {
+      return NextResponse.json({ error: "Choose your school before verifying." }, { status: 400 });
+    }
     const accountEmail = await resolveKycRecipient(userId).catch(() => null);
     ({ attemptId, upgrade, provisionalName } = await claimKycSubmission(userId, submission, { accountEmail }));
   } catch (error) {

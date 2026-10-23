@@ -11,6 +11,10 @@ import useUniversitySelection from "@/hooks/useUniversitySelection";
 import useUserStore from "@/lib/userStore";
 import { useUser } from "@/context/UserContext";
 
+// Pages allowed to send someone here and get them back afterwards (?next=).
+// A fixed list, so the link can't be used to redirect anywhere else.
+const RETURN_PATHS = new Set(["/kyc"]);
+
 /**
  * Campus picker shown once, right after signup.
  *
@@ -37,6 +41,14 @@ export default function SelectUniversityPage() {
 
   const [phase, setPhase] = useState("loading");
   const [pending, setPending] = useState(null); // the campus being saved
+  // Where to go once a campus is set. Read from the URL when the page starts
+  // (not useSearchParams, which would need a Suspense boundary); it isn't
+  // rendered, so the server/browser difference can't cause a mismatch.
+  const [next] = useState(() => {
+    if (typeof window === "undefined") return "/";
+    const requested = new URLSearchParams(window.location.search).get("next");
+    return RETURN_PATHS.has(requested) ? requested : "/";
+  });
 
   // The store is only initialised by login/signup and after sign-in, so opening
   // this page directly (refresh, installed-app relaunch) must load it itself.
@@ -61,16 +73,16 @@ export default function SelectUniversityPage() {
     }
     if (selectedUniversity) {
       setPhase("leaving");
-      router.replace("/");
+      router.replace(next);
       return;
     }
     setPhase("picker");
-  }, [authLoading, currentUser, isInitialized, initError, selectedUniversity, router]);
+  }, [authLoading, currentUser, isInitialized, initError, selectedUniversity, router, next]);
 
   const onSelect = async (university) => {
     if (pending) return; // no double taps
     setPending(university);
-    const saved = await handleSelectUniversity(university);
+    const saved = await handleSelectUniversity(university, next);
     if (!saved) setPending(null); // let them retry; on success we're navigating away
   };
 
