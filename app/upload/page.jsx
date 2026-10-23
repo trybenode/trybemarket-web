@@ -1,108 +1,135 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Package, Briefcase, ArrowRight, Users, LayoutList, TrendingUp, Store } from "lucide-react";
+import { collection, getCountFromServer, query, where } from "firebase/firestore";
+import { Briefcase, ChevronRight, IdCard, Package } from "lucide-react";
 import Header from "@/components/Header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useUser } from "@/context/UserContext";
+import { db } from "@/lib/firebase";
+import { isKycCleared } from "@/lib/kycAccess";
+import { getUserLimits } from "@/lib/subscriptionStore";
 
-const options = [
+/**
+ * "What are you listing?" — the choice between a product and a service, in
+ * the /kyc start screen's pattern. Kept deliberately quiet: two cards, plus a
+ * notice only when something stops the seller (not verified yet, or the
+ * plan's listing limit is used up).
+ */
+
+const OPTIONS = [
   {
-    id: 1,
-    name: "List a product",
-    description: "Sell physical items, gadgets or goods to students on your campus.",
-    icon: Package,
+    type: "product",
+    title: "A product",
+    subtitle: "Clothes, gadgets, food, books…",
+    Icon: Package,
     tone: "bg-blue-50 text-primary",
     route: "/product-upload",
+    collection: "products",
+    limitKey: "maxProducts",
   },
   {
-    id: 2,
-    name: "List a service",
-    description: "Offer your skills — tutoring, design, writing, repairs and more.",
-    icon: Briefcase,
+    type: "service",
+    title: "A service",
+    subtitle: "Hair, tutoring, design, repairs…",
+    Icon: Briefcase,
     tone: "bg-brand-yellow text-slate-900",
     route: "/service-upload",
+    collection: "services",
+    limitKey: "maxServices",
     badge: "Beta",
   },
 ];
 
-const benefits = [
-  { icon: Users, title: "Reach students", text: "Connect with campus communities nationwide." },
-  { icon: LayoutList, title: "Easy management", text: "Simple tools to upload and track your listings." },
-  { icon: TrendingUp, title: "Grow your business", text: "Premium features to boost visibility and sales." },
-];
+/** Which listing types have used up the plan's limit — empty until loaded (or signed out). */
+function useFullTypes(userId) {
+  const [full, setFull] = useState([]);
+  useEffect(() => {
+    if (!userId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [limits, ...counts] = await Promise.all([
+          getUserLimits(userId),
+          ...OPTIONS.map((o) => getCountFromServer(query(collection(db, o.collection), where("userId", "==", userId)))),
+        ]);
+        if (!cancelled) {
+          setFull(OPTIONS.filter((o, i) => counts[i].data().count >= (limits?.[o.limitKey] ?? Infinity)).map((o) => o.type));
+        }
+      } catch (error) {
+        console.error("Couldn't check listing limits:", error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+  return full;
+}
 
 export default function Upload() {
+  const { currentUser } = useUser();
+  const fullTypes = useFullTypes(currentUser?.uid);
+  const needsKyc = !!currentUser && !isKycCleared(currentUser);
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-16">
-      <Header title="List your hustle" />
+    <div className="min-h-screen bg-slate-50">
+      <Header title="Start selling" />
 
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        {/* Hero */}
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl md:text-4xl">
-            What would you like to list?
-          </h1>
-          <p className="mt-2 text-slate-600">Choose how you want to showcase your business.</p>
+      <div className="mx-auto max-w-md space-y-4 px-4 pb-10 pt-4">
+        <div>
+          <h1 className="text-lg font-bold tracking-tight text-slate-900">What are you listing?</h1>
+          <p className="mt-0.5 text-sm text-slate-500">You can edit it any time.</p>
         </div>
 
-        {/* Options */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {options.map(({ id, name, description, icon: Icon, tone, route, badge }) => (
-            <Link
-              key={id}
-              href={route}
-              className="group relative flex items-start gap-4 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md active:scale-[0.99] md:flex-col md:gap-0 md:p-6"
-            >
-              {badge && (
-                <Badge variant="brand" className="absolute right-3 top-3 md:right-4 md:top-4">
-                  {badge}
-                </Badge>
-              )}
-              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl md:mb-4 md:h-14 md:w-14 ${tone}`}>
-                <Icon className="h-6 w-6 md:h-7 md:w-7" strokeWidth={1.75} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-lg font-bold text-slate-900 md:text-xl">{name}</h2>
-                <p className="mt-1 text-sm leading-relaxed text-slate-600">{description}</p>
-                <span className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-primary md:mt-5">
-                  Get started
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        {needsKyc && (
+          <Link href="/kyc" className="flex items-center gap-2.5 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200 transition active:scale-[0.99]">
+            <IdCard className="h-4 w-4 shrink-0 text-amber-600" />
+            <span className="min-w-0 flex-1 text-sm text-slate-800">
+              <span className="font-semibold">Verify you're a student first.</span> It takes a minute.
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+          </Link>
+        )}
+
+        <div className="space-y-2.5">
+          {OPTIONS.map(({ type, title, subtitle, Icon, tone, route, badge }) => {
+            const full = fullTypes.includes(type);
+            return (
+              <Link
+                key={type}
+                href={full ? "/subscription" : route}
+                className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-primary/40 active:scale-[0.99]"
+              >
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}>
+                  <Icon className="h-5 w-5" />
                 </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Why list */}
-        <div className="mt-10">
-          <h3 className="mb-3 text-center text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Why list on TrybeMarket?
-          </h3>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {benefits.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="flex items-start gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:block">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-yellow-soft text-amber-700 sm:mb-3">
-                  <Icon className="h-[18px] w-[18px]" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+                    {title}
+                    {badge && (
+                      <Badge variant="brand" className="px-1.5 py-0 text-[10px]">
+                        {badge}
+                      </Badge>
+                    )}
+                  </span>
+                  <span className={`block text-xs ${full ? "text-red-600" : "text-slate-500"}`}>
+                    {full ? "Your plan's limit is reached. Upgrade to list more." : subtitle}
+                  </span>
                 </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{title}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+              </Link>
+            );
+          })}
         </div>
 
-        {/* Already listed something */}
-        <div className="mt-10 flex flex-col items-center gap-2 text-center">
-          <p className="text-sm text-slate-500">Already have listings?</p>
-          <Button asChild variant="soft">
-            <Link href="/my-shop">
-              <Store /> Manage them in My Shop
-            </Link>
-          </Button>
-        </div>
+        <p className="pt-2 text-center text-xs text-slate-500">
+          Already listed something?{" "}
+          <Link href="/my-shop" className="font-medium text-primary">
+            Go to My Shop
+          </Link>
+        </p>
       </div>
     </div>
   );
