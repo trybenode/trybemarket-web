@@ -51,9 +51,23 @@ async function fetchRankedSearch(tokens) {
   return docs.filter((d) => matchesAllTokens(d.product.searchKeywords, tokens));
 }
 
+// A link can open the site with a search already filled in — /?q=bracelet —
+// which is how replies from TrybeMarket on WhatsApp send people here
+// (lib/whatsapp/searchReply.js). utm_source says where the link came from.
+const MAX_URL_QUERY = 60;
+function searchFromUrl() {
+  if (typeof window === "undefined") return { query: "", source: null };
+  const params = new URLSearchParams(window.location.search);
+  const query = (params.get("q") || "").replace(/\s+/g, " ").trim().slice(0, MAX_URL_QUERY);
+  const source = (params.get("utm_source") || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 30);
+  return { query, source: query ? source || "link" : null };
+}
+
 export default React.memo(function SearchBar({ onResults }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  // Read once, on first render (this component only renders in the browser).
+  const [fromUrl] = useState(searchFromUrl);
+  const [searchQuery, setSearchQuery] = useState(fromUrl.query);
+  const [debouncedQuery, setDebouncedQuery] = useState(fromUrl.query);
   const [loading, setLoading] = useState(false);
 
   // Debounce user input
@@ -78,6 +92,7 @@ export default React.memo(function SearchBar({ onResults }) {
         }
 
         const results = await fetchRankedSearch(tokens);
+        const openedByLink = !!fromUrl.query && debouncedQuery === fromUrl.query;
 
         // Track search event
         import('@/utils/analytics').then(({ trackEvent, EVENT_TYPES }) => {
@@ -90,12 +105,14 @@ export default React.memo(function SearchBar({ onResults }) {
                 has_results: results.length > 0,
                 campus_id: useUserStore.getState().selectedUniversity,
                 session_id: getOrCreateSessionId(),
+                // set only for the search a link opened with, not ones typed afterwards
+                ...(openedByLink ? { source: fromUrl.source } : {}),
               });
             });
           });
         });
 
-        onResults(results, true);
+        onResults(results, true, { openedByLink });
       } catch (error) {
         console.error("Error fetching search results:", error);
       } finally {
