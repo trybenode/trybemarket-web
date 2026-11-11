@@ -11,7 +11,14 @@ http.createServer((req, res) => {
     if (req.url.startsWith("/_delay/")) { delayMs = Number(req.url.split("/")[2]); res.end("ok"); return; }
     const message = JSON.parse(body || "{}");
     setTimeout(() => {
-      sent.push({ path: req.url, auth: req.headers.authorization, to: message.to, type: message.type, body: message.text?.body });
+      sent.push({
+        path: req.url,
+        auth: req.headers.authorization,
+        to: message.to,
+        type: message.type,
+        body: message.text?.body ?? message.interactive?.body?.text,
+        buttons: message.interactive?.action?.buttons?.map((b) => b.reply) ?? null,
+      });
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ messaging_product: "whatsapp", messages: [{ id: `wamid.out${sent.length}` }] }));
     }, delayMs);
