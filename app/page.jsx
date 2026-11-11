@@ -64,6 +64,7 @@ export default function HomePage() {
   const storeReady = useUserStore((s) => s.isInitialized);
 
   const lastDocRef = useRef(null);
+  const resultsHeadingRef = useRef(null);
 
   /**
    * ------------------------------------------
@@ -196,9 +197,13 @@ export default function HomePage() {
 
       <div className="mx-auto max-w-6xl flex-1 px-3 pb-10 pt-4 sm:px-4">
         <SearchBar
-          onResults={(res, active) => {
+          onResults={(res, active, meta) => {
             setFiltered(res);
             setHasSearch(active);
+            // Opened from a link with a search filled in (/?q=…): bring the results into view.
+            if (meta?.openedByLink) {
+              requestAnimationFrame(() => resultsHeadingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+            }
           }}
         />
 
@@ -208,7 +213,9 @@ export default function HomePage() {
         <WhatsAppOptInCard source="home" className="mt-4" />
 
         <BoostedProductsCarousel />
-        <h2 className="mb-1 mt-6 text-lg font-bold text-slate-900">All products</h2>
+        <h2 ref={resultsHeadingRef} className="mb-1 mt-6 scroll-mt-20 text-lg font-bold text-slate-900">
+          {hasSearch ? "Search results" : "All products"}
+        </h2>
 
         {initialLoading ? (
           <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
