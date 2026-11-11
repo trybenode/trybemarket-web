@@ -1,8 +1,16 @@
 export const runtime = "nodejs";
 
 import crypto from "crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { adminDB } from "@/lib/firebaseAdmin";
+import { createAssistantDeps } from "@/lib/whatsapp/adapter";
+import { isAssistantEnabled } from "@/lib/whatsapp/config";
+import { claimMessage, recordMessageResult } from "@/lib/whatsapp/dedupe";
+import { handleInbound } from "@/lib/whatsapp/router";
+import { collectWebhookWork } from "@/lib/whatsapp/webhook";
+
+// The reply work runs after the 200 has gone out (see POST); this bounds it.
+export const maxDuration = 60;
 
 /**
  * WhatsApp Cloud API webhook (08-campaign-messaging.md §7.2).
@@ -20,9 +28,17 @@ import { adminDB } from "@/lib/firebaseAdmin";
  *    A marketing "resume" preference turns it back on.
  *  - Delivery status (sent / delivered / read / failed) for messages the
  *    admin app's campaigns record in whatsappMessages/{messageId}.
+ *  - The WhatsApp assistant (09-whatsapp-assistant.md), when WA_ENABLED=true:
+ *    each inbound message goes to lib/whatsapp/router.js.
  *
- * Always answers 200 for a correctly signed request, even if handling part of
- * it failed (logged): Meta retries non-200 responses for days.
+ * Order of steps on every POST:
+ *   1. check Meta's signature
+ *   2. claim each inbound message id (waMessages/{wamid}) — Meta re-delivers,
+ *      and a repeat must change nothing
+ *   3. answer 200 straight away
+ *   4. do the work after the response (next/server `after`)
+ * A correctly signed request always gets 200, even if part of the work then
+ * fails (logged): Meta retries non-200 responses for days.
  */
 
 // GET: Meta's one-time verification handshake when the webhook is saved.
@@ -50,18 +66,6 @@ function hasValidSignature(rawBody, header) {
   );
   const given = Buffer.from(header);
   return expected.length === given.length && crypto.timingSafeEqual(expected, given);
-}
-
-const STOP_WORDS = new Set(["STOP", "STOP PROMOTIONS", "UNSUBSCRIBE"]);
-
-// Is this incoming message a request to stop promotional messages?
-function isStopRequest(message) {
-  const text =
-    message.type === "button" ? message.button?.text :
-    message.type === "interactive" ? message.interactive?.button_reply?.title :
-    message.type === "text" ? message.text?.body :
-    null;
-  return typeof text === "string" && STOP_WORDS.has(text.trim().toUpperCase());
 }
 
 // wa_id is the number with country code and no "+", the same format as users.phone.
@@ -134,34 +138,39 @@ export async function POST(req) {
     return new NextResponse("Bad request", { status: 400 });
   }
 
-  const tasks = [];
-  for (const entry of payload.entry || []) {
-    for (const change of entry.changes || []) {
-      const value = change.value || {};
+  const work = collectWebhookWork(payload);
 
-      for (const message of value.messages || []) {
-        if (isStopRequest(message)) {
-          tasks.push(setWhatsappMarketing(message.from, false, "whatsapp_stop"));
-        }
-      }
+  // 2. De-duplicate: only messages we haven't seen before reach the assistant.
+  const claimed = await Promise.all(work.messages.map((message) => claimMessage(adminDB, message)));
+  const freshMessages = work.messages.filter((_, i) => claimed[i]);
 
-      // Marketing message preference changes Meta reports on its own
-      for (const pref of value.user_preferences || []) {
-        if (pref.category !== "marketing_messages") continue;
-        if (pref.value === "stop") tasks.push(setWhatsappMarketing(pref.wa_id, false, "whatsapp_preferences"));
-        if (pref.value === "resume") tasks.push(setWhatsappMarketing(pref.wa_id, true, "whatsapp_preferences"));
-      }
+  // 4. Everything else happens after the 200 below has been sent.
+  after(async () => {
+    const tasks = [
+      ...work.stopRequests.map((waId) => setWhatsappMarketing(waId, false, "whatsapp_stop")),
+      ...work.preferences.map((pref) => setWhatsappMarketing(pref.waId, pref.enabled, "whatsapp_preferences")),
+      ...work.statuses.map((status) => recordStatus(status)),
+    ];
+    const results = await Promise.allSettled(tasks);
+    results
+      .filter((r) => r.status === "rejected")
+      .forEach((r) => console.error("WhatsApp webhook task failed:", r.reason));
 
-      for (const status of value.statuses || []) {
-        if (status.id && status.status) tasks.push(recordStatus(status));
+    if (!isAssistantEnabled() || freshMessages.length === 0) return;
+    const deps = createAssistantDeps();
+    // One at a time, so a person's messages are answered in the order they sent them.
+    for (const message of freshMessages) {
+      let result;
+      try {
+        result = await handleInbound(message, deps);
+      } catch (error) {
+        console.error("WhatsApp assistant failed on a message:", error);
+        result = "error";
       }
+      await recordMessageResult(adminDB, message, result);
     }
-  }
+  });
 
-  const results = await Promise.allSettled(tasks);
-  results
-    .filter((r) => r.status === "rejected")
-    .forEach((r) => console.error("WhatsApp webhook task failed:", r.reason));
-
+  // 3. Answer straight away.
   return NextResponse.json({ received: true });
 }

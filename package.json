@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --test \"tests/**/*.test.mjs\"",
     "preview:lastseen": "node scripts/preview-lastseen-migration.js",
     "migrate:lastseen": "node scripts/migrate-add-lastseen.js",
     "rollback:lastseen": "node scripts/rollback-lastseen.js",

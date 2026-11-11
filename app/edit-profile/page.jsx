@@ -14,6 +14,7 @@ import { Bell, Camera, Check, Mail, MessageSquare } from "lucide-react";
 import { useUser } from "../../context/UserContext";
 import toast from "react-hot-toast"; // Using react-hot-toast
 import Header from "@/components/Header";
+import WhatsAppConnectCard from "@/components/WhatsAppConnectCard";
 
 export default function EditProfilePage() {
   const { currentUser, setCurrentUser, loading: authLoading, profileError, refreshProfile } = useUser();
@@ -341,6 +342,8 @@ export default function EditProfilePage() {
             )}
           </Button>
         </section>
+
+        <WhatsAppConnectCard />
 
         {/* Notifications */}
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
