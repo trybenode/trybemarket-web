@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { collection, doc, getDoc, addDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import toast from "react-hot-toast";
 import { compressImage } from "@/utils/compressImage";
 import serviceCategories from "@/public/serviceCategories.json";
@@ -141,9 +140,6 @@ export const useServiceForm = (currentUser) => {
         return;
       }
 
-      const userSnap = await getDoc(doc(db, "users", userId));
-      const university = userSnap.data()?.selectedUniversity || "Unknown";
-
       // Prepare availability data
       const availability = {
         type: availabilityType,
@@ -153,43 +149,37 @@ export const useServiceForm = (currentUser) => {
         }),
       };
 
-      // isVip/sellerTier/rankScore/searchKeywords are server-computed only
-      // (firestore.rules blocks them here) — set below via
-      // /api/listing/set-vip-tag, which enforces the VIP-tag plan cap and
-      // recomputes rankScore. See 07-ranking-unification.md.
-      const data = {
-        name: serviceName.trim(),
-        categoryId: selectedCategory,
-        description: serviceDescription.trim(),
-        price: parseFloat(price),
-        availability,
-        images,
-        userId,
-        university,
-        createdAt: new Date(),
-      };
-
-      const newDocRef = await addDoc(collection(db, "services"), data);
-
-      // The listing itself always saves regardless of what happens here —
-      // this only syncs the VIP tag (cap-enforced server-side) and
-      // recomputes rankScore. If the seller asked for isVip and it was
-      // refused (cap reached), tell them why rather than letting it fail
-      // silently — a paid feature quietly not applying is worse than a toast.
-      try {
-        const idToken = await auth.currentUser.getIdToken();
-        const vipRes = await fetch("/api/listing/set-vip-tag", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ itemId: newDocRef.id, itemType: "service", isVip }),
-        });
-        if (!vipRes.ok && isVip) {
-          const vipData = await vipRes.json().catch(() => ({}));
-          toast.error(vipData.error || "Service saved, but the VIP tag couldn't be applied", { duration: 5000 });
+      // The server creates the listing: it checks KYC and the plan's listing
+      // limit, and sets the owner, school, rank fields and VIP tag itself
+      // (lib/listingCore.js) — firestore.rules refuses a direct create from
+      // the browser.
+      const idToken = await auth.currentUser.getIdToken();
+      const res = await fetch("/api/listing/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          itemType: "service",
+          listing: {
+            name: serviceName.trim(),
+            categoryId: selectedCategory,
+            description: serviceDescription.trim(),
+            price: parseFloat(price),
+            availability,
+            images,
+          },
+          isVip,
+        }),
+      });
+      const created = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (created.code === "limit_reached") {
+          toast.error(created.error, { duration: 5000 });
+          setTimeout(() => router.push("/subscription"), 2000);
+          return;
         }
-      } catch (error) {
-        console.error("Error syncing VIP tag/rank score:", error);
+        throw new Error(created.error || "Couldn't save your service. Please try again.");
       }
+      if (created.vipError) toast.error(`Service saved, but: ${created.vipError}`, { duration: 5000 });
 
       toast.success("Service Listed Successfully");
       router.push("/explore-services");

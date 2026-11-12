@@ -1,8 +1,8 @@
 /**
  * A tiny in-memory stand-in for the Admin Firestore, with just what
  * lib/whatsapp/* uses: collection().doc(), doc.get/set/create/update/delete,
- * collection().where(field, "==", value).get(), and runTransaction with
- * tx.get/set/update/delete. Transactions run one at a time, in order.
+ * collection().where(field, "==", value).get() (select/limit are accepted and
+ * ignored), and runTransaction with tx.get/set/create/update/delete. Transactions run one at a time, in order.
  */
 export function createFakeFirestore() {
   const store = new Map(); // "collection/id" → data
@@ -51,6 +51,8 @@ export function createFakeFirestore() {
         if (op !== "==") throw new Error("fake Firestore only supports ==");
         return query([...filters, [field, value]]);
       },
+      select: () => query(filters), // field masks don't matter here
+      limit: () => query(filters),
       get: async () => runQuery({ collection: name, filters }),
     });
     return { doc: (id) => docRef(name, id ?? `auto${++autoId}`), ...query([]) };
@@ -63,6 +65,11 @@ export function createFakeFirestore() {
       const tx = {
         get: async (target) => (target.path ? snapshot(target) : runQuery(target)),
         set: (ref, data, options) => writes.push(() => write(ref, data, options)),
+        create: (ref, data) =>
+          writes.push(() => {
+            if (store.has(ref.path)) throw Object.assign(new Error("ALREADY_EXISTS"), { code: 6 });
+            write(ref, data);
+          }),
         update: (ref, data) => writes.push(() => write(ref, data, { merge: true })),
         delete: (ref) => writes.push(() => store.delete(ref.path)),
       };

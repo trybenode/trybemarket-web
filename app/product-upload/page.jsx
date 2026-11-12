@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   collection,
   getDoc,
-  addDoc,
   updateDoc,
   deleteDoc,
   doc,
@@ -334,19 +333,9 @@ export default function SellPage() {
         return;
       }
       
-      //add university from user collection to product collection
-       const userRef = doc(db, "users", userId);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) throw new Error("User not found");
-      const userData = userSnap.data();
-      const university = userData.selectedUniversity || "Unknown";
-
-      // isVip/sellerTier/rankScore/searchKeywords are server-computed only
-      // (firestore.rules blocks them here) — /api/listing/set-vip-tag below
-      // both enforces the VIP-tag plan cap and recomputes rankScore from
-      // whatever this write actually saved, covering plain name/description
-      // edits too, not just VIP toggling. See 07-ranking-unification.md.
-      const data = {
+      // What the seller filled in. Owner, school, rank fields and VIP are
+      // decided on the server, never sent from here.
+      const listing = {
         name: productName.trim(),
         subcategory: selectedSubcategories,
         categoryId: selectedCategory,
@@ -359,38 +348,48 @@ export default function SellPage() {
         originalPrice: parseFloat(originalPrice) || "",
         year: year.trim(),
         images,
-        userId,
-        university,
-        ...(isEditMode ? { updatedAt: new Date() } : { createdAt: new Date() }),
       };
+      const idToken = await auth.currentUser.getIdToken();
 
-      let savedProductId = productId;
       if (isEditMode) {
-        await updateDoc(doc(db, "products", productId), data);
-      } else {
-        const newDocRef = await addDoc(collection(db, "products"), data);
-        savedProductId = newDocRef.id;
-        // No need to increment count - we check actual count in Firestore
-      }
+        await updateDoc(doc(db, "products", productId), { ...listing, userId, updatedAt: new Date() });
 
-      // The listing itself always saves regardless of what happens here —
-      // this only syncs the VIP tag (cap-enforced server-side) and recomputes
-      // rankScore. If the seller asked for isVip and it was refused (cap
-      // reached), tell them why rather than letting it fail silently — a
-      // paid feature quietly not applying is worse than a toast.
-      try {
-        const idToken = await auth.currentUser.getIdToken();
-        const vipRes = await fetch("/api/listing/set-vip-tag", {
+        // Syncs the VIP tag (cap-enforced server-side) and recomputes
+        // rankScore from what was just saved. If the seller asked for isVip
+        // and it was refused (cap reached), tell them why rather than
+        // letting it fail silently.
+        try {
+          const vipRes = await fetch("/api/listing/set-vip-tag", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ itemId: productId, itemType: "product", isVip }),
+          });
+          if (!vipRes.ok && isVip) {
+            const vipData = await vipRes.json().catch(() => ({}));
+            toast.error(vipData.error || "Product saved, but the VIP tag couldn't be applied", { duration: 5000 });
+          }
+        } catch (error) {
+          console.error("Error syncing VIP tag/rank score:", error);
+        }
+      } else {
+        // New listings are created by the server, which checks KYC and the
+        // plan's listing limit (lib/listingCore.js) — firestore.rules refuses
+        // a direct create from the browser.
+        const res = await fetch("/api/listing/create", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ itemId: savedProductId, itemType: "product", isVip }),
+          body: JSON.stringify({ itemType: "product", listing, isVip }),
         });
-        if (!vipRes.ok && isVip) {
-          const vipData = await vipRes.json().catch(() => ({}));
-          toast.error(vipData.error || "Product saved, but the VIP tag couldn't be applied", { duration: 5000 });
+        const created = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (created.code === "limit_reached") {
+            toast.error(created.error, { duration: 5000 });
+            setTimeout(() => router.push("/subscription"), 2000);
+            return;
+          }
+          throw new Error(created.error || "Couldn't save your listing. Please try again.");
         }
-      } catch (error) {
-        console.error("Error syncing VIP tag/rank score:", error);
+        if (created.vipError) toast.error(`Product saved, but: ${created.vipError}`, { duration: 5000 });
       }
 
       toast.success(isEditMode ? "Updated" : "Uploaded");
