@@ -38,33 +38,56 @@ test("a service keeps its availability, with times only when specific", () => {
   assert.deepEqual(timed.data.availability, { type: "specific_time", start: "09:00", end: "17:30" });
   assert.equal(validateListingInput("service", service({ availability: { type: "specific_time", start: "17:00", end: "09:00" } }), { cloudName: CLOUD }).ok, false);
   assert.equal(validateListingInput("service", service({ availability: { type: "whenever" } }), { cloudName: CLOUD }).ok, false);
-  assert.equal(validateListingInput("service", service({ price: 0 }), { cloudName: CLOUD }).ok, false);
+  assert.equal(validateListingInput("service", service({ price: 0 }), { cloudName: CLOUD }).ok, true); // "price on request"
+  assert.equal(validateListingInput("service", service({ price: "abc" }), { cloudName: CLOUD }).ok, false);
 });
 
 const BAD_PRODUCTS = [
   ["no name", { name: "   " }],
-  ["a name that's too long", { name: "x".repeat(121) }],
+  ["a name that's too long", { name: "x".repeat(151) }],
   ["no category", { categoryId: "" }],
   ["no description", { description: "" }],
   ["a negative price", { price: -1 }],
   ["a price that isn't a number", { price: "three thousand" }],
   ["an absurd price", { price: 1e12 }],
   ["no photos", { images: [] }],
-  ["six photos", { images: [1, 2, 3, 4, 5, 6].map(IMG) }],
+  ["more than 20 photos", { images: Array.from({ length: 21 }, (_, i) => IMG(i + 1)) }],
   ["the same photo twice", { images: [IMG(1), IMG(1)] }],
   ["a photo hosted somewhere else", { images: ["https://evil.example/pixel.png"] }],
   ["a photo from another Cloudinary account", { images: [IMG(1).replace(CLOUD, "othercloud")] }],
   ["a private KYC photo", { images: [`https://res.cloudinary.com/${CLOUD}/image/authenticated/v1/kyc/u1/front.jpg`] }],
   ["a photo address with a query string", { images: [`${IMG(1)}?x=1`] }],
-  ["subcategories that aren't a list", { subcategory: "Jewellery" }],
+  ["subcategories that are neither a list nor text", { subcategory: { a: 1 } }],
   ["a bad original price", { originalPrice: "free" }],
-  ["a field that's too long", { brand: "b".repeat(200) }],
+  ["a field that's far too long", { color: "c".repeat(301) }],
 ];
 for (const [label, over] of BAD_PRODUCTS) {
   test(`a product with ${label} is refused`, () => {
     assert.equal(validateListingInput("product", product(over), { cloudName: CLOUD }).ok, false);
   });
 }
+
+// Things real sellers do today (found by checking every listing in production)
+// that must NOT be refused.
+test("several colours in one field, 17 photos picked at once, and a long description are all accepted", () => {
+  const colours = "Black, white, cream, navy blue, wine, army green, chocolate brown, burnt orange, mustard yellow, baby pink, sky blue, lilac, ash, charcoal grey, beige, olive, maroon, teal, coral and peach — all sizes".padEnd(210, ".");
+  const result = validateListingInput("product", product({ color: colours, images: Array.from({ length: 17 }, (_, i) => IMG(i + 1)), description: "d".repeat(2588) }), { cloudName: CLOUD });
+  assert.equal(result.ok, true);
+  assert.equal(result.data.images.length, 17);
+  assert.equal(result.data.color.length, 210);
+});
+
+test("a subcategory given as plain text (older listings) is accepted as a one-item list", () => {
+  assert.deepEqual(validateListingInput("product", product({ subcategory: "Fashion footwear" }), { cloudName: CLOUD }).data.subcategory, ["Fashion footwear"]);
+  assert.deepEqual(validateListingInput("product", product({ subcategory: "" }), { cloudName: CLOUD }).data.subcategory, []);
+  assert.deepEqual(validateListingInput("product", product({ subcategory: undefined }), { cloudName: CLOUD }).data.subcategory, []);
+});
+
+test("a photo on either of our Cloudinary account names is accepted", () => {
+  assert.equal(validateListingInput("product", product(), { cloudName: ["dj21x4jnt", "another"] }).ok, true);
+  assert.equal(validateListingInput("product", product({ images: [IMG(1).replace(CLOUD, "another")] }), { cloudName: ["dj21x4jnt", "another"] }).ok, true);
+  assert.equal(validateListingInput("product", product({ images: [IMG(1).replace(CLOUD, "stranger")] }), { cloudName: ["dj21x4jnt", "another"] }).ok, false);
+});
 
 test("only our own Cloudinary uploads count as listing photos", () => {
   assert.equal(isListingImageUrl(IMG(1), CLOUD), true);
