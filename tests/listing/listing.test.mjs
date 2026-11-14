@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { ListingError, createListingCore } from "../../lib/listingCore.js";
 import { isListingImageUrl, validateListingInput } from "../../lib/listingValidation.js";
+import { MAX_LISTING_PHOTOS, photosThatFit } from "../../lib/listingPhotos.js";
 import { resolveLimits } from "../../lib/planLimitsServer.js";
 import { createFakeFirestore } from "../whatsapp/fakeFirestore.mjs";
 
@@ -51,7 +52,7 @@ const BAD_PRODUCTS = [
   ["a price that isn't a number", { price: "three thousand" }],
   ["an absurd price", { price: 1e12 }],
   ["no photos", { images: [] }],
-  ["more than 20 photos", { images: Array.from({ length: 21 }, (_, i) => IMG(i + 1)) }],
+  ["six photos", { images: [1, 2, 3, 4, 5, 6].map(IMG) }],
   ["the same photo twice", { images: [IMG(1), IMG(1)] }],
   ["a photo hosted somewhere else", { images: ["https://evil.example/pixel.png"] }],
   ["a photo from another Cloudinary account", { images: [IMG(1).replace(CLOUD, "othercloud")] }],
@@ -69,11 +70,11 @@ for (const [label, over] of BAD_PRODUCTS) {
 
 // Things real sellers do today (found by checking every listing in production)
 // that must NOT be refused.
-test("several colours in one field, 17 photos picked at once, and a long description are all accepted", () => {
+test("several colours in one field, five photos and a long description are all accepted", () => {
   const colours = "Black, white, cream, navy blue, wine, army green, chocolate brown, burnt orange, mustard yellow, baby pink, sky blue, lilac, ash, charcoal grey, beige, olive, maroon, teal, coral and peach — all sizes".padEnd(210, ".");
-  const result = validateListingInput("product", product({ color: colours, images: Array.from({ length: 17 }, (_, i) => IMG(i + 1)), description: "d".repeat(2588) }), { cloudName: CLOUD });
+  const result = validateListingInput("product", product({ color: colours, images: [1, 2, 3, 4, 5].map(IMG), description: "d".repeat(2588) }), { cloudName: CLOUD });
   assert.equal(result.ok, true);
-  assert.equal(result.data.images.length, 17);
+  assert.equal(result.data.images.length, 5);
   assert.equal(result.data.color.length, 210);
 });
 
@@ -87,6 +88,29 @@ test("a photo on either of our Cloudinary account names is accepted", () => {
   assert.equal(validateListingInput("product", product(), { cloudName: ["dj21x4jnt", "another"] }).ok, true);
   assert.equal(validateListingInput("product", product({ images: [IMG(1).replace(CLOUD, "another")] }), { cloudName: ["dj21x4jnt", "another"] }).ok, true);
   assert.equal(validateListingInput("product", product({ images: [IMG(1).replace(CLOUD, "stranger")] }), { cloudName: ["dj21x4jnt", "another"] }).ok, false);
+});
+
+test("the photo limit is five, with a clear reason when there are too many", () => {
+  assert.equal(MAX_LISTING_PHOTOS, 5);
+  const tooMany = validateListingInput("product", product({ images: [1, 2, 3, 4, 5, 6].map(IMG) }), { cloudName: CLOUD });
+  assert.deepEqual(tooMany, { ok: false, error: "A listing can have up to 5 photos. Remove some and try again." });
+});
+
+test("the forms keep only the photos that fit, and say so", () => {
+  const files = (n) => Array.from({ length: n }, (_, i) => `file${i + 1}`);
+  assert.deepEqual(photosThatFit(files(3), 0), { accepted: files(3), skipped: 0, message: null });
+  assert.deepEqual(photosThatFit(files(5), 0), { accepted: files(5), skipped: 0, message: null });
+  // 17 picked at once (the most seen in production): the first five are kept
+  const many = photosThatFit(files(17), 0);
+  assert.deepEqual([many.accepted, many.skipped], [files(5), 12]);
+  assert.equal(many.message, "A listing can have up to 5 photos, so only the first 5 were added.");
+  // room for one more
+  assert.equal(photosThatFit(files(3), 4).message, "A listing can have up to 5 photos, so only the first 1 was added.");
+  assert.deepEqual(photosThatFit(files(3), 4).accepted, ["file1"]);
+  // already full, or an older listing with more than five
+  for (const already of [5, 17]) {
+    assert.deepEqual(photosThatFit(files(2), already), { accepted: [], skipped: 2, message: "A listing can have up to 5 photos. Remove one to add another." });
+  }
 });
 
 test("only our own Cloudinary uploads count as listing photos", () => {

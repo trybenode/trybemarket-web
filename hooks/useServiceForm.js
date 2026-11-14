@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { compressImage } from "@/utils/compressImage";
 import serviceCategories from "@/public/serviceCategories.json";
 import { canUserUploadService } from "@/hooks/UploadLimiter";
+import { MAX_LISTING_PHOTOS, photosThatFit } from "@/lib/listingPhotos";
 
 export const useServiceForm = (currentUser) => {
   const router = useRouter();
@@ -63,7 +64,11 @@ export const useServiceForm = (currentUser) => {
   const handleImageUpload = async (e) => {
     const files = e.target.files;
     if (!files?.length) return;
-    const arr = Array.from(files);
+    // Up to five photos: picking more in one go used to slip past the hidden "add" button.
+    const { accepted: arr, message } = photosThatFit(Array.from(files), images.length);
+    e.target.value = ""; // so the same photo can be picked again after removing one
+    if (message) toast.error(message, { duration: 5000 });
+    if (arr.length === 0) return;
     try {
       const urls = await Promise.all(
         arr.map(async (file) => {
@@ -83,7 +88,8 @@ export const useServiceForm = (currentUser) => {
           return json.secure_url.replace("/upload/", "/upload/q_auto,f_auto,w_1200/");
         })
       );
-      setImages((prev) => [...prev, ...urls]);
+      // Two quick picks can both pass the check above before either finishes uploading.
+      setImages((prev) => [...prev, ...urls].slice(0, Math.max(prev.length, MAX_LISTING_PHOTOS)));
     } catch (err) {
       toast.error(err.message);
     }
