@@ -52,6 +52,7 @@ import { compressImage } from '@/utils/imageCompress';
 import Header from "@/components/Header";
 import KycRequiredPanel from "@/components/KycRequiredPanel";
 import { isKycCleared } from "@/lib/kycAccess";
+import { MAX_LISTING_PHOTOS, photosThatFit } from "@/lib/listingPhotos";
 export default function SellPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -268,7 +269,11 @@ export default function SellPage() {
   const handleImageUpload = async (e) => {
     const files = e.target.files;
     if (!files.length) return;
-    const arr = Array.from(files)
+    // Up to five photos: picking more in one go used to slip past the hidden "add" button.
+    const { accepted: arr, message } = photosThatFit(Array.from(files), images.length);
+    e.target.value = ""; // so the same photo can be picked again after removing one
+    if (message) toast.error(message, { duration: 5000 });
+    if (arr.length === 0) return;
     try {
       const urls = await Promise.all(
         arr.map(async (file) => {
@@ -287,7 +292,8 @@ export default function SellPage() {
           return json.secure_url.replace("/upload/", "/upload/q_auto,f_auto,w_1200/");
         })
       );
-      setImages((prev) => [...prev, ...urls]);
+      // Two quick picks can both pass the check above before either finishes uploading.
+      setImages((prev) => [...prev, ...urls].slice(0, Math.max(prev.length, MAX_LISTING_PHOTOS)));
     } catch (err) {
       console.error("Image upload error:", err);
       toast.error(err.message);
@@ -632,7 +638,7 @@ export default function SellPage() {
                   </div>
                 ))}
 
-                {images.length < 5 && (
+                {images.length < MAX_LISTING_PHOTOS && (
                   <div className='aspect-square flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors bg-gray-50'>
                     <label className='cursor-pointer flex flex-col items-center justify-center w-full h-full'>
                       <Upload className='h-8 w-8 text-gray-400' />
